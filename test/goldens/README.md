@@ -7,6 +7,7 @@ Todo: Add description here
 ```typescript
 import { h } from '@rljson/hash';
 
+
 /**
  * The example function demonstrates how the package works
  */
@@ -20,4 +21,5 @@ export const example = () => {
 };
 
 export class X {}
+
 ```

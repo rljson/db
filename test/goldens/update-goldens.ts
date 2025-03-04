@@ -5,4 +5,4 @@
 // found in the LICENSE file in the root of this package.
 
 /// If this is set to true, the golden files will be updated.
-export const updateGoldens = true;
+export const updateGoldens = false;
