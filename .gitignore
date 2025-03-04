@@ -1,0 +1,34 @@
+# Node modules
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+build/
+
+# Coverage reports
+coverage/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE and editor files
+*.swp
+*.swo
+*.swn
+
+# Optional npm cache files
+.npm/
+
+# Other
+*.lock  # (Optional: for ignoring package-lock.json or yarn.lock if you don't want to version them)
