@@ -9,7 +9,7 @@ Please check from time to time, if the issue is fixed and remove this hint.
 
 ## Report issues
 
-Visit <https://github.com/rljson/validate/issues>
+Visit <https://github.com/rljson/db/issues>
 
 Check if there is already an issue for your problem
 
@@ -20,8 +20,8 @@ If no, report the issue
 ```bash
 mkdir rljson
 cd rljson
-git clone https://github.com/rljson/validate.git
-cd validate
+git clone https://github.com/rljson/db.git
+cd db
 ```
 
 ## Install dependencies

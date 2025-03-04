@@ -14,11 +14,10 @@ export const example = () => {
   const print = console.log;
   const assert = console.assert;
 
-  const validate = new Foo();
-  print(validate.foo());
-  assert(validate.foo() === 'bar');
+  const db = new Foo();
+  print(db.foo());
+  assert(db.foo() === 'bar');
 };
 
 export class X {}
-
 ```
