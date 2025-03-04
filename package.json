@@ -1,0 +1,50 @@
+{
+  "name": "@rljson/db",
+  "version": "0.0.1",
+  "description": "A high level interface to read and write RLJSON data from and into a database",
+  "homepage": "https://github.com/rljson/db",
+  "bugs": "https://github.com/rljson/db/issues",
+  "private": false,
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rljson/db.git"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "npx vite build && tsc && npx vite-node src/build-readme.ts",
+    "test": "npx vitest run --coverage && npm run lint",
+    "prebuild": "npm run test",
+    "prepublishOnly": "npm run build && npm run test",
+    "lint": "npx eslint"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.9",
+    "@typescript-eslint/eslint-plugin": "^8.26.0",
+    "@typescript-eslint/parser": "^8.26.0",
+    "@vitest/coverage-v8": "^3.0.7",
+    "eslint-plugin-jsdoc": "^50.6.3",
+    "eslint-plugin-tsdoc": "^0.4.0",
+    "eslint": "^9.21.0",
+    "globals": "^16.0.0",
+    "jsdoc": "^4.0.4",
+    "typescript-eslint": "^8.26.0",
+    "typescript": "~5.8.2",
+    "vite-node": "^3.0.7",
+    "vite-plugin-dts": "^4.5.0",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vite": "^6.2.0",
+    "vitest-dom": "^0.1.1",
+    "vitest": "^3.0.7"
+  },
+  "peerDependencies": {},
+  "dependencies": {}
+}
