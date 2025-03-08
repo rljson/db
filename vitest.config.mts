@@ -2,6 +2,7 @@
 
 import { defineConfig } from 'vite';
 
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   return {
@@ -9,7 +10,7 @@ export default defineConfig(({ mode }) => {
       globals: true,
       environment: 'node',
       setupFiles: ['./test/test-setup.ts'],
-      include: ['**/test/*.spec.ts'],
+      include: ['**/test/**/*.spec.ts'],
 
       reporters: ['default'],
       coverage: {
