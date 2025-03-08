@@ -57,7 +57,15 @@ npm run build
 Make publish dry-run
 
 ```bash
-npm publish --dry-run
+npm publish --access=public --dry-run
+```
+
+Check the changes to uploaded
+
+Publish the package
+
+```bash
+npm publish --access=public
 ```
 
 ## Architecture
