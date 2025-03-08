@@ -24,7 +24,8 @@
     "test": "npx vitest run --coverage && npm run lint",
     "prebuild": "npm run test",
     "prepublishOnly": "npm run build && npm run test",
-    "lint": "npx eslint"
+    "lint": "npx eslint",
+    "updateGoldens": "cross-env UPDATE_GOLDENS=true npm test"
   },
   "devDependencies": {
     "@types/node": "^22.13.9",
