@@ -19,6 +19,7 @@
     "luanpotter.dart-import",
     "mokkapps.jasmine-test-selector",
     "antfu.vite",
-    "vitest.explorer"
+    "vitest.explorer",
+    "github.vscode-github-actions"
   ]
 }
