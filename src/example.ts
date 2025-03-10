@@ -1,16 +1,9 @@
-import { Foo } from './foo.ts';
-
+import { RljsonDb } from './rljson-db.ts';
 
 /**
  * The example function demonstrates how the package works
  */
 export const example = () => {
-  const print = console.log;
-  const assert = console.assert;
-
-  const db = new Foo();
-  print(db.foo());
-  assert(db.foo() === 'bar');
+  new RljsonDb();
+  console.log('RljsonDb works.');
 };
-
-export class X {}

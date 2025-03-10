@@ -11,7 +11,6 @@ import { buildReadme } from '../src/build-readme';
 
 import { updateGoldens } from './setup/goldens.ts';
 
-
 describe('buildReadme()', () => {
   it('should insert example into README.public.md and write the result to dist/README.md', async () => {
     // Delete old dist/README.md
@@ -32,8 +31,8 @@ describe('buildReadme()', () => {
   it('golden test', async () => {
     await buildReadme();
 
-    if (updateGoldens) {
-      cp('dist/README.md', 'test/goldens/README.md');
+    if (updateGoldens()) {
+      await cp('dist/README.md', 'test/goldens/README.md');
     }
 
     const actual = await readFile('dist/README.md', 'utf-8');
