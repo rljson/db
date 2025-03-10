@@ -20,7 +20,7 @@ export const buildReadme = async () => {
   );
 
   // Replace import
-  const importKey = "import { Foo } from './foo.ts';";
+  const importKey = "import { RljsonDb } from './rljson-db.ts';";
   /* v8 ignore start */
   if (!example.includes(importKey)) {
     throw new Error('example.ts must include ' + importKey);
