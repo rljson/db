@@ -1,6 +1,6 @@
 {
   "name": "@rljson/db",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A high level interface to read and write RLJSON data from and into a database",
   "homepage": "https://github.com/rljson/db",
   "bugs": "https://github.com/rljson/db/issues",
