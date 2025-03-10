@@ -21,7 +21,7 @@
   ],
   "type": "module",
   "scripts": {
-    "build": "npx vite build && tsc && npx vite-node src/build-readme.ts",
+    "build": "npx vite build && tsc && cp README* dist && mkdir dist/src && cp src/example.ts dist/src",
     "test": "npx vitest run --coverage && npm run lint",
     "prebuild": "npm run test",
     "prepublishOnly": "npm run build && npm run test",
