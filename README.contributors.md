@@ -29,13 +29,13 @@ cd db
 Windows:
 
 ```bash
-npm install -g pnpm
+corepack enable pnpm
 ```
 
 Mac:
 
 ```bash
-sudo npm install -g pnpm
+sudo corepack enable pnpm
 ```
 
 ## Install dependencies
