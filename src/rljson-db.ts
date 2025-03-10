@@ -5,10 +5,10 @@
 // found in the LICENSE file in the root of this package.
 
 /**
- * The main class of the package
+ * Access Rljson data
  */
-export class Foo {
-  foo() {
-    return 'bar';
-  }
+export class RljsonDb {
+  static example = async () => {
+    return new RljsonDb();
+  };
 }
