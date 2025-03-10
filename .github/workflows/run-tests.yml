@@ -26,22 +26,14 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
-
-      # Debug: Prüfen, ob pnpm jetzt verfügbar ist
-      - name: Verify pnpm Installation
-        run: which pnpm && pnpm --version
-
-      # Falls pnpm nicht gefunden wird, kann es hier alternativ installiert werden:
-      # - name: Install pnpm manually
-      #   run: npm install -g pnpm
-
-      - name: Install pnpm
-        run: corepack prepare pnpm@latest --activate
 
       - name: Cache pnpm dependencies
         uses: actions/cache@v3
