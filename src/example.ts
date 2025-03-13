@@ -1,4 +1,4 @@
-import { RljsonDb } from './rljson-db.ts';
+import { RljsonDb } from './db.ts';
 
 /**
  * The example function demonstrates how the package works
