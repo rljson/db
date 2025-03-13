@@ -27,7 +27,7 @@ export class Db {
 
   /**
    * Example
-   * @returns A new RljsonDb instance for test purposes
+   * @returns A new Db instance for test purposes
    */
   static example = async () => {
     const io = new IoMem();
