@@ -9,20 +9,20 @@ importers:
   .:
     dependencies:
       '@rljson/hash':
-        specifier: ^0.0.9
-        version: 0.0.9
+        specifier: ^0.0.10
+        version: 0.0.10
       '@rljson/io':
-        specifier: ^0.0.4
-        version: 0.0.4
-      '@rljson/io-mem':
-        specifier: ^0.0.2
-        version: 0.0.2
-      '@rljson/rljson':
         specifier: ^0.0.7
         version: 0.0.7
+      '@rljson/json':
+        specifier: ^0.0.9
+        version: 0.0.9
+      '@rljson/rljson':
+        specifier: ^0.0.9
+        version: 0.0.9
       '@rljson/validate':
-        specifier: ^0.0.4
-        version: 0.0.4
+        specifier: ^0.0.6
+        version: 0.0.6
     devDependencies:
       '@types/node':
         specifier: ^22.13.10
@@ -278,8 +278,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@eslint-community/eslint-utils@4.5.0':
-    resolution: {integrity: sha512-RoV8Xs9eNwiDvhv7M+xcL4PWyRyIXRY/FLp3buU4h1EYfdF7unWUy3dOjPqb3C7rMUewIcqwW850PgS8h1o1yg==}
+  '@eslint-community/eslint-utils@4.5.1':
+    resolution: {integrity: sha512-soEIOALTfTK6EjmKMMoLugwaP0rzkad90iIWd1hMO9ARkSAyjfMfkRRhLvD5qH7vvM0Cg72pieUfR6yh6XxC4w==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
     peerDependencies:
       eslint: ^6.0.0 || ^7.0.0 || >=8.0.0
@@ -399,32 +399,28 @@ packages:
     resolution: {integrity: sha512-cq8o4cWH0ibXh9VGi5P20Tu9XF/0fFXl9EUinr9QfTM7a7p0oTA4iJRCQWppXR1Pg8dSM0UCItCkPwsk9qWWYA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
 
-  '@rljson/hash@0.0.9':
-    resolution: {integrity: sha512-o29trLdi1wTZ3l+g8KCHHWevq78WXsk5+gq1KN5qoAKarpY0+jjVBJVBEycqoUJKE3tPN19ca+eQR4hOoK6tMw==}
+  '@rljson/hash@0.0.10':
+    resolution: {integrity: sha512-R0/ztl0i7SI+zT60nkXh/tDAJNfbTXH7+6JiXrY6/nrfczwo1lf+RtIh+n21MMssMGa22sPD8l2WHV2TQGc1SQ==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/io-mem@0.0.2':
-    resolution: {integrity: sha512-Ibrg4txgIXf4zwJYcxTXDB6+/qMqzkRaqVoKRUBovaVQU3KMrFZOzYC2yptxcnI2Zp5UyIOo7yao2HizgnrgZA==}
+  '@rljson/io@0.0.7':
+    resolution: {integrity: sha512-zN/Da46ZIhSRZM/fP33ozeB/Q0bGHNzOAVu7g8cAd0tgdOJBtr5t8/wthQtO30vitUyAUZXPqPcp+p+RA/1oag==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/io@0.0.4':
-    resolution: {integrity: sha512-MZbl3oXL5XvLn5LzlGjrYJg3wYAt4k0lYIn/Krz9L1JtjcW3IKXzCn8a33D0BWgT6EKJo4Pbd1qa5gY8rPXRCQ==}
+  '@rljson/json@0.0.8':
+    resolution: {integrity: sha512-bYZp2S/xZ3ODA8sejxhoUW5A1GKonWWBxJcTw8jk1+nkugDOM+ehEBylTCY38o4bol6DAIzjT6JM0pu4fmrbfQ==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/json@0.0.7':
-    resolution: {integrity: sha512-8he5W+EVRH8Rwgtjzz9YNvqp506PZlzmxuNmeI4rwru3vCIlIQ9Yy46cqcpeUQc2VQbSj5enoPvNGOAJDkisZg==}
+  '@rljson/json@0.0.9':
+    resolution: {integrity: sha512-3DZkfG2KEcq2elPMhfzAO9JYvwDZf13PeXWEAh0dAhWKZ9e2+PlZ76OZCh0dLP1EJTRHFC/goCv7PwS4ds/DAQ==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/rljson@0.0.6':
-    resolution: {integrity: sha512-Q5kwW2dEYYf8Perl/xRHZ1dWGipoyXKuNwycB9vd+RMLJucuSgKdn0vChqqYrQ09LvuIUMlrgMuxDLNtO43wnw==}
+  '@rljson/rljson@0.0.9':
+    resolution: {integrity: sha512-ZXS23GFK8ExhMg3y2pI9Xqd4DZYFcO+jr8trJI+Sa5SodEclA01YPWkdVtxws8W3G5vxjNtn4MFeA6hwHtHq5w==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/rljson@0.0.7':
-    resolution: {integrity: sha512-ym7m/25QXv7fZxgCXfmfSnZwKULn3xN09jqPxRofPwajot+OL7zqbezWOL+x2wOLrmR+EswmSVCvUk7kUc4YCA==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/validate@0.0.4':
-    resolution: {integrity: sha512-p/LuhAH4IwffwNFawMLaj5coQhRpSgRsbtuOPSFYEBImBvlinZ/SdLHRIweAkBhWKc9qKxhZh49OJQn1yEQudQ==}
+  '@rljson/validate@0.0.6':
+    resolution: {integrity: sha512-Qh1mcf0R+CedCC+zR6v6yPCA1ZrsgjXLl6NBu2KSRfHrVBcR3jqqYK47y3FzfI4kMR5Knqt7Gh9tqL6370MIjg==}
     engines: {node: '>=22.14.0'}
 
   '@rollup/pluginutils@5.1.4':
@@ -1879,7 +1875,7 @@ snapshots:
   '@esbuild/win32-x64@0.25.1':
     optional: true
 
-  '@eslint-community/eslint-utils@4.5.0(eslint@9.22.0)':
+  '@eslint-community/eslint-utils@4.5.1(eslint@9.22.0)':
     dependencies:
       eslint: 9.22.0
       eslint-visitor-keys: 3.4.3
@@ -2020,43 +2016,33 @@ snapshots:
 
   '@pkgr/core@0.1.1': {}
 
-  '@rljson/hash@0.0.9':
+  '@rljson/hash@0.0.10':
     dependencies:
       '@aws-crypto/sha256-js': 5.2.0
-      '@rljson/json': 0.0.7
+      '@rljson/json': 0.0.8
       js-base64: 3.7.7
 
-  '@rljson/io-mem@0.0.2':
+  '@rljson/io@0.0.7':
     dependencies:
-      '@rljson/hash': 0.0.9
-      '@rljson/io': 0.0.4
-      '@rljson/json': 0.0.7
-      '@rljson/rljson': 0.0.7
+      '@rljson/hash': 0.0.10
+      '@rljson/json': 0.0.9
+      '@rljson/rljson': 0.0.9
+      '@rljson/validate': 0.0.6
 
-  '@rljson/io@0.0.4':
+  '@rljson/json@0.0.8': {}
+
+  '@rljson/json@0.0.9': {}
+
+  '@rljson/rljson@0.0.9':
     dependencies:
-      '@rljson/hash': 0.0.9
-      '@rljson/json': 0.0.7
-      '@rljson/rljson': 0.0.7
-      '@rljson/validate': 0.0.4
+      '@rljson/hash': 0.0.10
+      '@rljson/json': 0.0.9
 
-  '@rljson/json@0.0.7': {}
-
-  '@rljson/rljson@0.0.6':
+  '@rljson/validate@0.0.6':
     dependencies:
-      '@rljson/hash': 0.0.9
-      '@rljson/json': 0.0.7
-
-  '@rljson/rljson@0.0.7':
-    dependencies:
-      '@rljson/hash': 0.0.9
-      '@rljson/json': 0.0.7
-
-  '@rljson/validate@0.0.4':
-    dependencies:
-      '@rljson/hash': 0.0.9
-      '@rljson/json': 0.0.7
-      '@rljson/rljson': 0.0.6
+      '@rljson/hash': 0.0.10
+      '@rljson/json': 0.0.9
+      '@rljson/rljson': 0.0.9
 
   '@rollup/pluginutils@5.1.4(rollup@4.35.0)':
     dependencies:
@@ -2259,7 +2245,7 @@ snapshots:
 
   '@typescript-eslint/utils@8.26.1(eslint@9.22.0)(typescript@5.8.2)':
     dependencies:
-      '@eslint-community/eslint-utils': 4.5.0(eslint@9.22.0)
+      '@eslint-community/eslint-utils': 4.5.1(eslint@9.22.0)
       '@typescript-eslint/scope-manager': 8.26.1
       '@typescript-eslint/types': 8.26.1
       '@typescript-eslint/typescript-estree': 8.26.1(typescript@5.8.2)
@@ -2592,7 +2578,7 @@ snapshots:
 
   eslint@9.22.0:
     dependencies:
-      '@eslint-community/eslint-utils': 4.5.0(eslint@9.22.0)
+      '@eslint-community/eslint-utils': 4.5.1(eslint@9.22.0)
       '@eslint-community/regexpp': 4.12.1
       '@eslint/config-array': 0.19.2
       '@eslint/config-helpers': 0.1.0

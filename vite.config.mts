@@ -22,6 +22,7 @@ export default defineConfig({
         '@rljson/validate',
         '@rljson/io',
         '@rljson/io-mem',
+        '@rljson/json',
       ],
       output: {
         globals: {},
