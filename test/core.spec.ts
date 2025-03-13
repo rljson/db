@@ -6,7 +6,12 @@
 
 import { hsh } from '@rljson/hash';
 import { Hashed } from '@rljson/json';
-import { exampleRljson, exampleRljsonWithErrors, Rljson } from '@rljson/rljson';
+import {
+  exampleRljson,
+  exampleRljsonWithErrors,
+  Rljson,
+  TableType,
+} from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -88,6 +93,17 @@ describe('Core', () => {
 
       const result2 = await core.hasTable('non-existing-table');
       expect(result2).toBe(false);
+    });
+  });
+
+  describe('readRow(table, rowHash)', () => {
+    it('returns a specific row from a database table', async () => {
+      const dump = await core.dumpTable('table');
+      const rowExpected = (dump.table as TableType)._data[0];
+      const rowHash = rowExpected._hash as string;
+
+      const result = await core.readRow('table', rowHash);
+      expect((result.table as any)._data[0]).toEqual(rowExpected);
     });
   });
 });

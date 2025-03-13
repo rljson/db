@@ -73,4 +73,10 @@ export class Core {
     const tables = await this._io.tables();
     return tables.includes(table);
   }
+
+  // ...........................................................................
+  /** Reads a specific row from a database table */
+  readRow(table: string, rowHash: string): Promise<Rljson> {
+    return this._io.readRow({ table, rowHash });
+  }
 }
