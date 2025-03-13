@@ -6,13 +6,13 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { RljsonDb } from '../src/db';
+import { Db } from '../src/db';
 
 describe('Db', () => {
-  let db: RljsonDb;
+  let db: Db;
 
   beforeEach(async () => {
-    db = await RljsonDb.example();
+    db = await Db.example();
   });
 
   describe('core', () => {

@@ -11,17 +11,19 @@ import { Core } from './core.ts';
 /**
  * Access Rljson data
  */
-export class RljsonDb {
+export class Db {
   /**
    * Constructor
-   * @param io - The Io instance used to read and write data
+   * @param _io - The Io instance used to read and write data
    */
-  constructor(private readonly io: Io) {}
+  constructor(private readonly _io: Io) {
+    this.core = new Core(this._io);
+  }
 
   /**
    * Core functionalities like importing data, setting and getting tables
    */
-  readonly core = new Core(this.io);
+  readonly core: Core;
 
   /**
    * Example
@@ -29,6 +31,6 @@ export class RljsonDb {
    */
   static example = async () => {
     const io = new IoMem();
-    return new RljsonDb(io);
+    return new Db(io);
   };
 }
