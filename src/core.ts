@@ -5,6 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import { Io, IoMem } from '@rljson/io';
+import { JsonValue } from '@rljson/json';
 import { ContentType, Rljson } from '@rljson/rljson';
 import { validate } from '@rljson/validate';
 
@@ -72,5 +73,19 @@ export class Core {
   async hasTable(table: string): Promise<boolean> {
     const tables = await this._io.tables();
     return tables.includes(table);
+  }
+
+  // ...........................................................................
+  /** Reads a specific row from a database table */
+  readRow(table: string, rowHash: string): Promise<Rljson> {
+    return this._io.readRow({ table, rowHash });
+  }
+
+  // ...........................................................................
+  readRows(
+    table: string,
+    where: { [column: string]: JsonValue },
+  ): Promise<Rljson> {
+    return this._io.readRows({ table, where });
   }
 }
