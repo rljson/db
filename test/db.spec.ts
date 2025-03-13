@@ -6,16 +6,18 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { RljsonDb } from '../src/rljson-db';
+import { Db } from '../src/db';
 
-describe('RljsonDb', () => {
-  let db: RljsonDb;
+describe('Db', () => {
+  let db: Db;
 
   beforeEach(async () => {
-    db = await RljsonDb.example();
+    db = await Db.example();
   });
 
-  it('should be defined"', () => {
-    expect(db).toBeDefined();
+  describe('core', () => {
+    it('should be defined', () => {
+      expect(db.core).toBeDefined();
+    });
   });
 });

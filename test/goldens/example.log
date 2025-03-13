@@ -1,0 +1,89 @@
+Create an io instane
+Create an example instance
+Create the tables
+Import Rljson
+Get the tables
+table
+Dump the database
+{
+  "_hash": "twhJ3SP_3wLV3viIkLq9Za",
+  "table": {
+    "_data": [
+      {
+        "int": 5,
+        "double": 5.5,
+        "string": "a",
+        "boolean": true,
+        "null": null,
+        "array": [
+          1,
+          "a",
+          true,
+          null,
+          [
+            1,
+            "a",
+            true,
+            null
+          ],
+          {
+            "a": 1,
+            "_hash": "AVq9f1zFei3ZS3WQ8ErYCE"
+          }
+        ],
+        "object": {
+          "a": 1,
+          "b": {
+            "c": 2,
+            "_hash": "C6G5zv8ldNiEviNtTxyoj3"
+          },
+          "_hash": "hGgAD2SBqPnVvwk8nYUICW"
+        },
+        "_hash": "sR1OyebvAsQn8_URi2cvId"
+      }
+    ],
+    "_type": "properties",
+    "_hash": "TMRAxxBKEuPHWClkgLXakg"
+  }
+}
+Dump a single table
+{
+  "table": {
+    "_data": [
+      {
+        "int": 5,
+        "double": 5.5,
+        "string": "a",
+        "boolean": true,
+        "null": null,
+        "array": [
+          1,
+          "a",
+          true,
+          null,
+          [
+            1,
+            "a",
+            true,
+            null
+          ],
+          {
+            "a": 1,
+            "_hash": "AVq9f1zFei3ZS3WQ8ErYCE"
+          }
+        ],
+        "object": {
+          "a": 1,
+          "b": {
+            "c": 2,
+            "_hash": "C6G5zv8ldNiEviNtTxyoj3"
+          },
+          "_hash": "hGgAD2SBqPnVvwk8nYUICW"
+        },
+        "_hash": "sR1OyebvAsQn8_URi2cvId"
+      }
+    ],
+    "_type": "properties",
+    "_hash": "TMRAxxBKEuPHWClkgLXakg"
+  }
+}

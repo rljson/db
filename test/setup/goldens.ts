@@ -22,6 +22,6 @@ export const checkGoldens = async (goldenFile: string, expected: string) => {
   const golden = await readFile(goldenFile, 'utf8');
   const message =
     `Golden "${goldenFile}" does not match expected content. ` +
-    'Consider to rebuild goldens using "npm run updateGoldens".';
+    'Consider to rebuild goldens using "pnpm updateGoldens".';
   expect(golden, message).toBe(expected);
 };
