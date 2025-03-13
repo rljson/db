@@ -4,13 +4,16 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@rljson/hash': link:../../../.pnpm/global/5/node_modules/@rljson/hash
+
 importers:
 
   .:
     dependencies:
       '@rljson/hash':
-        specifier: ^0.0.10
-        version: 0.0.10
+        specifier: link:../../../.pnpm/global/5/node_modules/@rljson/hash
+        version: link:../../../.pnpm/global/5/node_modules/@rljson/hash
       '@rljson/io':
         specifier: ^0.0.7
         version: 0.0.7
@@ -18,8 +21,8 @@ importers:
         specifier: ^0.0.9
         version: 0.0.9
       '@rljson/rljson':
-        specifier: ^0.0.9
-        version: 0.0.9
+        specifier: ^0.0.11
+        version: 0.0.11
       '@rljson/validate':
         specifier: ^0.0.6
         version: 0.0.6
@@ -87,17 +90,6 @@ packages:
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
-
-  '@aws-crypto/sha256-js@5.2.0':
-    resolution: {integrity: sha512-FFQQyu7edu4ufvIZ+OadFpHHOt+eSTBaYaki44c+akjg7qZg9oOQeLlk77F6tSYqjDAFClrHJk9tMf0HdVyOvA==}
-    engines: {node: '>=16.0.0'}
-
-  '@aws-crypto/util@5.2.0':
-    resolution: {integrity: sha512-4RkU9EsI6ZpBve5fseQlGNUWKMa1RLPQ1dnjnQoe07ldfIzcsGb5hC5W0Dm7u423KWzawlrpbjXBrXCEv9zazQ==}
-
-  '@aws-sdk/types@3.734.0':
-    resolution: {integrity: sha512-o11tSPTT70nAkGV1fN9wm/hAIiLPyWX6SuGf+9JyTp7S/rC2cFWhR26MvA69nplcjNaXVzB0f+QFrLXXjOqCrg==}
-    engines: {node: '>=18.0.0'}
 
   '@babel/code-frame@7.26.2':
     resolution: {integrity: sha512-RJlIHRueQgwWitWgF8OdFYGZX328Ax5BCemNGlqHfplnRT9ESi8JkFlvaVYbS+UubVY6dpv87Fs2u5M29iNFVQ==}
@@ -399,20 +391,16 @@ packages:
     resolution: {integrity: sha512-cq8o4cWH0ibXh9VGi5P20Tu9XF/0fFXl9EUinr9QfTM7a7p0oTA4iJRCQWppXR1Pg8dSM0UCItCkPwsk9qWWYA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
 
-  '@rljson/hash@0.0.10':
-    resolution: {integrity: sha512-R0/ztl0i7SI+zT60nkXh/tDAJNfbTXH7+6JiXrY6/nrfczwo1lf+RtIh+n21MMssMGa22sPD8l2WHV2TQGc1SQ==}
-    engines: {node: '>=22.14.0'}
-
   '@rljson/io@0.0.7':
     resolution: {integrity: sha512-zN/Da46ZIhSRZM/fP33ozeB/Q0bGHNzOAVu7g8cAd0tgdOJBtr5t8/wthQtO30vitUyAUZXPqPcp+p+RA/1oag==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/json@0.0.8':
-    resolution: {integrity: sha512-bYZp2S/xZ3ODA8sejxhoUW5A1GKonWWBxJcTw8jk1+nkugDOM+ehEBylTCY38o4bol6DAIzjT6JM0pu4fmrbfQ==}
-    engines: {node: '>=22.14.0'}
-
   '@rljson/json@0.0.9':
     resolution: {integrity: sha512-3DZkfG2KEcq2elPMhfzAO9JYvwDZf13PeXWEAh0dAhWKZ9e2+PlZ76OZCh0dLP1EJTRHFC/goCv7PwS4ds/DAQ==}
+    engines: {node: '>=22.14.0'}
+
+  '@rljson/rljson@0.0.11':
+    resolution: {integrity: sha512-/wDJ28PbF8QTKK95QdDHdzOBj/SHy0Sbml4UV1GI8Av4eDLLiCrpvyUQgIun7m7llsdHGqy+hFi/OmZ/Wxh6AA==}
     engines: {node: '>=22.14.0'}
 
   '@rljson/rljson@0.0.9':
@@ -548,22 +536,6 @@ packages:
 
   '@rushstack/ts-command-line@4.23.6':
     resolution: {integrity: sha512-7WepygaF3YPEoToh4MAL/mmHkiIImQq3/uAkQX46kVoKTNOOlCtFGyNnze6OYuWw2o9rxsyrHVfIBKxq/am2RA==}
-
-  '@smithy/is-array-buffer@2.2.0':
-    resolution: {integrity: sha512-GGP3O9QFD24uGeAXYUjwSTXARoqpZykHadOmA8G5vfJPK0/DC67qa//0qvqrJzL1xc8WQWX7/yc7fwudjPHPhA==}
-    engines: {node: '>=14.0.0'}
-
-  '@smithy/types@4.1.0':
-    resolution: {integrity: sha512-enhjdwp4D7CXmwLtD6zbcDMbo6/T6WtuuKCY49Xxc6OMOmUWlBEBDREsxxgV2LIdeQPW756+f97GzcgAwp3iLw==}
-    engines: {node: '>=18.0.0'}
-
-  '@smithy/util-buffer-from@2.2.0':
-    resolution: {integrity: sha512-IJdWBbTcMQ6DA0gdNhh/BwrLkDR+ADW5Kr1aZmd4k3DIF6ezMV4R2NIAmT08wQJ3yUK82thHWmC/TnK/wpMMIA==}
-    engines: {node: '>=14.0.0'}
-
-  '@smithy/util-utf8@2.3.0':
-    resolution: {integrity: sha512-R8Rdn8Hy72KKcebgLiv8jQcQkXoLMOGGv5uI1/k0l+snqkOzQ1R0ChUBCxWMlBsFMekWjq0wRudIweFs7sKT5A==}
-    engines: {node: '>=14.0.0'}
 
   '@types/argparse@1.0.38':
     resolution: {integrity: sha512-ebDJ9b0e702Yr7pWgB0jzm+CX4Srzz8RcXtLJDJB+BSccqMa36uyH/zUsSYao5+BD1ytv3k3rPYCq4mAE1hsXA==}
@@ -1136,9 +1108,6 @@ packages:
 
   jju@1.4.0:
     resolution: {integrity: sha512-8wb9Yw966OSxApiCt0K3yNJL8pnNeIv+OEq2YMidz4FKP6nonSRoOXc80iXY4JaN2FC11B9qsNmDsm+ZOfMROA==}
-
-  js-base64@3.7.7:
-    resolution: {integrity: sha512-7rCnleh0z2CkXhH67J8K1Ytz0b2Y+yxTPL+/KOJoa20hfnVQ/3/T6W/KflYI4bRHRagNeXeU2bkNGI3v1oS/lw==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -1756,23 +1725,6 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.8
       '@jridgewell/trace-mapping': 0.3.25
 
-  '@aws-crypto/sha256-js@5.2.0':
-    dependencies:
-      '@aws-crypto/util': 5.2.0
-      '@aws-sdk/types': 3.734.0
-      tslib: 2.8.1
-
-  '@aws-crypto/util@5.2.0':
-    dependencies:
-      '@aws-sdk/types': 3.734.0
-      '@smithy/util-utf8': 2.3.0
-      tslib: 2.8.1
-
-  '@aws-sdk/types@3.734.0':
-    dependencies:
-      '@smithy/types': 4.1.0
-      tslib: 2.8.1
-
   '@babel/code-frame@7.26.2':
     dependencies:
       '@babel/helper-validator-identifier': 7.25.9
@@ -2016,31 +1968,28 @@ snapshots:
 
   '@pkgr/core@0.1.1': {}
 
-  '@rljson/hash@0.0.10':
-    dependencies:
-      '@aws-crypto/sha256-js': 5.2.0
-      '@rljson/json': 0.0.8
-      js-base64: 3.7.7
-
   '@rljson/io@0.0.7':
     dependencies:
-      '@rljson/hash': 0.0.10
+      '@rljson/hash': link:../../../.pnpm/global/5/node_modules/@rljson/hash
       '@rljson/json': 0.0.9
       '@rljson/rljson': 0.0.9
       '@rljson/validate': 0.0.6
 
-  '@rljson/json@0.0.8': {}
-
   '@rljson/json@0.0.9': {}
+
+  '@rljson/rljson@0.0.11':
+    dependencies:
+      '@rljson/hash': link:../../../.pnpm/global/5/node_modules/@rljson/hash
+      '@rljson/json': 0.0.9
 
   '@rljson/rljson@0.0.9':
     dependencies:
-      '@rljson/hash': 0.0.10
+      '@rljson/hash': link:../../../.pnpm/global/5/node_modules/@rljson/hash
       '@rljson/json': 0.0.9
 
   '@rljson/validate@0.0.6':
     dependencies:
-      '@rljson/hash': 0.0.10
+      '@rljson/hash': link:../../../.pnpm/global/5/node_modules/@rljson/hash
       '@rljson/json': 0.0.9
       '@rljson/rljson': 0.0.9
 
@@ -2142,24 +2091,6 @@ snapshots:
       string-argv: 0.3.2
     transitivePeerDependencies:
       - '@types/node'
-
-  '@smithy/is-array-buffer@2.2.0':
-    dependencies:
-      tslib: 2.8.1
-
-  '@smithy/types@4.1.0':
-    dependencies:
-      tslib: 2.8.1
-
-  '@smithy/util-buffer-from@2.2.0':
-    dependencies:
-      '@smithy/is-array-buffer': 2.2.0
-      tslib: 2.8.1
-
-  '@smithy/util-utf8@2.3.0':
-    dependencies:
-      '@smithy/util-buffer-from': 2.2.0
-      tslib: 2.8.1
 
   '@types/argparse@1.0.38': {}
 
@@ -2798,8 +2729,6 @@ snapshots:
       '@pkgjs/parseargs': 0.11.0
 
   jju@1.4.0: {}
-
-  js-base64@3.7.7: {}
 
   js-tokens@4.0.0: {}
 

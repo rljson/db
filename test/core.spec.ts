@@ -4,9 +4,10 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { hsh } from '@rljson/hash';
-import { Hashed } from '@rljson/json';
+import { hsh, rmhsh } from '@rljson/hash';
+import { Hashed, JsonArray, JsonValue } from '@rljson/json';
 import {
+  exampleBinary,
   exampleRljson,
   exampleRljsonWithErrors,
   Rljson,
@@ -104,6 +105,33 @@ describe('Core', () => {
 
       const result = await core.readRow('table', rowHash);
       expect((result.table as any)._data[0]).toEqual(rowExpected);
+    });
+  });
+
+  describe('readRows(table, where)', () => {
+    beforeEach(async () => {
+      await core.import(exampleBinary());
+    });
+
+    const readRows = async (where: {
+      [column: string]: JsonValue;
+    }): Promise<JsonArray> => {
+      const result = rmhsh(await core.readRows('table', where));
+      return (result.table as any)._data;
+    };
+
+    it('returns rows from a database table', async () => {
+      expect(await readRows({ a: 0 })).toEqual([
+        { a: 0, b: 0 },
+        { a: 0, b: 1 },
+      ]);
+
+      expect(await readRows({ a: 1 })).toEqual([
+        { a: 1, b: 0 },
+        { a: 1, b: 1 },
+      ]);
+
+      expect(await readRows({ a: 0, b: 0 })).toEqual([{ a: 0, b: 0 }]);
     });
   });
 });
