@@ -1,11 +1,10 @@
-# DB eample
-## Create an io instane
-## Create an example instance
-## Create the tables
-## Import Rljson
-## Get the tables
+Create an io instane
+Create an example instance
+Create the tables
+Import Rljson
+Get the tables
 table
-## Dump the database
+Dump the database
 {
   "_hash": "twhJ3SP_3wLV3viIkLq9Za",
   "table": {
@@ -47,7 +46,7 @@ table
     "_hash": "TMRAxxBKEuPHWClkgLXakg"
   }
 }
-## Dump a single table
+Dump a single table
 {
   "table": {
     "_data": [

@@ -21,7 +21,7 @@ describe('example', () => {
     await example();
 
     // Compare log with golden
-    checkGoldens('test/goldens/example-log.md', messages.join('\n'));
+    checkGoldens('test/goldens/example.log', messages.join('\n'));
 
     // Restore logging
     console.log = backup;
