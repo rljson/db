@@ -20,6 +20,9 @@ importers:
       '@rljson/rljson':
         specifier: ^0.0.11
         version: 0.0.11
+      '@rljson/table':
+        specifier: ^0.0.4
+        version: 0.0.4
       '@rljson/validate':
         specifier: ^0.0.6
         version: 0.0.6
@@ -403,8 +406,20 @@ packages:
     resolution: {integrity: sha512-R0/ztl0i7SI+zT60nkXh/tDAJNfbTXH7+6JiXrY6/nrfczwo1lf+RtIh+n21MMssMGa22sPD8l2WHV2TQGc1SQ==}
     engines: {node: '>=22.14.0'}
 
+  '@rljson/hash@0.0.11':
+    resolution: {integrity: sha512-StYlZRl7bsn1JnqVEiWBhghfG3xJkIX4r7O6yu3TuqiboKFoMziqyvzB0CEQ8m095YMW5cYCu7L0Y24Hm2qkNQ==}
+    engines: {node: '>=22.14.0'}
+
   '@rljson/io@0.0.7':
     resolution: {integrity: sha512-zN/Da46ZIhSRZM/fP33ozeB/Q0bGHNzOAVu7g8cAd0tgdOJBtr5t8/wthQtO30vitUyAUZXPqPcp+p+RA/1oag==}
+    engines: {node: '>=22.14.0'}
+
+  '@rljson/json@0.0.10':
+    resolution: {integrity: sha512-hGlfW9cny0ekCBeKfoIGcAZctJRtPaf4Ke4nrj+Ilwxi5fB8kSKPoXBPYwwNggCoIFDVh2/LeOW1/N6GnHaMTA==}
+    engines: {node: '>=22.14.0'}
+
+  '@rljson/json@0.0.13':
+    resolution: {integrity: sha512-/T/jMCCi37Ezkr+g5JvNYct0BpcjwaF5FQzNFUXXe1Z6AvGyBMbMo9tgz/aXh6a3XBYWupdLmWVktbmJU6W4dg==}
     engines: {node: '>=22.14.0'}
 
   '@rljson/json@0.0.8':
@@ -421,6 +436,10 @@ packages:
 
   '@rljson/rljson@0.0.9':
     resolution: {integrity: sha512-ZXS23GFK8ExhMg3y2pI9Xqd4DZYFcO+jr8trJI+Sa5SodEclA01YPWkdVtxws8W3G5vxjNtn4MFeA6hwHtHq5w==}
+    engines: {node: '>=22.14.0'}
+
+  '@rljson/table@0.0.4':
+    resolution: {integrity: sha512-NAHhWLFfbiSPdLrMzh6KjhSOF8YSzl4ExaIunTgTu7TSRIuiGWwl09tW3ilzRdeH7dpEXyehToM4OXgy84yBrw==}
     engines: {node: '>=22.14.0'}
 
   '@rljson/validate@0.0.6':
@@ -2026,12 +2045,22 @@ snapshots:
       '@rljson/json': 0.0.8
       js-base64: 3.7.7
 
+  '@rljson/hash@0.0.11':
+    dependencies:
+      '@aws-crypto/sha256-js': 5.2.0
+      '@rljson/json': 0.0.10
+      js-base64: 3.7.7
+
   '@rljson/io@0.0.7':
     dependencies:
       '@rljson/hash': 0.0.10
       '@rljson/json': 0.0.9
       '@rljson/rljson': 0.0.9
       '@rljson/validate': 0.0.6
+
+  '@rljson/json@0.0.10': {}
+
+  '@rljson/json@0.0.13': {}
 
   '@rljson/json@0.0.8': {}
 
@@ -2046,6 +2075,12 @@ snapshots:
     dependencies:
       '@rljson/hash': 0.0.10
       '@rljson/json': 0.0.9
+
+  '@rljson/table@0.0.4':
+    dependencies:
+      '@rljson/hash': 0.0.11
+      '@rljson/json': 0.0.13
+      '@rljson/rljson': 0.0.11
 
   '@rljson/validate@0.0.6':
     dependencies:
