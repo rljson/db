@@ -71,7 +71,7 @@ export class Core {
 
   // ...........................................................................
   async hasTable(table: string): Promise<boolean> {
-    const tables = await this._io.tables();
+    const tables = await this._io.tableNames();
     return tables.includes(table);
   }
 
