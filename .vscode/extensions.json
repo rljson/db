@@ -17,9 +17,10 @@
     "pkief.material-icon-theme",
     "dart-code.dart-code",
     "luanpotter.dart-import",
-    "mokkapps.jasmine-test-selector",
     "antfu.vite",
     "vitest.explorer",
-    "github.vscode-github-actions"
+    "github.vscode-github-actions",
+    "yzhang.markdown-all-in-one",
+    "mdickin.markdown-shortcuts"
   ]
 }
