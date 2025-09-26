@@ -20,4 +20,10 @@ describe('Db', () => {
       expect(db.core).toBeDefined();
     });
   });
+
+  describe('edit', () => {
+    it('basic edit', () => {
+      expect(db.core).toBeDefined();
+    });
+  });
 });

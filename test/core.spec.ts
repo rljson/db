@@ -73,7 +73,7 @@ describe('Core', () => {
       let message: string = '';
       try {
         await core.dumpTable('non-existing-table');
-      } catch (error) {
+      } catch (error: any) {
         message = error.message;
       }
 
