@@ -4,16 +4,19 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { hsh, rmhsh } from '@rljson/hash';
-import { Hashed, JsonArray, JsonValue } from '@rljson/json';
+import { hip, hsh, rmhsh } from '@rljson/hash';
+import { JsonArray, JsonValue } from '@rljson/json';
 import {
-  exampleBinary,
+  Example,
   exampleRljson,
-  exampleRljsonWithErrors,
+  exampleTableCfgTable,
   Rljson,
+  TableCfg,
+  TablesCfgTable,
   TableType,
 } from '@rljson/rljson';
 
+import { traverse } from 'object-traversal';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { Core } from '../src/core';
@@ -21,34 +24,49 @@ import { Core } from '../src/core';
 describe('Core', () => {
   let core: Core;
   let data: Rljson;
-  let dataH: Hashed<Rljson>;
+  let dataTable: TableType;
+  let tableCfg: TableCfg;
 
   beforeEach(async () => {
     core = await Core.example();
-    core.createTable('table', 'properties');
+    tableCfg = exampleTableCfgTable()._data[0];
+    await core.createTable(tableCfg);
+
     data = exampleRljson();
-    dataH = hsh(data);
     await core.import(data);
+
+    dataTable = hsh(data.table) as TableType;
+    traverse(dataTable, ({ parent, key, value }) => {
+      if (key === 'null' && !value) {
+        delete parent![key];
+      }
+    });
   });
 
   describe('createTable(name, type)', () => {
     it('creates a table', async () => {
       const tables = await core.tables();
-      expect(tables).toEqual(['table']);
+      expect(Object.keys(tables)).toEqual([
+        '_hash',
+        'tableCfgs',
+        'revisions',
+        'table',
+      ]);
     });
   });
 
   describe('dump()', () => {
     it('returns the complete db content as Rljson', async () => {
       const dump = await core.dump();
-      expect(dump).toEqual(dataH);
+      const dumpTable = dump.table;
+      expect(dumpTable).toEqual(dataTable);
     });
   });
 
   describe('dumpTable()', () => {
     it('returns the complete table', async () => {
       const dump = await core.dumpTable('table');
-      expect(dump.table).toEqual((dataH as any).table);
+      expect(dump.table).toEqual(dataTable);
     });
 
     it('throws when the table does not exist', async () => {
@@ -59,16 +77,17 @@ describe('Core', () => {
         message = error.message;
       }
 
-      expect(message).toBe('Table non-existing-table not found');
+      expect(message).toBe('Table "non-existing-table" not found');
     });
   });
 
   describe('import(data)', () => {
     it('throws when the data is not valid', async () => {
       let message: string = '';
+      const broken = Example.broken.base.brokenTableKey() as Rljson;
       try {
-        await core.import(exampleRljsonWithErrors());
-      } catch (error) {
+        await core.import(broken);
+      } catch (error: any) {
         message = error.message;
       }
 
@@ -83,7 +102,12 @@ describe('Core', () => {
   describe('tables()', () => {
     it('returns the list of tables', async () => {
       const tables = await core.tables();
-      expect(tables).toEqual(['table']);
+      expect(Object.keys(tables)).toEqual([
+        '_hash',
+        'tableCfgs',
+        'revisions',
+        'table',
+      ]);
     });
   });
 
@@ -110,7 +134,41 @@ describe('Core', () => {
 
   describe('readRows(table, where)', () => {
     beforeEach(async () => {
-      await core.import(exampleBinary());
+      const binaryTableCfgs = hip<TablesCfgTable>({
+        _hash: '',
+        _type: 'tableCfgs',
+        _data: [
+          {
+            version: 0,
+            _hash: '',
+            key: 'table',
+            type: 'components',
+            isHead: false,
+            isRoot: false,
+            isShared: true,
+            columns: [
+              {
+                key: '_hash',
+                type: 'string',
+              },
+              {
+                key: 'a',
+                type: 'boolean',
+              },
+              {
+                key: 'b',
+                type: 'boolean',
+              },
+            ],
+          },
+        ],
+      });
+      core = await Core.example();
+      tableCfg = binaryTableCfgs._data[0];
+      await core.createTable(tableCfg);
+
+      data = Example.ok.binary();
+      await core.import(data);
     });
 
     const readRows = async (where: {
@@ -121,17 +179,19 @@ describe('Core', () => {
     };
 
     it('returns rows from a database table', async () => {
-      expect(await readRows({ a: 0 })).toEqual([
-        { a: 0, b: 0 },
-        { a: 0, b: 1 },
+      expect(await readRows({ a: false })).toEqual([
+        { a: false, b: true },
+        { a: false, b: false },
       ]);
 
-      expect(await readRows({ a: 1 })).toEqual([
-        { a: 1, b: 0 },
-        { a: 1, b: 1 },
+      expect(await readRows({ a: true })).toEqual([
+        { a: true, b: true },
+        { a: true, b: false },
       ]);
 
-      expect(await readRows({ a: 0, b: 0 })).toEqual([{ a: 0, b: 0 }]);
+      expect(await readRows({ a: false, b: false })).toEqual([
+        { a: false, b: false },
+      ]);
     });
   });
 });
@@ -139,11 +199,13 @@ describe('Core', () => {
 // .............................................................................
 const error = `The imported rljson data is not valid:
 {
-  "tableNamesAreLowerCamelCase": {
-    "error": "Table names must be lower camel case",
-    "invalidTableNames": [
-      "brok$en"
-    ]
-  },
-  "hasErrors": true
+  "base": {
+    "hasErrors": true,
+    "tableKeysNotLowerCamelCase": {
+      "error": "Table names must be lower camel case",
+      "invalidTableKeys": [
+        "brok$en"
+      ]
+    }
+  }
 }`;

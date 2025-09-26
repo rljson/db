@@ -1,5 +1,5 @@
 import { IoMem } from '@rljson/io';
-import { exampleRljson } from '@rljson/rljson';
+import { exampleRljson, exampleTableCfgTable } from '@rljson/rljson';
 
 import { Db } from './db.ts';
 
@@ -11,20 +11,24 @@ export const example = async () => {
   const l = console.log;
 
   l('Create an io instane');
-  const io = new IoMem();
+  const io = await IoMem.example();
+  await io.init();
+  await io.isReady();
 
   l('Create an example instance');
   const db = new Db(io);
 
   l('Create the tables');
-  await db.core.createTable('table', 'properties');
+  const tableCfg = exampleTableCfgTable()._data[0];
+  await db.core.createTable(tableCfg);
 
   l('Import Rljson');
-  await db.core.import(exampleRljson());
+  const rljson = exampleRljson();
+  await db.core.import(rljson);
 
   l('Get the tables');
   const tables = await db.core.tables();
-  l(tables.join(', '));
+  l(Object.keys(tables).join(', '));
 
   l('Dump the database');
   const dump = await db.core.dump();

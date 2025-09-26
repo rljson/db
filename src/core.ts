@@ -6,8 +6,7 @@
 
 import { Io, IoMem } from '@rljson/io';
 import { JsonValue } from '@rljson/json';
-import { ContentType, Rljson } from '@rljson/rljson';
-import { validate } from '@rljson/validate';
+import { BaseValidator, Rljson, TableCfg, Validate } from '@rljson/rljson';
 
 /** Implements core functionalities like importing data, setting tables  */
 export class Core {
@@ -15,17 +14,16 @@ export class Core {
   constructor(private readonly _io: Io) {}
 
   static example = async () => {
-    return new Core(IoMem.example());
+    return new Core(await IoMem.example());
   };
 
   // ...........................................................................
   /**
    * Creates a table
-   * @param name The name of the table.
-   * @param type The type of the table.
+   * @param tableCfg TableCfg of table to create
    */
-  async createTable(name: string, type: ContentType): Promise<void> {
-    return this._io.createTable({ name, type });
+  async createTable(tableCfg: TableCfg): Promise<void> {
+    return this._io.createOrExtendTable({ tableCfg });
   }
 
   // ...........................................................................
@@ -41,8 +39,8 @@ export class Core {
    * @returns a dump of a table.
    * @throws when table name does not exist
    */
-  dumpTable(name: string): Promise<Rljson> {
-    return this._io.dumpTable({ name });
+  dumpTable(table: string): Promise<Rljson> {
+    return this._io.dumpTable({ table });
   }
 
   // ...........................................................................
@@ -52,8 +50,11 @@ export class Core {
    */
   async import(data: Rljson): Promise<void> {
     // Throw an error if the data is invalid
-    const result = validate(data);
-    if (result.hasErrors) {
+    const validate = new Validate();
+    validate.addValidator(new BaseValidator());
+
+    const result = await validate.run(data);
+    if (result.hasErrors || (result.base && result.base.hasErrors)) {
       throw new Error(
         'The imported rljson data is not valid:\n' +
           JSON.stringify(result, null, 2),
@@ -65,20 +66,19 @@ export class Core {
   }
 
   // ...........................................................................
-  async tables(): Promise<string[]> {
-    return this._io.tables();
+  async tables(): Promise<Rljson> {
+    return await this._io.dump();
   }
 
   // ...........................................................................
   async hasTable(table: string): Promise<boolean> {
-    const tables = await this._io.tables();
-    return tables.includes(table);
+    return await this._io.tableExists(table);
   }
 
   // ...........................................................................
   /** Reads a specific row from a database table */
   readRow(table: string, rowHash: string): Promise<Rljson> {
-    return this._io.readRow({ table, rowHash });
+    return this._io.readRows({ table, where: { _hash: rowHash } });
   }
 
   // ...........................................................................

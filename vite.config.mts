@@ -23,6 +23,7 @@ export default defineConfig({
         '@rljson/io',
         '@rljson/io-mem',
         '@rljson/json',
+        'object-traversal',
       ],
       output: {
         globals: {},
