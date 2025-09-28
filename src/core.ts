@@ -4,9 +4,19 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+import { hsh } from '@rljson/hash';
 import { Io, IoMem } from '@rljson/io';
-import { JsonValue } from '@rljson/json';
-import { BaseValidator, Rljson, TableCfg, Validate } from '@rljson/rljson';
+import { Json, JsonValue, JsonValueH } from '@rljson/json';
+import {
+  BaseValidator,
+  ComponentRef,
+  Edit,
+  Ref,
+  Rljson,
+  Route,
+  TableCfg,
+  Validate,
+} from '@rljson/rljson';
 
 /** Implements core functionalities like importing data, setting tables  */
 export class Core {
@@ -16,14 +26,87 @@ export class Core {
   static example = async () => {
     return new Core(await IoMem.example());
   };
+  // ...........................................................................
+  /**
+   * Runs an edit on the database
+   * @param edit - The edit to run
+   * @throws when the table does not exist
+   * @throws when the edit is invalid
+   */
+  async run(edit: Edit<any>): Promise<any> {
+    const route: Route = Route.fromFlat(edit.route);
+    const isRoot = route.isRoot;
+
+    if (!isRoot) {
+      return this.run({
+        ...edit,
+        route: route.deeper().flat,
+      });
+    }
+
+    const tableKey = route.segment();
+    const hasTable = await this.hasTable(tableKey);
+    if (!hasTable) {
+      throw new Error(`Table ${tableKey} does not exist`);
+    }
+
+    let ref: Ref;
+    if (edit.type === 'components') {
+      ref = await this.runComponentEdit(tableKey, edit.value);
+    } else {
+      throw new Error(`Unsupported edit type: ${edit.type}`);
+    }
+
+    return { [tableKey]: ref };
+  }
+
+  async runComponentEdit(
+    tableKey: string,
+    value: JsonValueH,
+  ): Promise<ComponentRef> {
+    const component = value as JsonValue & { _hash?: string };
+    const rlJson = { [tableKey]: { _data: [component] } } as Rljson;
+    await this._io.write({ data: rlJson });
+    return hsh(component as Json)._hash as string;
+  }
 
   // ...........................................................................
+  /**
+   * Creates a table and an edit protocol for the table
+   * @param tableCfg TableCfg of table to create
+   */
+  async createEditable(tableCfg: TableCfg): Promise<void> {
+    await this.createTable(tableCfg);
+    await this.createEditProtocol(tableCfg);
+  }
+
   /**
    * Creates a table
    * @param tableCfg TableCfg of table to create
    */
   async createTable(tableCfg: TableCfg): Promise<void> {
     return this._io.createOrExtendTable({ tableCfg });
+  }
+  /**
+   * Creates an edit protocol table for a given table
+   * @param tableCfg TableCfg of table
+   */
+  async createEditProtocol(tableCfg: TableCfg): Promise<void> {
+    const editProtocolTableCfg: TableCfg = {
+      key: `${tableCfg.key}Edits`,
+      type: 'editProtocol',
+      columns: [
+        { key: '_hash', type: 'string' },
+        { key: 'id', type: 'number' },
+        { key: 'route', type: 'string' },
+        { key: 'origin', type: 'string' },
+        { key: 'previous', type: 'jsonArray' },
+      ],
+      isHead: true,
+      isRoot: true,
+      isShared: false,
+    };
+    await this.createTable(editProtocolTableCfg);
   }
 
   // ...........................................................................

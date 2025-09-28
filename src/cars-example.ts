@@ -16,301 +16,523 @@ import {
   TablesCfgTable,
 } from '@rljson/rljson';
 
-const carSliceId = {
-  _type: 'sliceIds',
-  _data: [
-    {
-      add: ['VIN1', 'VIN2'],
-      _hash: 'gaY8E_pzUVZYJT1RTMWsrh',
-    },
-  ],
-  _hash: '8CPu6Tw2zuVzD1j6cr--Xp',
-} as SliceIdsTable;
+export interface CarsExample extends Rljson {
+  carSliceId: SliceIdsTable;
+  carGeneral: ComponentsTable<CarGeneral>;
+  carTechnical: ComponentsTable<Json>;
+  carColor: ComponentsTable<Json>;
+  carGeneralLayer: LayersTable;
+  carTechnicalLayer: LayersTable;
+  carColorLayer: LayersTable;
+  carCake: CakesTable;
+  wheelSliceId: SliceIdsTable;
+  wheelBrand: ComponentsTable<Json>;
+  wheelDimension: ComponentsTable<Json>;
+  wheelBrandLayer: LayersTable;
+  wheelDimensionLayer: LayersTable;
+  wheelCake: CakesTable;
+  tableCfgs: TablesCfgTable;
+}
 
-const carGeneralTableCfg = hip<any>({
-  key: 'carGeneral',
-  type: 'components',
-  columns: [
-    { key: '_hash', type: 'string' },
-    { key: 'brand', type: 'string' },
-    { key: 'type', type: 'string' },
-    { key: 'doors', type: 'number' },
-  ],
-  isHead: false,
-  isRoot: false,
-  isShared: true,
-}) as TableCfg;
+export interface CarGeneral extends Json {
+  brand: string;
+  type: string;
+  doors: number;
+}
 
-const carGeneralTableCfgs = {
-  _data: [carGeneralTableCfg],
-} as TablesCfgTable;
+export const carsExample = (): CarsExample => {
+  //CarSliceId
+  //................................................................
+  const carSliceIdTableCfg = hip<TableCfg>({
+    key: 'carSliceId',
+    type: 'sliceIds',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'add', type: 'jsonArray' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
 
-const carGeneral = {
-  _tableCfg: carGeneralTableCfg._hash,
-  _type: 'components',
-  _data: [
-    {
-      brand: 'Volkswagen',
-      type: 'Polo',
-      doors: 5,
-      _hash: 'kGUWVQqc3s04pEFCrAhPBU',
-    },
-    {
-      brand: 'Volkswagen',
-      type: 'Golf',
-      doors: 3,
-      _hash: '32MNv-aROHGLPpb96BMIqq',
-    },
-  ],
-  _hash: 'r7D4l_Jc472Bkaw9-deTjq',
-} as ComponentsTable<Json>;
-
-const carTechnical = {
-  _type: 'components',
-  _data: [
-    {
-      engine: 'Diesel',
-      transmission: 'Manual',
-      gears: 6,
-      _hash: 'bS4c-w-oYiodBMxv4cRPXs',
-    },
-    {
-      engine: 'Petrol',
-      transmission: 'Automatic',
-      gears: 7,
-      _hash: 'cE6GU1sf4CvCGuGozsgaa7',
-    },
-  ],
-  _hash: 'yERt7m3fnOwmFObYk_DWRz',
-} as ComponentsTable<Json>;
-
-const carColor = {
-  _type: 'components',
-  _data: [
-    {
-      sides: 'green',
-      roof: 'white',
-      highlights: 'chrome',
-      _hash: 'aCjcRQw-KWRYJe6ttLx-Un',
-    },
-    {
-      sides: 'blue',
-      roof: 'black',
-      highlights: 'chrome',
-      _hash: '5vRZZ-vTbp1zhman-kDIV3',
-    },
-  ],
-  _hash: 'uB6She7CuR0X9A4_qK5Q5U',
-} as ComponentsTable<Json>;
-
-const carWheel = {
-  _type: 'components',
-  _data: [
-    {
-      _hash: 'RBNvo1WzZ4oRRq0W9-hknp',
-    },
-    {
-      _hash: 'RBNvo1WzZ4oRRq0W9-hknp',
-    },
-  ],
-  _hash: 'du-6IBU7HSLFj3IqLTN9Pp',
-} as ComponentsTable<Json>;
-
-const carGeneralLayer = {
-  _type: 'layers',
-  _data: [
-    {
-      add: {
-        VIN1: 'kGUWVQqc3s04pEFCrAhPBU',
-        VIN2: '32MNv-aROHGLPpb96BMIqq',
-        _hash: 'FGfUNShhXdib0UXiIyQHSs',
+  const carSliceId = hip<any>({
+    _tableCfg: carSliceIdTableCfg._hash,
+    _type: 'sliceIds',
+    _data: [
+      {
+        add: ['VIN1', 'VIN2'],
+        _hash: '',
       },
-      sliceIdsTable: 'carSliceId',
-      sliceIdsTableRow: 'gaY8E_pzUVZYJT1RTMWsrh',
-      componentsTable: 'carGeneral',
-      _hash: 'Gv1hBZjCrOPaW1T9qwB7i1',
-    },
-  ],
-  _hash: 'l1EqfFPrepjZPGklNgZm2T',
-} as LayersTable;
+    ],
+    _hash: '',
+  }) as SliceIdsTable;
 
-const carTechnicalLayer = {
-  _type: 'layers',
-  _data: [
-    {
-      add: {
-        VIN1: 'bS4c-w-oYiodBMxv4cRPXs',
-        VIN2: 'cE6GU1sf4CvCGuGozsgaa7',
-        _hash: 'vui_APtNHzJHtoYF7-n228',
+  //CarGeneral
+  //................................................................
+  const carGeneralTableCfg = hip<any>({
+    key: 'carGeneral',
+    type: 'components',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'brand', type: 'string' },
+      { key: 'type', type: 'string' },
+      { key: 'doors', type: 'number' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const carGeneral = hip<any>({
+    _tableCfg: carGeneralTableCfg._hash,
+    _type: 'components',
+    _data: [
+      {
+        brand: 'Volkswagen',
+        type: 'Polo',
+        doors: 5,
+        _hash: '',
       },
-      sliceIdsTable: 'carSliceId',
-      sliceIdsTableRow: 'gaY8E_pzUVZYJT1RTMWsrh',
-      componentsTable: 'carTechnical',
-      _hash: '3FqkEWxnPT6ctdPHk04XBL',
-    },
-  ],
-  _hash: 'wSHzbkD7z3rBsLvq3ReY0w',
-} as LayersTable;
-
-const carColorLayer = {
-  _type: 'layers',
-  _data: [
-    {
-      add: {
-        VIN1: 'aCjcRQw-KWRYJe6ttLx-Un',
-        VIN2: '5vRZZ-vTbp1zhman-kDIV3',
-        _hash: '7_J6jgSc-UYL5SZYS4ZgL0',
+      {
+        brand: 'Volkswagen',
+        type: 'Golf',
+        doors: 3,
+        _hash: '',
       },
-      sliceIdsTable: 'carSliceId',
-      sliceIdsTableRow: 'gaY8E_pzUVZYJT1RTMWsrh',
-      componentsTable: 'carColor',
-      _hash: '3-Xak37KCHtV-LXU084JCt',
-    },
-  ],
-  _hash: '2CPFGUver5DOm8s0_3WPQT',
-} as LayersTable;
+    ],
+    _hash: '',
+  }) as ComponentsTable<CarGeneral>;
 
-const carWheelLayer = {
-  _type: 'layers',
-  _data: [
-    {
-      add: {
-        VIN1: 'RBNvo1WzZ4oRRq0W9-hknp',
-        VIN2: 'RBNvo1WzZ4oRRq0W9-hknp',
-        _hash: 'OJtYyRy9yW1COM_YBlCUH2',
+  //CarTechnical
+  //................................................................
+  const carTechnicalTableCfg = hip<any>({
+    key: 'carTechnical',
+    type: 'components',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'engine', type: 'string' },
+      { key: 'transmission', type: 'string' },
+      { key: 'gears', type: 'number' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const carTechnical = hip<any>({
+    _tableCfg: carTechnicalTableCfg._hash,
+    _type: 'components',
+    _data: [
+      {
+        engine: 'Diesel',
+        transmission: 'Manual',
+        gears: 6,
+        _hash: '',
       },
-      sliceIdsTable: 'carSliceId',
-      sliceIdsTableRow: 'gaY8E_pzUVZYJT1RTMWsrh',
-      componentsTable: 'carWheel',
-      _hash: 'tYWK2dZbgVJv2xmI5knESg',
-    },
-  ],
-  _hash: '6qlGNIlZgHHttBg8DAQNro',
-} as LayersTable;
-
-const carCake = {
-  _type: 'cakes',
-  _data: [
-    {
-      sliceIdsTable: 'carSliceId',
-      sliceIdsRow: 'gaY8E_pzUVZYJT1RTMWsrh',
-      layers: {
-        carGeneralLayer: 'Gv1hBZjCrOPaW1T9qwB7i1',
-        carTechnicalLayer: '3FqkEWxnPT6ctdPHk04XBL',
-        carColorLayer: '3-Xak37KCHtV-LXU084JCt',
-        carWheelLayer: 'tYWK2dZbgVJv2xmI5knESg',
+      {
+        engine: 'Petrol',
+        transmission: 'Automatic',
+        gears: 7,
+        _hash: '',
       },
-    },
-  ],
-} as CakesTable;
+    ],
+    _hash: '',
+  }) as ComponentsTable<Json>;
 
-const wheelSliceId = {
-  _type: 'sliceIds',
-  _data: [
-    {
-      add: ['BOB37382', 'BOB37383'],
-      _hash: 'JPP7A-skpEe1KuDS11mtBH',
-    },
-  ],
-  _hash: '3yLoZHlJMhlsY7SvmpNBg1',
-} as SliceIdsTable;
+  //CarColor
+  //................................................................
+  const carColorTableCfg = hip<any>({
+    key: 'carColor',
+    type: 'components',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'sides', type: 'string' },
+      { key: 'roof', type: 'string' },
+      { key: 'highlights', type: 'string' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
 
-const wheelBrand = {
-  _type: 'components',
-  _data: [
-    {
-      brand: 'Borbet',
-      _hash: 'VQxyOOlL5pVCWUoteV_x8V',
-    },
-    {
-      brand: 'Borbet',
-      _hash: 'VQxyOOlL5pVCWUoteV_x8V',
-    },
-  ],
-  _hash: '5rbdtYEHQzUvEvC_85h-vx',
-} as ComponentsTable<Json>;
-
-const wheelDimension = {
-  _type: 'components',
-  _data: [
-    {
-      dimension: '185/60 R16',
-      _hash: 'pQB1jQ9uRxoYAcVc25VA20',
-    },
-    {
-      dimension: '195/55 R16',
-      _hash: '7G8GafBJu0ohK_1lcTWgEn',
-    },
-  ],
-  _hash: 'NxACjUL9cXgXcalytGsor3',
-} as ComponentsTable<Json>;
-
-const wheelBrandLayer = {
-  _type: 'layers',
-  _data: [
-    {
-      add: {
-        BOB37382: 'VQxyOOlL5pVCWUoteV_x8V',
-        BOB37383: 'VQxyOOlL5pVCWUoteV_x8V',
-        _hash: 'Iwr3s5WQxdptlIlbsV6FHu',
+  const carColor = hip<any>({
+    _tableCfg: carColorTableCfg._hash,
+    _type: 'components',
+    _data: [
+      {
+        sides: 'green',
+        roof: 'white',
+        highlights: 'chrome',
+        _hash: '',
       },
-      sliceIdsTable: 'wheelSliceId',
-      sliceIdsTableRow: 'JPP7A-skpEe1KuDS11mtBH',
-      componentsTable: 'wheelBrand',
-      _hash: 'QtYdaYaOgULRv2VToNq2td',
-    },
-  ],
-  _hash: 'xB4Dkjv1IwTVUTy5reV4CO',
-} as LayersTable;
-
-const wheelDimensionLayer = {
-  _type: 'layers',
-  _data: [
-    {
-      add: {
-        BOB37382: 'pQB1jQ9uRxoYAcVc25VA20',
-        BOB37383: '7G8GafBJu0ohK_1lcTWgEn',
-        _hash: '4bIVTR_l-negIVz-bVhb-L',
+      {
+        sides: 'blue',
+        roof: 'black',
+        highlights: 'chrome',
+        _hash: '',
       },
-      sliceIdsTable: 'wheelSliceId',
-      sliceIdsTableRow: 'JPP7A-skpEe1KuDS11mtBH',
-      componentsTable: 'wheelDimension',
-      _hash: '3wKgawhS1yjWlNvS8f85qc',
-    },
-  ],
-  _hash: 'bsdPHbqts6OWx2E-jWXIg6',
-} as LayersTable;
+    ],
+    _hash: '',
+  }) as ComponentsTable<Json>;
 
-const wheelCake = {
-  _type: 'cakes',
-  _data: [
-    {
-      sliceIdsTable: 'wheelSliceId',
-      sliceIdsRow: 'JPP7A-skpEe1KuDS11mtBH',
-      layers: {
-        wheelBrandLayer: 'QtYdaYaOgULRv2VToNq2td',
-        wheelDimensionLayer: '3wKgawhS1yjWlNvS8f85qc',
+  //CarLayers and CarCake
+  //................................................................
+  const carGeneralLayerTableCfg = hip<TableCfg>({
+    key: 'carGeneralLayer',
+    type: 'layers',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'sliceIdsTable', type: 'string' },
+      { key: 'sliceIdsTableRow', type: 'string' },
+      { key: 'componentsTable', type: 'string' },
+      { key: 'add', type: 'json' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const carGeneralLayer = hip<any>({
+    _tableCfg: carGeneralLayerTableCfg._hash,
+    _type: 'layers',
+    _data: [
+      {
+        add: {
+          VIN1: carGeneral._data[0]._hash || '',
+          VIN2: carGeneral._data[1]._hash || '',
+          _hash: '',
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: carSliceId._data[0]._hash || '',
+        componentsTable: 'carGeneral',
+        _hash: '',
       },
-    },
-  ],
-} as CakesTable;
+    ],
+    _hash: '',
+  }) as LayersTable;
 
-export const carsExample = {
-  carSliceId,
-  carGeneral,
-  carGeneralTableCfgs,
-  carTechnical,
-  carColor,
-  carWheel,
-  carGeneralLayer,
-  carTechnicalLayer,
-  carColorLayer,
-  carWheelLayer,
-  carCake,
-  wheelSliceId,
-  wheelBrand,
-  wheelDimension,
-  wheelBrandLayer,
-  wheelDimensionLayer,
-  wheelCake,
-} as Rljson;
+  const carTechnicalLayerTableCfg = hip<TableCfg>({
+    key: 'carTechnicalLayer',
+    type: 'layers',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'sliceIdsTable', type: 'string' },
+      { key: 'sliceIdsTableRow', type: 'string' },
+      { key: 'componentsTable', type: 'string' },
+      { key: 'add', type: 'json' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const carTechnicalLayer = hip<any>({
+    _tableCfg: carTechnicalLayerTableCfg._hash,
+    _type: 'layers',
+    _data: [
+      {
+        add: {
+          VIN1: carTechnical._data[0]._hash || '',
+          VIN2: carTechnical._data[1]._hash || '',
+          _hash: '',
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: carSliceId._data[0]._hash || '',
+        componentsTable: 'carTechnical',
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  }) as LayersTable;
+
+  const carColorLayerTableCfg = hip<TableCfg>({
+    key: 'carColorLayer',
+    type: 'layers',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'sliceIdsTable', type: 'string' },
+      { key: 'sliceIdsTableRow', type: 'string' },
+      { key: 'componentsTable', type: 'string' },
+      { key: 'add', type: 'json' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const carColorLayer = hip<any>({
+    _tableCfg: carColorLayerTableCfg._hash,
+    _type: 'layers',
+    _data: [
+      {
+        add: {
+          VIN1: carColor._data[0]._hash || '',
+          VIN2: carColor._data[1]._hash || '',
+          _hash: '',
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: carSliceId._data[0]._hash || '',
+        componentsTable: 'carColor',
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  }) as LayersTable;
+
+  const carCakeTableCfg = hip<TableCfg>({
+    key: 'carCake',
+    type: 'cakes',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'sliceIdsTable', type: 'string' },
+      { key: 'sliceIdsRow', type: 'string' },
+      { key: 'layers', type: 'json' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const carCake = hip<any>({
+    _tableCfg: carCakeTableCfg._hash,
+    _type: 'cakes',
+    _data: [
+      {
+        sliceIdsTable: 'carSliceId',
+        sliceIdsRow: carSliceId._data[0]._hash || '',
+        layers: {
+          carGeneralLayer: carGeneralLayer._data[0]._hash || '',
+          carTechnicalLayer: carTechnicalLayer._data[0]._hash || '',
+          carColorLayer: carColorLayer._data[0]._hash || '',
+        },
+      },
+    ],
+  }) as CakesTable;
+
+  //WheelSliceId
+  //................................................................
+
+  const wheelSliceIdTableCfg = hip<TableCfg>({
+    key: 'wheelSliceId',
+    type: 'sliceIds',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'add', type: 'jsonArray' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const wheelSliceId = hip<any>({
+    _tableCfg: wheelSliceIdTableCfg._hash,
+    _type: 'sliceIds',
+    _data: [
+      {
+        add: ['BOB37382', 'BOB37383'],
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  }) as SliceIdsTable;
+
+  //WheelBrand
+  //................................................................
+  const wheelBrandTableCfg = hip<any>({
+    key: 'wheelBrand',
+    type: 'components',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'brand', type: 'string' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const wheelBrand = hip<any>({
+    _tableCfg: wheelBrandTableCfg._hash,
+    _type: 'components',
+    _data: [
+      {
+        brand: 'Borbet',
+        _hash: '',
+      },
+      {
+        brand: 'Borbet',
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  }) as ComponentsTable<Json>;
+
+  //WheelDimension
+  //................................................................
+
+  const wheelDimensionTableCfg = hip<any>({
+    key: 'wheelDimension',
+    type: 'components',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'dimension', type: 'string' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const wheelDimension = hip<any>({
+    _tableCfg: wheelDimensionTableCfg._hash,
+    _type: 'components',
+    _data: [
+      {
+        dimension: '185/60 R16',
+        _hash: '',
+      },
+      {
+        dimension: '195/55 R16',
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  }) as ComponentsTable<Json>;
+
+  //WheelLayers and WheelCake
+  //................................................................
+
+  const wheelBrandLayerTableCfg = hip<TableCfg>({
+    key: 'wheelBrandLayer',
+    type: 'layers',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'sliceIdsTable', type: 'string' },
+      { key: 'sliceIdsTableRow', type: 'string' },
+      { key: 'componentsTable', type: 'string' },
+      { key: 'add', type: 'json' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const wheelBrandLayer = hip<any>({
+    _tableCfg: wheelBrandLayerTableCfg._hash,
+    _type: 'layers',
+    _data: [
+      {
+        add: {
+          BOB37382: wheelBrand._data[0]._hash || '',
+          BOB37383: wheelBrand._data[1]._hash || '',
+          _hash: '',
+        },
+        sliceIdsTable: 'wheelSliceId',
+        sliceIdsTableRow: wheelSliceId._data[0]._hash || '',
+        componentsTable: 'wheelBrand',
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  }) as LayersTable;
+
+  const wheelDimensionLayerTableCfg = hip<TableCfg>({
+    key: 'wheelDimensionLayer',
+    type: 'layers',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'sliceIdsTable', type: 'string' },
+      { key: 'sliceIdsTableRow', type: 'string' },
+      { key: 'componentsTable', type: 'string' },
+      { key: 'add', type: 'json' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const wheelDimensionLayer = hip<any>({
+    _tableCfg: wheelDimensionLayerTableCfg._hash,
+    _type: 'layers',
+    _data: [
+      {
+        add: {
+          BOB37382: wheelDimension._data[0]._hash || '',
+          BOB37383: wheelDimension._data[1]._hash || '',
+          _hash: '',
+        },
+        sliceIdsTable: 'wheelSliceId',
+        sliceIdsTableRow: wheelSliceId._data[0]._hash || '',
+        componentsTable: 'wheelDimension',
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  }) as LayersTable;
+
+  const wheelCakeTableCfg = hip<TableCfg>({
+    key: 'wheelCake',
+    type: 'cakes',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'sliceIdsTable', type: 'string' },
+      { key: 'sliceIdsRow', type: 'string' },
+      { key: 'layers', type: 'json' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const wheelCake = hip<any>({
+    _tableCfg: wheelCakeTableCfg._hash,
+    _type: 'cakes',
+    _data: [
+      {
+        sliceIdsTable: 'wheelSliceId',
+        sliceIdsRow: wheelSliceId._data[0]._hash || '',
+        layers: {
+          wheelBrandLayer: wheelBrandLayer._data[0]._hash || '',
+          wheelDimensionLayer: wheelDimensionLayer._data[0]._hash || '',
+        },
+      },
+    ],
+  }) as CakesTable;
+
+  const tableCfgs = {
+    _data: [
+      carSliceIdTableCfg,
+      carGeneralTableCfg,
+      carTechnicalTableCfg,
+      carColorTableCfg,
+      carGeneralLayerTableCfg,
+      carTechnicalLayerTableCfg,
+      carColorLayerTableCfg,
+      carCakeTableCfg,
+      wheelSliceIdTableCfg,
+      wheelBrandTableCfg,
+      wheelDimensionTableCfg,
+      wheelBrandLayerTableCfg,
+      wheelDimensionLayerTableCfg,
+      wheelCakeTableCfg,
+    ],
+  } as TablesCfgTable;
+
+  const carsExample = {
+    carSliceId,
+    carGeneral,
+    carTechnical,
+    carColor,
+    carGeneralLayer,
+    carTechnicalLayer,
+    carColorLayer,
+    carCake,
+    wheelSliceId,
+    wheelBrand,
+    wheelDimension,
+    wheelBrandLayer,
+    wheelDimensionLayer,
+    wheelCake,
+    tableCfgs,
+  };
+
+  return carsExample;
+};

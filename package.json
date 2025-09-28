@@ -35,7 +35,7 @@
     "@vitest/coverage-v8": "^3.2.4",
     "cross-env": "^10.0.0",
     "eslint": "^9.36.0",
-    "eslint-plugin-jsdoc": "^60.3.1",
+    "eslint-plugin-jsdoc": "^60.5.0",
     "eslint-plugin-tsdoc": "^0.4.0",
     "globals": "^16.4.0",
     "jsdoc": "^4.0.4",
@@ -53,7 +53,7 @@
     "@rljson/hash": "^0.0.16",
     "@rljson/io": "^0.0.43",
     "@rljson/json": "^0.0.22",
-    "@rljson/rljson": "^0.0.58",
+    "@rljson/rljson": "link:../rljson",
     "@rljson/validate": "^0.0.11",
     "object-traversal": "^1.0.1"
   },
@@ -61,6 +61,8 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ],
-    "overrides": {}
+    "overrides": {
+      "@rljson/rljson": "link:../rljson"
+    }
   }
 }
