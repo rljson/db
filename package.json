@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@rljson/hash": "^0.0.16",
-    "@rljson/io": "^0.0.43",
+    "@rljson/io": "link:../rljson-io",
     "@rljson/json": "^0.0.22",
     "@rljson/rljson": "link:../rljson",
     "@rljson/validate": "^0.0.11",
@@ -62,7 +62,8 @@
       "esbuild"
     ],
     "overrides": {
-      "@rljson/rljson": "link:../rljson"
+      "@rljson/rljson": "link:../rljson",
+      "@rljson/io": "link:../rljson-io"
     }
   }
 }

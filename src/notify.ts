@@ -1,11 +1,13 @@
-import { EditProtocolRow } from '@rljson/rljson';
-
 // @license
 // Copyright (c) 2025 Rljson
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
+class Notify {
+  // ...........................................................................
+  constructor() {}
 
-export declare abstract class Transform {
-  abstract run(): Promise<EditProtocolRow<any>>;
+  registerOnRoute() {}
+
+  registerOnOrigin() {}
 }

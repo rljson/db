@@ -4,19 +4,22 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { hsh } from '@rljson/hash';
 import { Io, IoMem } from '@rljson/io';
-import { Json, JsonValue, JsonValueH } from '@rljson/json';
+import { JsonValue } from '@rljson/json';
 import {
   BaseValidator,
-  ComponentRef,
+  ContentType,
   Edit,
-  Ref,
+  EditProtocolRow,
   Rljson,
   Route,
   TableCfg,
   Validate,
 } from '@rljson/rljson';
+
+import { TransformComponent } from './transform/transform-component.ts';
+import { TransformLayer } from './transform/transform-layer.ts';
+import { Transform } from './transform/transform.ts';
 
 /** Implements core functionalities like importing data, setting tables  */
 export class Core {
@@ -33,7 +36,7 @@ export class Core {
    * @throws when the table does not exist
    * @throws when the edit is invalid
    */
-  async run(edit: Edit<any>): Promise<any> {
+  async run(edit: Edit<any>): Promise<EditProtocolRow<any>> {
     const route: Route = Route.fromFlat(edit.route);
     const isRoot = route.isRoot;
 
@@ -50,24 +53,24 @@ export class Core {
       throw new Error(`Table ${tableKey} does not exist`);
     }
 
-    let ref: Ref;
-    if (edit.type === 'components') {
-      ref = await this.runComponentEdit(tableKey, edit.value);
+    const content = await this.contentType(tableKey);
+
+    let transform: Transform;
+    if (content === 'components') {
+      transform = new TransformComponent<any>(this._io, edit, tableKey);
+    } else if (content === 'layers') {
+      transform = new TransformLayer(this._io, edit, tableKey);
     } else {
-      throw new Error(`Unsupported edit type: ${edit.type}`);
+      throw new Error(`Table ${tableKey} is not supported for edits.`);
     }
 
-    return { [tableKey]: ref };
-  }
+    //Run Edit
+    const editProtocolRow = await transform.run();
 
-  async runComponentEdit(
-    tableKey: string,
-    value: JsonValueH,
-  ): Promise<ComponentRef> {
-    const component = value as JsonValue & { _hash?: string };
-    const rlJson = { [tableKey]: { _data: [component] } } as Rljson;
-    await this._io.write({ data: rlJson });
-    return hsh(component as Json)._hash as string;
+    //Protocol Edit
+    await this.protocol(tableKey, editProtocolRow);
+
+    return editProtocolRow;
   }
 
   // ...........................................................................
@@ -94,16 +97,17 @@ export class Core {
   async createEditProtocol(tableCfg: TableCfg): Promise<void> {
     const editProtocolTableCfg: TableCfg = {
       key: `${tableCfg.key}Edits`,
-      type: 'editProtocol',
+      type: 'edits',
       columns: [
         { key: '_hash', type: 'string' },
-        { key: 'id', type: 'number' },
+        { key: 'timeId', type: 'string' },
+        { key: `${tableCfg.key}Ref`, type: 'string' },
         { key: 'route', type: 'string' },
         { key: 'origin', type: 'string' },
         { key: 'previous', type: 'jsonArray' },
       ],
-      isHead: true,
-      isRoot: true,
+      isHead: false,
+      isRoot: false,
       isShared: false,
     };
     await this.createTable(editProtocolTableCfg);
@@ -129,6 +133,7 @@ export class Core {
   // ...........................................................................
   /**
    * Imports data into the memory.
+   * @param data - The rljson data to import.
    * @throws {Error} If the data is invalid.
    */
   async import(data: Rljson): Promise<void> {
@@ -149,6 +154,76 @@ export class Core {
   }
 
   // ...........................................................................
+  /**
+   * Adds an edit protocol row to the edits table of a table
+   * @param table - The table the edit was made on
+   * @param editProtocolRow - The edit protocol row to add
+   * @throws {Error} If the edits table does not exist
+   */
+  private async protocol(
+    table: string,
+    editProtocolRow: EditProtocolRow<any>,
+  ): Promise<void> {
+    const protocolTable = table + 'Edits';
+    const hasTable = await this.hasTable(protocolTable);
+    if (!hasTable) {
+      throw new Error(`Table ${table} does not exist`);
+    }
+
+    //Write edit protocol row to io
+    await this._io.write({
+      data: {
+        [protocolTable]: {
+          _data: [editProtocolRow],
+          _type: 'edits',
+        },
+      },
+    });
+  }
+
+  // ...........................................................................
+  /**
+   * Get the edit protocol of a table
+   * @param table - The table to get the edit protocol for
+   * @throws {Error} If the edits table does not exist
+   */
+  async getProtocol(
+    table: string,
+    options?: { sorted?: boolean; ascending?: boolean },
+  ): Promise<Rljson> {
+    const protocolTable = table + 'Edits';
+    const hasTable = await this.hasTable(protocolTable);
+    if (!hasTable) {
+      throw new Error(`Table ${table} does not exist`);
+    }
+
+    if (options === undefined) {
+      options = { sorted: false, ascending: true };
+    }
+
+    if (options.sorted) {
+      const dumpedTable = await this._io.dumpTable({ table: protocolTable });
+      const tableData = dumpedTable[protocolTable]
+        ._data as EditProtocolRow<any>[];
+
+      //Sort table
+      tableData.sort((a, b) => {
+        const aTime = a.timeId.split(':')[1];
+        const bTime = b.timeId.split(':')[1];
+        if (options.ascending) {
+          return aTime.localeCompare(bTime);
+        } else {
+          return bTime.localeCompare(aTime);
+        }
+      });
+
+      return { [protocolTable]: { _data: tableData, _type: 'edits' } };
+    }
+
+    return this._io.dumpTable({ table: protocolTable });
+  }
+
+  // ...........................................................................
   async tables(): Promise<Rljson> {
     return await this._io.dump();
   }
@@ -157,7 +232,12 @@ export class Core {
   async hasTable(table: string): Promise<boolean> {
     return await this._io.tableExists(table);
   }
-
+  // ...........................................................................
+  async contentType(table: string): Promise<ContentType | null> {
+    const t = await this._io.dumpTable({ table });
+    const contentType = t[table]?._type;
+    return contentType;
+  }
   // ...........................................................................
   /** Reads a specific row from a database table */
   readRow(table: string, rowHash: string): Promise<Rljson> {

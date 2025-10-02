@@ -6,6 +6,7 @@ settings:
 
 overrides:
   '@rljson/rljson': link:../rljson
+  '@rljson/io': link:../rljson-io
 
 importers:
 
@@ -15,8 +16,8 @@ importers:
         specifier: ^0.0.16
         version: 0.0.16
       '@rljson/io':
-        specifier: ^0.0.43
-        version: 0.0.43
+        specifier: link:../rljson-io
+        version: link:../rljson-io
       '@rljson/json':
         specifier: ^0.0.22
         version: 0.0.22
@@ -411,14 +412,6 @@ packages:
 
   '@rljson/hash@0.0.16':
     resolution: {integrity: sha512-RbMQUEP4uhSTVArvRRXR73bXyQRbghuYzhzQiJyDyTsyFJiDbEcSKEyU1VYbJ3PPEu6HUklRx6ieZC0kPGDEcQ==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/io@0.0.43':
-    resolution: {integrity: sha512-WECAW5NNs6sTXBh67O4SrfO6Ztwmlo0bYHBZUmEfz3mXUUV5bdHKPuZLl/JWQ84BvFK4nkp4nJ0fO8YiaKUjQQ==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/is-ready@0.0.17':
-    resolution: {integrity: sha512-rSDcGRWIngcOPJ/uE2kHGBhVoo/jEBKlmeJ5BdeDcSi3i6KrFIsIYepOJvybMc8+gcCOgecivCpPRd4fHksdcA==}
     engines: {node: '>=22.14.0'}
 
   '@rljson/json@0.0.21':
@@ -2107,16 +2100,6 @@ snapshots:
       '@aws-crypto/sha256-js': 5.2.0
       '@rljson/json': 0.0.21
       js-base64: 3.7.8
-
-  '@rljson/io@0.0.43':
-    dependencies:
-      '@rljson/hash': 0.0.16
-      '@rljson/is-ready': 0.0.17
-      '@rljson/json': 0.0.21
-      '@rljson/rljson': link:../rljson
-      '@rljson/validate': 0.0.11
-
-  '@rljson/is-ready@0.0.17': {}
 
   '@rljson/json@0.0.21': {}
 

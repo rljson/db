@@ -5,7 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import { hip } from '@rljson/hash';
-import { Json } from '@rljson/json';
+import { Json, JsonH } from '@rljson/json';
 import {
   CakesTable,
   ComponentsTable,
@@ -34,7 +34,7 @@ export interface CarsExample extends Rljson {
   tableCfgs: TablesCfgTable;
 }
 
-export interface CarGeneral extends Json {
+export interface CarGeneral extends JsonH {
   brand: string;
   type: string;
   doors: number;
