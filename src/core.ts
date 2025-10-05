@@ -9,17 +9,12 @@ import { JsonValue } from '@rljson/json';
 import {
   BaseValidator,
   ContentType,
-  Edit,
+  createEditProtocolTableCfg,
   EditProtocolRow,
   Rljson,
-  Route,
   TableCfg,
   Validate,
 } from '@rljson/rljson';
-
-import { TransformComponent } from './transform/transform-component.ts';
-import { TransformLayer } from './transform/transform-layer.ts';
-import { Transform } from './transform/transform.ts';
 
 /** Implements core functionalities like importing data, setting tables  */
 export class Core {
@@ -29,49 +24,6 @@ export class Core {
   static example = async () => {
     return new Core(await IoMem.example());
   };
-  // ...........................................................................
-  /**
-   * Runs an edit on the database
-   * @param edit - The edit to run
-   * @throws when the table does not exist
-   * @throws when the edit is invalid
-   */
-  async run(edit: Edit<any>): Promise<EditProtocolRow<any>> {
-    const route: Route = Route.fromFlat(edit.route);
-    const isRoot = route.isRoot;
-
-    if (!isRoot) {
-      return this.run({
-        ...edit,
-        route: route.deeper().flat,
-      });
-    }
-
-    const tableKey = route.segment();
-    const hasTable = await this.hasTable(tableKey);
-    if (!hasTable) {
-      throw new Error(`Table ${tableKey} does not exist`);
-    }
-
-    const content = await this.contentType(tableKey);
-
-    let transform: Transform;
-    if (content === 'components') {
-      transform = new TransformComponent<any>(this._io, edit, tableKey);
-    } else if (content === 'layers') {
-      transform = new TransformLayer(this._io, edit, tableKey);
-    } else {
-      throw new Error(`Table ${tableKey} is not supported for edits.`);
-    }
-
-    //Run Edit
-    const editProtocolRow = await transform.run();
-
-    //Protocol Edit
-    await this.protocol(tableKey, editProtocolRow);
-
-    return editProtocolRow;
-  }
 
   // ...........................................................................
   /**
@@ -95,22 +47,8 @@ export class Core {
    * @param tableCfg TableCfg of table
    */
   async createEditProtocol(tableCfg: TableCfg): Promise<void> {
-    const editProtocolTableCfg: TableCfg = {
-      key: `${tableCfg.key}Edits`,
-      type: 'edits',
-      columns: [
-        { key: '_hash', type: 'string' },
-        { key: 'timeId', type: 'string' },
-        { key: `${tableCfg.key}Ref`, type: 'string' },
-        { key: 'route', type: 'string' },
-        { key: 'origin', type: 'string' },
-        { key: 'previous', type: 'jsonArray' },
-      ],
-      isHead: false,
-      isRoot: false,
-      isShared: false,
-    };
-    await this.createTable(editProtocolTableCfg);
+    const cfg = createEditProtocolTableCfg(tableCfg);
+    await this.createTable(cfg);
   }
 
   // ...........................................................................
@@ -238,6 +176,7 @@ export class Core {
     const contentType = t[table]?._type;
     return contentType;
   }
+
   // ...........................................................................
   /** Reads a specific row from a database table */
   readRow(table: string, rowHash: string): Promise<Rljson> {

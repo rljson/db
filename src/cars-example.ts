@@ -9,6 +9,8 @@ import { Json, JsonH } from '@rljson/json';
 import {
   CakesTable,
   ComponentsTable,
+  createCakeTableCfg,
+  createLayerTableCfg,
   LayersTable,
   Rljson,
   SliceIdsTable,
@@ -177,20 +179,9 @@ export const carsExample = (): CarsExample => {
 
   //CarLayers and CarCake
   //................................................................
-  const carGeneralLayerTableCfg = hip<TableCfg>({
-    key: 'carGeneralLayer',
-    type: 'layers',
-    columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'sliceIdsTable', type: 'string' },
-      { key: 'sliceIdsTableRow', type: 'string' },
-      { key: 'componentsTable', type: 'string' },
-      { key: 'add', type: 'json' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
+  const carGeneralLayerTableCfg = hip<TableCfg>(
+    createLayerTableCfg('carGeneralLayer'),
+  ) as TableCfg;
 
   const carGeneralLayer = hip<any>({
     _tableCfg: carGeneralLayerTableCfg._hash,
@@ -211,20 +202,9 @@ export const carsExample = (): CarsExample => {
     _hash: '',
   }) as LayersTable;
 
-  const carTechnicalLayerTableCfg = hip<TableCfg>({
-    key: 'carTechnicalLayer',
-    type: 'layers',
-    columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'sliceIdsTable', type: 'string' },
-      { key: 'sliceIdsTableRow', type: 'string' },
-      { key: 'componentsTable', type: 'string' },
-      { key: 'add', type: 'json' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
+  const carTechnicalLayerTableCfg = hip<TableCfg>(
+    createLayerTableCfg('carTechnicalLayer'),
+  ) as TableCfg;
 
   const carTechnicalLayer = hip<any>({
     _tableCfg: carTechnicalLayerTableCfg._hash,
@@ -245,20 +225,9 @@ export const carsExample = (): CarsExample => {
     _hash: '',
   }) as LayersTable;
 
-  const carColorLayerTableCfg = hip<TableCfg>({
-    key: 'carColorLayer',
-    type: 'layers',
-    columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'sliceIdsTable', type: 'string' },
-      { key: 'sliceIdsTableRow', type: 'string' },
-      { key: 'componentsTable', type: 'string' },
-      { key: 'add', type: 'json' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
+  const carColorLayerTableCfg = hip<TableCfg>(
+    createLayerTableCfg('carColorLayer'),
+  ) as TableCfg;
 
   const carColorLayer = hip<any>({
     _tableCfg: carColorLayerTableCfg._hash,
@@ -279,19 +248,9 @@ export const carsExample = (): CarsExample => {
     _hash: '',
   }) as LayersTable;
 
-  const carCakeTableCfg = hip<TableCfg>({
-    key: 'carCake',
-    type: 'cakes',
-    columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'sliceIdsTable', type: 'string' },
-      { key: 'sliceIdsRow', type: 'string' },
-      { key: 'layers', type: 'json' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
+  const carCakeTableCfg = hip<TableCfg>(
+    createCakeTableCfg('carCake'),
+  ) as TableCfg;
 
   const carCake = hip<any>({
     _tableCfg: carCakeTableCfg._hash,
@@ -400,20 +359,9 @@ export const carsExample = (): CarsExample => {
   //WheelLayers and WheelCake
   //................................................................
 
-  const wheelBrandLayerTableCfg = hip<TableCfg>({
-    key: 'wheelBrandLayer',
-    type: 'layers',
-    columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'sliceIdsTable', type: 'string' },
-      { key: 'sliceIdsTableRow', type: 'string' },
-      { key: 'componentsTable', type: 'string' },
-      { key: 'add', type: 'json' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
+  const wheelBrandLayerTableCfg = hip<TableCfg>(
+    createLayerTableCfg('wheelBrandLayer'),
+  ) as TableCfg;
 
   const wheelBrandLayer = hip<any>({
     _tableCfg: wheelBrandLayerTableCfg._hash,
@@ -434,20 +382,9 @@ export const carsExample = (): CarsExample => {
     _hash: '',
   }) as LayersTable;
 
-  const wheelDimensionLayerTableCfg = hip<TableCfg>({
-    key: 'wheelDimensionLayer',
-    type: 'layers',
-    columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'sliceIdsTable', type: 'string' },
-      { key: 'sliceIdsTableRow', type: 'string' },
-      { key: 'componentsTable', type: 'string' },
-      { key: 'add', type: 'json' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
+  const wheelDimensionLayerTableCfg = hip<TableCfg>(
+    createLayerTableCfg('wheelDimensionLayer'),
+  ) as TableCfg;
 
   const wheelDimensionLayer = hip<any>({
     _tableCfg: wheelDimensionLayerTableCfg._hash,
@@ -468,19 +405,9 @@ export const carsExample = (): CarsExample => {
     _hash: '',
   }) as LayersTable;
 
-  const wheelCakeTableCfg = hip<TableCfg>({
-    key: 'wheelCake',
-    type: 'cakes',
-    columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'sliceIdsTable', type: 'string' },
-      { key: 'sliceIdsRow', type: 'string' },
-      { key: 'layers', type: 'json' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
+  const wheelCakeTableCfg = hip<TableCfg>(
+    createCakeTableCfg('wheelCake'),
+  ) as TableCfg;
 
   const wheelCake = hip<any>({
     _tableCfg: wheelCakeTableCfg._hash,
