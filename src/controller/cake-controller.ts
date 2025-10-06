@@ -17,7 +17,7 @@ import {
   timeId,
 } from '@rljson/rljson';
 
-import { Db } from '../db.ts';
+import { Core } from '../core.ts';
 
 import {
   Controller,
@@ -25,7 +25,7 @@ import {
   ControllerRefs,
 } from './controller.ts';
 
-export interface CakeValue extends Partial<Cake> {
+export interface CakeValue extends Json {
   layers: {
     [layerTable: TableKey]: LayerRef;
   };
@@ -35,15 +35,15 @@ export interface CakeValue extends Partial<Cake> {
 export type CakeControllerCommands = ControllerCommands;
 
 export interface CakeControllerRefs extends ControllerRefs {
-  sliceIdsTable: TableKey;
-  sliceIdsRow: SliceIdsRef;
+  sliceIdsTable?: TableKey;
+  sliceIdsRow?: SliceIdsRef;
 }
 
 export class CakeController<N extends string>
   implements Controller<CakesTable, N>
 {
   constructor(
-    private readonly _db: Db,
+    private readonly _core: Core,
     private readonly _tableKey: TableKey,
     private _refs?: CakeControllerRefs,
   ) {}
@@ -59,7 +59,7 @@ export class CakeController<N extends string>
     }
 
     // Table must be of type cakes
-    const rljson = await this._db.core.dumpTable(this._tableKey);
+    const rljson = await this._core.dumpTable(this._tableKey);
     const table = rljson[this._tableKey] as CakesTable;
     if (!table) {
       throw new Error(`Table ${this._tableKey} does not exist.`);
@@ -99,7 +99,7 @@ export class CakeController<N extends string>
   }
 
   async get(ref: string): Promise<Cake | null> {
-    const row = await this._db.core.readRow(this._tableKey, ref);
+    const row = await this._core.readRow(this._tableKey, ref);
     if (!row || !row[this._tableKey] || !row[this._tableKey]._data) {
       return null;
     }
@@ -107,7 +107,7 @@ export class CakeController<N extends string>
   }
 
   async table(): Promise<CakesTable> {
-    const rljson = await this._db.core.dumpTable(this._tableKey);
+    const rljson = await this._core.dumpTable(this._tableKey);
     if (!rljson[this._tableKey]) {
       throw new Error(`Table ${this._tableKey} does not exist.`);
     }
@@ -116,7 +116,7 @@ export class CakeController<N extends string>
 
   async run(
     command: CakeControllerCommands,
-    value: CakeValue,
+    value: Json,
     origin?: Ref,
     previous?: string[],
     refs?: CakeControllerRefs,
@@ -135,7 +135,7 @@ export class CakeController<N extends string>
     const rlJson = { [this._tableKey]: { _data: [cake] } } as Rljson;
 
     //Write component to io
-    await this._db.core.import(rlJson);
+    await this._core.import(rlJson);
 
     //Create EditProtocolRow
     const result = {

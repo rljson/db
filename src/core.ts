@@ -10,7 +10,6 @@ import {
   BaseValidator,
   ContentType,
   createEditProtocolTableCfg,
-  EditProtocolRow,
   Rljson,
   TableCfg,
   Validate,
@@ -89,76 +88,6 @@ export class Core {
 
     // Write data
     await this._io.write({ data });
-  }
-
-  // ...........................................................................
-  /**
-   * Adds an edit protocol row to the edits table of a table
-   * @param table - The table the edit was made on
-   * @param editProtocolRow - The edit protocol row to add
-   * @throws {Error} If the edits table does not exist
-   */
-  private async protocol(
-    table: string,
-    editProtocolRow: EditProtocolRow<any>,
-  ): Promise<void> {
-    const protocolTable = table + 'Edits';
-    const hasTable = await this.hasTable(protocolTable);
-    if (!hasTable) {
-      throw new Error(`Table ${table} does not exist`);
-    }
-
-    //Write edit protocol row to io
-    await this._io.write({
-      data: {
-        [protocolTable]: {
-          _data: [editProtocolRow],
-          _type: 'edits',
-        },
-      },
-    });
-  }
-
-  // ...........................................................................
-  /**
-   * Get the edit protocol of a table
-   * @param table - The table to get the edit protocol for
-   * @throws {Error} If the edits table does not exist
-   */
-  async getProtocol(
-    table: string,
-    options?: { sorted?: boolean; ascending?: boolean },
-  ): Promise<Rljson> {
-    const protocolTable = table + 'Edits';
-    const hasTable = await this.hasTable(protocolTable);
-    if (!hasTable) {
-      throw new Error(`Table ${table} does not exist`);
-    }
-
-    if (options === undefined) {
-      options = { sorted: false, ascending: true };
-    }
-
-    if (options.sorted) {
-      const dumpedTable = await this._io.dumpTable({ table: protocolTable });
-      const tableData = dumpedTable[protocolTable]
-        ._data as EditProtocolRow<any>[];
-
-      //Sort table
-      tableData.sort((a, b) => {
-        const aTime = a.timeId.split(':')[1];
-        const bTime = b.timeId.split(':')[1];
-        if (options.ascending) {
-          return aTime.localeCompare(bTime);
-        } else {
-          return bTime.localeCompare(aTime);
-        }
-      });
-
-      return { [protocolTable]: { _data: tableData, _type: 'edits' } };
-    }
-
-    return this._io.dumpTable({ table: protocolTable });
   }
 
   // ...........................................................................

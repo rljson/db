@@ -23,10 +23,12 @@ import {
   LayerController,
   LayerControllerRefs,
 } from '../src/controller/layer-controller';
+import { Core } from '../src/core';
 import { Db } from '../src/db';
 
 describe('Controller', () => {
   let db: Db;
+  let core: Core;
 
   beforeEach(async () => {
     //Init io
@@ -34,8 +36,9 @@ describe('Controller', () => {
     await io.init();
     await io.isReady();
 
-    //Init Core
+    //Init Db
     db = new Db(io);
+    core = db.core;
 
     //Create Tables for TableCfgs in carsExample
     for (const tableCfg of carsExample().tableCfgs._data) {
@@ -53,14 +56,14 @@ describe('Controller', () => {
         let componentCtrl: ComponentController<'CarGeneral', CarGeneral>;
 
         //Wrong TableKey
-        componentCtrl = new ComponentController(db, '#');
+        componentCtrl = new ComponentController(core, '#');
         await expect(componentCtrl.init()).rejects.toThrow(
           'Table "#" not found',
         );
 
         //Table not of type components
         // Create a mock table, which is not of type components
-        componentCtrl = new ComponentController(db, 'carSliceId');
+        componentCtrl = new ComponentController(core, 'carSliceId');
         await expect(componentCtrl.init()).rejects.toThrow(
           'Table carSliceId is not of type components.',
         );
@@ -69,7 +72,7 @@ describe('Controller', () => {
         //Create ComponentController
         const carGeneralComponentController = await createController(
           'components',
-          db,
+          core,
           'carGeneral',
         );
 
@@ -86,7 +89,7 @@ describe('Controller', () => {
         //Create ComponentController
         const carGeneralComponentController = await createController(
           'components',
-          db,
+          core,
           'carGeneral',
         );
 
@@ -106,7 +109,7 @@ describe('Controller', () => {
         //Create ComponentController
         const carGeneralComponentController = await createController(
           'components',
-          db,
+          core,
           'carGeneral',
         );
 
@@ -168,7 +171,7 @@ describe('Controller', () => {
         //Create LayerController
         const carGeneralLayerController = await createController(
           'layers',
-          db,
+          core,
           'carGeneralLayer',
           carGeneralLayerRefs,
         );
@@ -257,13 +260,13 @@ describe('Controller', () => {
         let layerCtrl: LayerController<'CarGeneral'>;
 
         //Wrong TableKey
-        layerCtrl = new LayerController(db, '#', carGeneralLayerRefs);
+        layerCtrl = new LayerController(core, '#', carGeneralLayerRefs);
         await expect(layerCtrl.init()).rejects.toThrow(
           'Table # is not supported by LayerController.',
         );
 
         //Table not existing
-        layerCtrl = new LayerController(db, '#Layer', carGeneralLayerRefs);
+        layerCtrl = new LayerController(core, '#Layer', carGeneralLayerRefs);
         await expect(layerCtrl.init()).rejects.toThrow(
           'Table "#Layer" not found',
         );
@@ -277,13 +280,17 @@ describe('Controller', () => {
         } as TableCfg;
         await db.core.createTable(rmhsh(mockCfg) as TableCfg);
 
-        layerCtrl = new LayerController(db, mockLayerName, carGeneralLayerRefs);
+        layerCtrl = new LayerController(
+          core,
+          mockLayerName,
+          carGeneralLayerRefs,
+        );
         await expect(layerCtrl.init()).rejects.toThrow(
           'Table mockLayer is not of type layers.',
         );
 
         //Missing Refs
-        layerCtrl = new LayerController(db, 'carGeneralLayer', {
+        layerCtrl = new LayerController(core, 'carGeneralLayer', {
           sliceIdsTable: 'carSliceId',
           componentsTable: 'carGeneral',
         } as LayerControllerRefs);
@@ -293,7 +300,7 @@ describe('Controller', () => {
 
         //Valid
         layerCtrl = new LayerController(
-          db,
+          core,
           'carGeneralLayer',
           carGeneralLayerRefs,
         );
@@ -312,7 +319,7 @@ describe('Controller', () => {
         //Create LayerController
         const carGeneralLayerController = await createController(
           'layers',
-          db,
+          core,
           'carGeneralLayer',
           carGeneralLayerRefs,
         );
@@ -334,7 +341,7 @@ describe('Controller', () => {
         //Create LayerController
         const carGeneralLayerController = await createController(
           'layers',
-          db,
+          core,
           'carGeneralLayer',
           carGeneralLayerRefs,
         );
@@ -364,7 +371,7 @@ describe('Controller', () => {
         //Create LayerController
         const carGeneralLayerController = await createController(
           'layers',
-          db,
+          core,
           'carGeneralLayer',
           carGeneralLayerRefs,
         );
@@ -424,7 +431,7 @@ describe('Controller', () => {
         //Create LayerController
         const carGeneralLayerController = await createController(
           'layers',
-          db,
+          core,
           'carGeneralLayer',
           carGeneralLayerRefs,
         );
@@ -512,13 +519,13 @@ describe('Controller', () => {
         let cakeCtrl: CakeController<'CarCake'>;
 
         //Wrong TableKey
-        cakeCtrl = new CakeController(db, '#', carCakeRefs);
+        cakeCtrl = new CakeController(core, '#', carCakeRefs);
         await expect(cakeCtrl.init()).rejects.toThrow(
           'Table # is not supported by CakeController.',
         );
 
         //Table not existing
-        cakeCtrl = new CakeController(db, '#Cake', carCakeRefs);
+        cakeCtrl = new CakeController(core, '#Cake', carCakeRefs);
         await expect(cakeCtrl.init()).rejects.toThrow(
           'Table "#Cake" not found',
         );
@@ -532,13 +539,13 @@ describe('Controller', () => {
         } as TableCfg;
         await db.core.createTable(rmhsh(mockCfg) as TableCfg);
 
-        cakeCtrl = new CakeController(db, mockCakesName, carCakeRefs);
+        cakeCtrl = new CakeController(core, mockCakesName, carCakeRefs);
         await expect(cakeCtrl.init()).rejects.toThrow(
           'Table mockCake is not of type cakes.',
         );
 
         //Missing Refs
-        cakeCtrl = new CakeController(db, 'carCake', {
+        cakeCtrl = new CakeController(core, 'carCake', {
           sliceIdsTable: 'carSliceId',
         } as CakeControllerRefs);
         await expect(cakeCtrl.init()).rejects.toThrow(
@@ -546,7 +553,7 @@ describe('Controller', () => {
         );
 
         //Valid
-        cakeCtrl = new CakeController(db, 'carCake', carCakeRefs);
+        cakeCtrl = new CakeController(core, 'carCake', carCakeRefs);
         await cakeCtrl.init();
         expect(cakeCtrl).toBeDefined();
       });
@@ -561,7 +568,7 @@ describe('Controller', () => {
         //Create CakeController
         const carCakeController = await createController(
           'cakes',
-          db,
+          core,
           'carCake',
           carCakeRefs,
         );
@@ -582,7 +589,7 @@ describe('Controller', () => {
         //Create CakeController
         const carCakeController = await createController(
           'cakes',
-          db,
+          core,
           'carCake',
           carCakeRefs,
         );
@@ -610,7 +617,7 @@ describe('Controller', () => {
         //Create CakeController
         const carCakeController = await createController(
           'cakes',
-          db,
+          core,
           'carCake',
           carCakeRefs,
         );
@@ -671,7 +678,7 @@ describe('Controller', () => {
         //Create CakeController without Refs
         const carCakeController = (await createController(
           'cakes',
-          db,
+          core,
           'carCake',
         )) as CakeController<'CarCake'>;
 

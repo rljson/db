@@ -18,7 +18,7 @@ import {
   timeId,
 } from '@rljson/rljson';
 
-import { Db } from '../db.ts';
+import { Core } from '../core.ts';
 
 import {
   Controller,
@@ -29,16 +29,16 @@ import {
 export type LayerControllerCommands = (ControllerCommands & 'add') | 'remove';
 
 export interface LayerControllerRefs extends ControllerRefs {
-  sliceIdsTable: TableKey;
-  sliceIdsTableRow: SliceIdsRef;
-  componentsTable: TableKey;
+  sliceIdsTable?: TableKey;
+  sliceIdsTableRow?: SliceIdsRef;
+  componentsTable?: TableKey;
 }
 
 export class LayerController<N extends string>
   implements Controller<LayersTable, N>
 {
   constructor(
-    private readonly _db: Db,
+    private readonly _core: Core,
     private readonly _tableKey: TableKey,
     private _refs?: LayerControllerRefs,
   ) {}
@@ -54,8 +54,8 @@ export class LayerController<N extends string>
     }
 
     // Table must be of type layers
-    const rljson = await this._db.core.dumpTable(this._tableKey);
-    const table = rljson[this._tableKey];
+    const rljson = await this._core.dumpTable(this._tableKey);
+    const table = rljson[this._tableKey] as LayersTable;
     if (!table) {
       throw new Error(`Table ${this._tableKey} does not exist.`);
     }
@@ -76,8 +76,7 @@ export class LayerController<N extends string>
       }
     } else {
       // Try to read refs from first row of layers table
-      const layersTable = table[this._tableKey] as LayersTable;
-      const layer = layersTable._data[0] as LayerControllerRefs;
+      const layer = table._data[0] as LayerControllerRefs;
       this._refs = {
         sliceIdsTable: layer.sliceIdsTable,
         sliceIdsTableRow: layer.sliceIdsTableRow,
@@ -105,7 +104,7 @@ export class LayerController<N extends string>
   }
 
   async get(ref: string): Promise<Layer | null> {
-    const row = await this._db.core.readRow(this._tableKey, ref);
+    const row = await this._core.readRow(this._tableKey, ref);
     if (!row || !row[this._tableKey] || !row[this._tableKey]._data) {
       return null;
     }
@@ -113,7 +112,7 @@ export class LayerController<N extends string>
   }
 
   async table(): Promise<LayersTable> {
-    const rljson = await this._db.core.dumpTable(this._tableKey);
+    const rljson = await this._core.dumpTable(this._tableKey);
     if (!rljson[this._tableKey]) {
       throw new Error(`Table ${this._tableKey} does not exist.`);
     }
@@ -122,7 +121,7 @@ export class LayerController<N extends string>
 
   async run(
     command: LayerControllerCommands,
-    value: Record<SliceId, ComponentRef>,
+    value: Json,
     origin?: Ref,
     previous?: string[],
     refs?: LayerControllerRefs,
@@ -138,19 +137,19 @@ export class LayerController<N extends string>
     const layer =
       command === 'add'
         ? {
-            add: value,
+            add: value as Record<SliceId, ComponentRef>,
             ...(refs || this._refs),
           }
         : ({
             add: {},
-            remove: value,
+            remove: value as Record<SliceId, ComponentRef>,
             ...(refs || this._refs),
           } as Layer & { _hash?: string });
 
     const rlJson = { [this._tableKey]: { _data: [layer] } } as Rljson;
 
     //Write component to io
-    await this._db.core.import(rlJson);
+    await this._core.import(rlJson);
 
     //Create EditProtocolRow
     const result = {

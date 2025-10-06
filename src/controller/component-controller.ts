@@ -14,7 +14,7 @@ import {
   timeId,
 } from '@rljson/rljson';
 
-import { Db } from '../db.ts';
+import { Core } from '../core.ts';
 
 import {
   Controller,
@@ -26,7 +26,7 @@ export class ComponentController<N extends string, T extends Json>
   implements Controller<ComponentsTable<T>, N>
 {
   constructor(
-    private readonly _db: Db,
+    private readonly _core: Core,
     private readonly _tableKey: TableKey,
     private _refs?: ControllerRefs,
   ) {}
@@ -39,7 +39,7 @@ export class ComponentController<N extends string, T extends Json>
     }
 
     // Table must be of type components
-    const rljson = await this._db.core.dumpTable(this._tableKey);
+    const rljson = await this._core.dumpTable(this._tableKey);
     const table = rljson[this._tableKey];
     if (table._type !== 'components') {
       throw new Error(`Table ${this._tableKey} is not of type components.`);
@@ -84,7 +84,7 @@ export class ComponentController<N extends string, T extends Json>
     const rlJson = { [this._tableKey]: { _data: [component] } } as Rljson;
 
     //Write component to io
-    await this._db.core.import(rlJson);
+    await this._core.import(rlJson);
 
     return {
       //Ref to component
@@ -101,7 +101,7 @@ export class ComponentController<N extends string, T extends Json>
   }
 
   async get(ref: string): Promise<T | null> {
-    const row = await this._db.core.readRow(this._tableKey, ref);
+    const row = await this._core.readRow(this._tableKey, ref);
     if (!row || !row[this._tableKey] || !row[this._tableKey]._data) {
       return null;
     }
@@ -109,7 +109,7 @@ export class ComponentController<N extends string, T extends Json>
   }
 
   async table(): Promise<ComponentsTable<T>> {
-    const rljson = await this._db.core.dumpTable(this._tableKey);
+    const rljson = await this._core.dumpTable(this._tableKey);
     if (!rljson[this._tableKey]) {
       throw new Error(`Table ${this._tableKey} does not exist.`);
     }
