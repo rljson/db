@@ -6,13 +6,7 @@
 
 import { Json } from '@rljson/json';
 import {
-  Cake,
-  ContentType,
-  EditProtocolRow,
-  Layer,
-  Ref,
-  TableKey,
-  TableType,
+  Cake, ContentType, EditCommand, EditProtocolRow, Layer, Ref, TableKey, TableType
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
@@ -21,8 +15,9 @@ import { CakeController, CakeControllerRefs } from './cake-controller.ts';
 import { ComponentController } from './component-controller.ts';
 import { LayerController, LayerControllerRefs } from './layer-controller.ts';
 
+
 export type ControllerRefs = Partial<Layer> & Partial<Cake>;
-export type ControllerCommands = 'add' | 'remove';
+export type ControllerCommands = EditCommand;
 
 export type ControllerRunFn<N extends string> = (
   command: ControllerCommands,

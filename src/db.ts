@@ -5,7 +5,13 @@
 // found in the LICENSE file in the root of this package.
 
 import { Io, IoMem } from '@rljson/io';
-import { Edit, EditProtocolRow, Rljson, Route } from '@rljson/rljson';
+import {
+  Edit,
+  EditProtocolRow,
+  Rljson,
+  Route,
+  validateEdit,
+} from '@rljson/rljson';
 
 import {
   Controller,
@@ -33,59 +39,82 @@ export class Db {
   readonly core: Core;
 
   async resolve(edit: Edit<any>): Promise<EditProtocolRow<any>> {
-    const route = Route.fromFlat(edit.route);
+    const initialRoute = Route.fromFlat(edit.route);
     const runs = await this._resolveRuns(edit);
+    const errors = validateEdit(edit);
+    if (!!errors.hasErrors) {
+      throw new Error(`Edit is not valid:\n${JSON.stringify(errors, null, 2)}`);
+    }
 
-    return this._run(edit, route, runs);
+    return this._run(edit, initialRoute, runs);
   }
 
+  // ...........................................................................
+  /**
+   * Recursively runs controllers based on the route of the edit
+   * @param edit - The edit to run
+   * @param route - The route of the edit
+   * @param runFns - A record of controller run functions, keyed by table name
+   * @returns The result of the edit
+   * @throws {Error} If the route is not valid or if any controller cannot be created
+   */
   private async _run(
     edit: Edit<any>,
     route: Route,
     runFns: Record<string, ControllerRunFn<any>>,
   ): Promise<EditProtocolRow<any>> {
+    let result: EditProtocolRow<any>;
+    let tableKey: string;
+
     if (!route.isRoot) {
       //Run nested controller first
       const childRoute = route.deeper(1);
 
-      //Run child controller
+      //Create edits for child values
+      if (typeof edit.value !== 'object' || edit.value === null) {
+        throw new Error(
+          `Edit value must be an object for nested routes. Got ${typeof edit.value}.`,
+        );
+      }
+
+      //Iterate over child values and create edits for each
       const childValues = Object.entries(edit.value);
       const childRefs: Record<string, string> = {};
       for (const [k, v] of childValues) {
         const childEdit: Edit<any> = { ...edit, value: v };
         const childResult = await this._run(childEdit, childRoute, runFns);
-        const childRefKey = childRoute.segment() + 'Ref';
+        const childRefKey = childRoute.top + 'Ref';
         const childRef = (childResult as any)[childRefKey] as string;
 
         childRefs[k] = childRef;
       }
 
-      const runFn = runFns[route.segment(0)];
+      //Run parent controller with child refs as value
+      tableKey = route.segment(0);
+      const runFn = runFns[tableKey];
       if (!runFn) {
         throw new Error(`No controller found for route ${route.root}`);
       }
-
-      const result = await runFn(
-        edit.command,
-        childRefs,
-        edit.origin,
-        edit.previous,
-      );
-      return { ...result, route: edit.route };
+      result = await runFn(edit.command, childRefs, edit.origin, edit.previous);
     } else {
       //Run root controller
-      const runFn = runFns[route.root];
+      tableKey = route.root;
+      const runFn = runFns[tableKey];
       if (!runFn) {
         throw new Error(`No controller found for route ${route.root}`);
       }
-      const result = await runFn(
+      result = await runFn(
         edit.command,
         edit.value,
         edit.origin,
         edit.previous,
       );
-      return { ...result, route: edit.route };
     }
+
+    //Write protocol
+    await this._writeProtocol(tableKey, result);
+
+    return { ...result, route: edit.route };
   }
 
   // ...........................................................................
@@ -99,7 +128,7 @@ export class Db {
     edit: Edit<any>,
   ): Promise<Record<string, ControllerRunFn<any>>> {
     // Get Controllers and their Run Functions
-    const controllers = await this.indexedControllers(
+    const controllers = await this._indexedControllers(
       Route.fromFlat(edit.route),
     );
     const runFns: Record<string, ControllerRunFn<any>> = {};
@@ -141,7 +170,7 @@ export class Db {
   }
 
   // ...........................................................................
-  private async indexedControllers(
+  private async _indexedControllers(
     route: Route,
   ): Promise<Record<string, Controller<any, any>>> {
     // Validate Route
@@ -164,7 +193,7 @@ export class Db {
    * @param editProtocolRow - The edit protocol row to add
    * @throws {Error} If the edits table does not exist
    */
-  async protocol(
+  private async _writeProtocol(
     table: string,
     editProtocolRow: EditProtocolRow<any>,
   ): Promise<void> {

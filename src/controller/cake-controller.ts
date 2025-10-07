@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Rljson
 //
 // Use of this source code is governed by terms that can be
-import { hsh } from '@rljson/hash';
+import { hsh, rmhsh } from '@rljson/hash';
 import { Json } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
@@ -32,7 +32,7 @@ export interface CakeValue extends Json {
   id?: string;
 }
 
-export type CakeControllerCommands = ControllerCommands;
+export type CakeControllerCommands = ControllerCommands | `add@${string}`;
 
 export interface CakeControllerRefs extends ControllerRefs {
   sliceIdsTable?: TableKey;
@@ -122,13 +122,22 @@ export class CakeController<N extends string>
     refs?: CakeControllerRefs,
   ): Promise<EditProtocolRow<any>> {
     // Validate command
-    if (command !== 'add') {
+    if (!command.startsWith('add')) {
       throw new Error(`Command ${command} is not supported by CakeController.`);
     }
 
+    // Merge with given base ref
+    const baseCakeRef = command.split('@')[1];
+    const { [this._tableKey]: baseCakesTable } = await this._core.readRow(
+      this._tableKey,
+      baseCakeRef,
+    );
+    const baseCake = baseCakesTable._data?.[0] as Cake;
+    const baseCakeLayers = rmhsh(baseCake.layers) || {};
+
     // Cake to add
     const cake = {
-      ...value,
+      layers: { ...baseCakeLayers, ...value },
       ...(refs || this._refs),
     };
 

@@ -79,7 +79,13 @@ export class Core {
     validate.addValidator(new BaseValidator());
 
     const result = await validate.run(data);
-    if (result.hasErrors || (result.base && result.base.hasErrors)) {
+    // If there are errors and they are not refsNotFound, throw an error
+    // refsNotFound can be ignored because we dont check against existing data
+    // when importing new data
+    if (
+      (result.hasErrors || (result.base && result.base.hasErrors)) &&
+      !result.base.refsNotFound
+    ) {
       throw new Error(
         'The imported rljson data is not valid:\n' +
           JSON.stringify(result, null, 2),

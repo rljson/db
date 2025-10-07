@@ -70,7 +70,7 @@ export class ComponentController<N extends string, T extends Json>
     refs?: ControllerRefs,
   ): Promise<EditProtocolRow<N>> {
     // Validate command
-    if (command !== 'add') {
+    if (!command.startsWith('add')) {
       throw new Error(
         `Command ${command} is not supported by ComponentController.`,
       );

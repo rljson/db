@@ -87,7 +87,7 @@ describe('Db', () => {
         expect(result.previous).toEqual([]);
       });
 
-      it('resolves nested structures: layer/component', async () => {
+      it('resolves nested: layer/component', async () => {
         const edit: Edit<Json> = {
           route: '/carGeneralLayer/carGeneral',
           command: 'add',
@@ -97,6 +97,11 @@ describe('Db', () => {
               brand: 'Porsche',
               doors: 4,
               type: 'Cayenne E-Hybrid',
+            } as CarGeneral,
+            VIN4: {
+              brand: 'Mercedes Benz',
+              doors: 4,
+              type: 'EQC 400 4MATIC',
             } as CarGeneral,
           } as Record<string, CarGeneral>,
           origin: 'H45H',
@@ -111,6 +116,86 @@ describe('Db', () => {
         expect(result.route).toBe('/carGeneralLayer/carGeneral');
         expect(result.origin).toBe('H45H');
         expect(result.previous).toEqual([]);
+
+        //Check if new layer is in db
+        const { carGeneralLayer: layerTable } = await db.core.dumpTable(
+          'carGeneralLayer',
+        );
+        const newLayer = layerTable._data.find(
+          (l) => l._hash === result.carGeneralLayerRef,
+        );
+        expect(newLayer).toBeDefined();
+
+        //Check if new components are in db
+        const { carGeneral: componentTable } = await db.core.dumpTable(
+          'carGeneral',
+        );
+        const newComponents = componentTable._data.filter(
+          (c) =>
+            c._hash === (newLayer as any).add.VIN3 ||
+            c._hash === (newLayer as any).add.VIN4,
+        );
+        expect(newComponents.length).toBe(2);
+      });
+
+      it('resolves nested: cake/layer/component', async () => {
+        const edit: Edit<Json> = {
+          route: '/carCake/carGeneralLayer/carGeneral',
+          command: 'add@rezIXkbWisvjRvYoyRAg0q',
+          value: {
+            carGeneralLayer: {
+              VIN5: {
+                brand: 'Porsche',
+                doors: 2,
+                type: '911 Carrera 4S',
+              } as CarGeneral,
+              VIN6: {
+                brand: 'Mercedes Benz',
+                doors: 4,
+                type: 'EQE 350+',
+              } as CarGeneral,
+            } as Record<string, CarGeneral>,
+          } as Record<string, Record<string, CarGeneral>>,
+          origin: 'H45H',
+          previous: [] /*TODO: Add previous on all levels*/,
+          acknowledged: false,
+        };
+
+        const result = await db.resolve(edit);
+        expect(result).toBeDefined();
+        expect(result.timeId).toBeDefined();
+        expect(result.carCakeRef).toBeDefined();
+        expect(result.route).toBe('/carCake/carGeneralLayer/carGeneral');
+        expect(result.origin).toBe('H45H');
+        expect(result.previous).toEqual([]);
+
+        //Check if new cake is in db
+        const { carCake: cakeTable } = await db.core.dumpTable('carCake');
+        const newCake = cakeTable._data.find(
+          (c) => c._hash === result.carCakeRef,
+        );
+        expect(newCake).toBeDefined();
+
+        //Check if new layer is in db
+        const { carGeneralLayer: layerTable } = await db.core.dumpTable(
+          'carGeneralLayer',
+        );
+        const newLayer = layerTable._data.find(
+          (l) => l._hash === (newCake as any).layers.carGeneralLayer,
+        );
+        expect(newLayer).toBeDefined();
+
+        //Check if new components are in db
+        const { carGeneral: componentTable } = await db.core.dumpTable(
+          'carGeneral',
+        );
+        const newComponents = componentTable._data.filter(
+          (c) =>
+            c._hash ===
+              (newLayer as any).add.VIN5 /*TODO: Fix typing for layers*/ ||
+            c._hash === (newLayer as any).add.VIN6,
+        );
+        expect(newComponents.length).toBe(2); //Only checking first layer components
       });
     });
   });

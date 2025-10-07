@@ -6,27 +6,14 @@ import { hsh } from '@rljson/hash';
 import { Json } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  ComponentRef,
-  EditProtocolRow,
-  Layer,
-  LayersTable,
-  Ref,
-  Rljson,
-  SliceId,
-  SliceIdsRef,
-  TableKey,
-  timeId,
+  ComponentRef, EditCommand, EditProtocolRow, Layer, LayersTable, Ref, Rljson, SliceId, SliceIdsRef,
+  TableKey, timeId
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
-import {
-  Controller,
-  ControllerCommands,
-  ControllerRefs,
-} from './controller.ts';
+import { Controller, ControllerRefs } from './controller.ts';
 
-export type LayerControllerCommands = (ControllerCommands & 'add') | 'remove';
 
 export interface LayerControllerRefs extends ControllerRefs {
   sliceIdsTable?: TableKey;
@@ -120,14 +107,14 @@ export class LayerController<N extends string>
   }
 
   async run(
-    command: LayerControllerCommands,
+    command: EditCommand,
     value: Json,
     origin?: Ref,
     previous?: string[],
     refs?: LayerControllerRefs,
   ): Promise<EditProtocolRow<any>> {
     // Validate command
-    if (command !== 'add' && command !== 'remove') {
+    if (!command.startsWith('add') && !command.startsWith('remove')) {
       throw new Error(
         `Command ${command} is not supported by LayerController.`,
       );
@@ -135,7 +122,7 @@ export class LayerController<N extends string>
 
     // layer to add/remove
     const layer =
-      command === 'add'
+      command.startsWith('add') === true
         ? {
             add: value as Record<SliceId, ComponentRef>,
             ...(refs || this._refs),
