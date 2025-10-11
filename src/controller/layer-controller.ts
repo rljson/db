@@ -6,14 +6,23 @@ import { hsh } from '@rljson/hash';
 import { Json } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  ComponentRef, EditCommand, EditProtocolRow, Layer, LayersTable, Ref, Rljson, SliceId, SliceIdsRef,
-  TableKey, timeId
+  ComponentRef,
+  EditCommand,
+  EditProtocolRow,
+  Layer,
+  LayersTable,
+  Ref,
+  Rljson,
+  SliceId,
+  SliceIdsRef,
+  TableKey,
+  timeId,
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
+import { BaseController } from './base-controller.ts';
 import { Controller, ControllerRefs } from './controller.ts';
-
 
 export interface LayerControllerRefs extends ControllerRefs {
   sliceIdsTable?: TableKey;
@@ -22,13 +31,16 @@ export interface LayerControllerRefs extends ControllerRefs {
 }
 
 export class LayerController<N extends string>
+  extends BaseController<LayersTable>
   implements Controller<LayersTable, N>
 {
   constructor(
-    private readonly _core: Core,
-    private readonly _tableKey: TableKey,
+    protected readonly _core: Core,
+    protected readonly _tableKey: TableKey,
     private _refs?: LayerControllerRefs,
-  ) {}
+  ) {
+    super(_core, _tableKey);
+  }
 
   async init() {
     // Validate Table
@@ -72,45 +84,10 @@ export class LayerController<N extends string>
     }
   }
 
-  async add(
-    value: Record<SliceId, ComponentRef>,
-    origin?: Ref,
-    previous?: string[],
-    refs?: LayerControllerRefs,
-  ): Promise<EditProtocolRow<N>> {
-    return this.run('add', value, origin, previous, refs || this._refs);
-  }
-
-  async remove(
-    value: Record<SliceId, ComponentRef>,
-    origin?: Ref,
-    previous?: string[],
-    refs?: LayerControllerRefs,
-  ): Promise<EditProtocolRow<N>> {
-    return this.run('remove', value, origin, previous, refs || this._refs);
-  }
-
-  async get(ref: string): Promise<Layer | null> {
-    const row = await this._core.readRow(this._tableKey, ref);
-    if (!row || !row[this._tableKey] || !row[this._tableKey]._data) {
-      return null;
-    }
-    return row[this._tableKey]._data[0] as Layer;
-  }
-
-  async table(): Promise<LayersTable> {
-    const rljson = await this._core.dumpTable(this._tableKey);
-    if (!rljson[this._tableKey]) {
-      throw new Error(`Table ${this._tableKey} does not exist.`);
-    }
-    return rljson[this._tableKey] as LayersTable;
-  }
-
   async run(
     command: EditCommand,
     value: Json,
     origin?: Ref,
-    previous?: string[],
     refs?: LayerControllerRefs,
   ): Promise<EditProtocolRow<any>> {
     // Validate command
@@ -146,12 +123,50 @@ export class LayerController<N extends string>
       //Data from edit
       route: '',
       origin,
-      previous,
 
       //Unique id/timestamp
       timeId: timeId(),
     } as EditProtocolRow<any>;
 
     return result;
+  }
+
+  async get(where: string | Json): Promise<Rljson> {
+    if (typeof where === 'string') {
+      return this._getByHash(where);
+    } else if (typeof where === 'object' && where !== null) {
+      // If where is an object, we assume it's a partial match
+      const keys = Object.keys(where);
+      if (keys.length === 1 && keys[0].endsWith('Ref')) {
+        // If the only key is the tableRef, we can use the _getByRef method
+        const tableKey = keys[0].replace('Ref', '') as TableKey;
+        return this._getByRef(tableKey, where[keys[0]] as Ref);
+      } else {
+        return this._getByWhere(where);
+      }
+    } else {
+      return Promise.resolve({});
+    }
+  }
+
+  protected async _getByRef(tableKey: TableKey, ref: Ref): Promise<Rljson> {
+    const table = await this._core.dumpTable(this._tableKey);
+    const layers = [];
+    for (const row of table[this._tableKey]._data) {
+      const layer = row as Layer;
+      // Only consider layers that belong to the requested components table
+      if (layer.componentsTable !== tableKey) {
+        continue;
+      }
+      // Check if the layer added the requested ref
+      for (const layerRef of Object.values(layer.add)) {
+        if (layerRef === ref) {
+          layers.push(layer);
+        }
+      }
+    }
+    return {
+      [this._tableKey]: { _data: layers, _type: 'layers' } as LayersTable,
+    };
   }
 }

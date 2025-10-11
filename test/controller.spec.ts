@@ -12,13 +12,19 @@ import { Layer, SliceId, TableCfg } from '@rljson/rljson';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { CarGeneral, carsExample } from '../src/cars-example';
-import { CakeController, CakeControllerRefs, CakeValue } from '../src/controller/cake-controller';
+import {
+  CakeController,
+  CakeControllerRefs,
+  CakeValue,
+} from '../src/controller/cake-controller';
 import { ComponentController } from '../src/controller/component-controller';
 import { createController } from '../src/controller/controller';
-import { LayerController, LayerControllerRefs } from '../src/controller/layer-controller';
+import {
+  LayerController,
+  LayerControllerRefs,
+} from '../src/controller/layer-controller';
 import { Core } from '../src/core';
 import { Db } from '../src/db';
-
 
 describe('Controller', () => {
   let db: Db;
@@ -99,7 +105,7 @@ describe('Controller', () => {
         expect(nonExistingRow).toBeUndefined();
       });
 
-      it('Add', async () => {
+      it('Run', async () => {
         //Create ComponentController
         const carGeneralComponentController = await createController(
           'components',
@@ -116,7 +122,8 @@ describe('Controller', () => {
           _hash: '', // hash will be generated automatically
         };
 
-        const editProtocolFirstRow = await carGeneralComponentController.add(
+        const editProtocolFirstRow = await carGeneralComponentController.run(
+          'add',
           carGeneralValue,
           origin,
         );
@@ -138,10 +145,10 @@ describe('Controller', () => {
           _hash: '', // hash will be generated automatically
         };
 
-        const editProtocolSecondRow = await carGeneralComponentController.add(
+        const editProtocolSecondRow = await carGeneralComponentController.run(
+          'add',
           carGeneralValueSecond,
           origin,
-          [editProtocolFirstRow.timeId as string],
         );
         expect(editProtocolSecondRow).toBeDefined();
         expect(editProtocolSecondRow.timeId).toBeDefined();
@@ -152,90 +159,6 @@ describe('Controller', () => {
           'carGeneral',
         );
         expect(carGeneralTable2?._data.length).toBe(4); // 4 because two rows already existed from carsExample and one from first add
-      });
-      it('Remove', async () => {
-        //LayerController Refs
-        const carGeneralLayerRefs = {
-          sliceIdsTable: 'carSliceId',
-          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
-            '') as string,
-          componentsTable: 'carGeneral',
-        } as LayerControllerRefs;
-
-        //Create LayerController
-        const carGeneralLayerController = await createController(
-          'layers',
-          core,
-          'carGeneralLayer',
-          carGeneralLayerRefs,
-        );
-
-        //Remove Layer
-        const origin = 'H45H';
-        const carGeneralLayerValue: Partial<Layer> = {
-          remove: {
-            VIN1: (carsExample().carGeneral._data[1]._hash as string) || '',
-            VIN2: (carsExample().carGeneral._data[0]._hash as string) || '',
-          } as Record<SliceId, string>,
-        };
-
-        const editProtocolFirstRow = await carGeneralLayerController.remove(
-          carGeneralLayerValue,
-          origin,
-        );
-        expect(editProtocolFirstRow).toBeDefined();
-        expect(editProtocolFirstRow.timeId).toBeDefined();
-        expect(editProtocolFirstRow.carGeneralLayerRef).toBeDefined();
-
-        //Check if EditProtocol was written correctly
-        const { carGeneralLayer: carGeneralEdits } = await db.core.dumpTable(
-          'carGeneralLayer',
-        );
-        expect(carGeneralEdits?._data.length).toBe(2); //2 because one row already existed from carsExample
-
-        //Remove another Layer, with previous
-        const carGeneralLayerValueSecond: Partial<Layer> = {
-          remove: {
-            VIN3: (carsExample().carGeneral._data[1]._hash as string) || '',
-          } as Record<SliceId, string>,
-        };
-
-        const editProtocolSecondRow = await carGeneralLayerController.remove(
-          carGeneralLayerValueSecond,
-          origin,
-          [editProtocolFirstRow.timeId as string],
-        );
-        expect(editProtocolSecondRow).toBeDefined();
-        expect(editProtocolSecondRow.timeId).toBeDefined();
-        expect(editProtocolSecondRow.carGeneralLayerRef).toBeDefined();
-
-        //Check if EditProtocol was written correctly
-        const { carGeneralLayer: carGeneralEdits2 } = await db.core.dumpTable(
-          'carGeneralLayer',
-        );
-        expect(carGeneralEdits2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first remove
-
-        //Check if previous is set correctly
-        expect(editProtocolSecondRow.previous).toEqual([
-          editProtocolFirstRow.timeId as string,
-        ]);
-
-        //Check if EditProtocol rows are correct
-        const { carGeneralLayer: carGeneralEdits3 } = await db.core.dumpTable(
-          'carGeneralLayer',
-        );
-        expect(carGeneralEdits3).toBeDefined();
-        expect(carGeneralEdits3?._data).toBeDefined();
-        expect(carGeneralEdits3?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first remove
-
-        expect(carGeneralEdits3?._data[0]).toBeDefined();
-        expect(carGeneralEdits3?._data[1]).toBeDefined();
-        expect(carGeneralEdits3?._data[2]).toBeDefined();
-
-        expect(carGeneralEdits3?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first remove
-        expect(carGeneralEdits3?._data[0]).toBeDefined();
-        expect(carGeneralEdits3?._data[1]).toBeDefined();
-        expect(carGeneralEdits3?._data[2]).toBeDefined();
       });
     });
   });
@@ -353,7 +276,7 @@ describe('Controller', () => {
         expect(nonExistingRow).toBeUndefined();
       });
 
-      it('Add', async () => {
+      it('Run', async () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
           sliceIdsTable: 'carSliceId',
@@ -379,7 +302,8 @@ describe('Controller', () => {
           } as Record<SliceId, string>,
         };
 
-        const editProtocolFirstRow = await carGeneralLayerController.add(
+        const editProtocolFirstRow = await carGeneralLayerController.run(
+          'add',
           carGeneralLayerValue,
           origin,
         );
@@ -399,10 +323,10 @@ describe('Controller', () => {
           } as Record<SliceId, string>,
         };
 
-        const editProtocolSecondRow = await carGeneralLayerController.add(
+        const editProtocolSecondRow = await carGeneralLayerController.run(
+          'add',
           carGeneralLayerValueSecond,
           origin,
-          [editProtocolFirstRow.timeId as string],
         );
         expect(editProtocolSecondRow).toBeDefined();
         expect(editProtocolSecondRow.timeId).toBeDefined();
@@ -412,90 +336,6 @@ describe('Controller', () => {
         const { carGeneralLayer: carGeneralLayerTable2 } =
           await db.core.dumpTable('carGeneralLayer');
         expect(carGeneralLayerTable2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first add
-      });
-      it('Remove', async () => {
-        //LayerController Refs
-        const carGeneralLayerRefs = {
-          sliceIdsTable: 'carSliceId',
-          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
-            '') as string,
-          componentsTable: 'carGeneral',
-        } as LayerControllerRefs;
-
-        //Create LayerController
-        const carGeneralLayerController = await createController(
-          'layers',
-          core,
-          'carGeneralLayer',
-          carGeneralLayerRefs,
-        );
-
-        //Remove Layer
-        const origin = 'H45H';
-        const carGeneralLayerValue: Partial<Layer> = {
-          remove: {
-            VIN1: (carsExample().carGeneral._data[1]._hash as string) || '',
-            VIN2: (carsExample().carGeneral._data[0]._hash as string) || '',
-          } as Record<SliceId, string>,
-        };
-
-        const editProtocolFirstRow = await carGeneralLayerController.remove(
-          carGeneralLayerValue,
-          origin,
-        );
-        expect(editProtocolFirstRow).toBeDefined();
-        expect(editProtocolFirstRow.timeId).toBeDefined();
-        expect(editProtocolFirstRow.carGeneralLayerRef).toBeDefined();
-
-        //Check if EditProtocol was written correctly
-        const { carGeneralLayer: carGeneralEdits } = await db.core.dumpTable(
-          'carGeneralLayer',
-        );
-        expect(carGeneralEdits?._data.length).toBe(2); //2 because one row already existed from carsExample
-
-        //Remove another Layer, with previous
-        const carGeneralLayerValueSecond: Partial<Layer> = {
-          remove: {
-            VIN3: (carsExample().carGeneral._data[1]._hash as string) || '',
-          } as Record<SliceId, string>,
-        };
-
-        const editProtocolSecondRow = await carGeneralLayerController.remove(
-          carGeneralLayerValueSecond,
-          origin,
-          [editProtocolFirstRow.timeId as string],
-        );
-        expect(editProtocolSecondRow).toBeDefined();
-        expect(editProtocolSecondRow.timeId).toBeDefined();
-        expect(editProtocolSecondRow.carGeneralLayerRef).toBeDefined();
-
-        //Check if EditProtocol was written correctly
-        const { carGeneralLayer: carGeneralEdits2 } = await db.core.dumpTable(
-          'carGeneralLayer',
-        );
-        expect(carGeneralEdits2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first remove
-
-        //Check if previous is set correctly
-        expect(editProtocolSecondRow.previous).toEqual([
-          editProtocolFirstRow.timeId as string,
-        ]);
-
-        //Check if EditProtocol rows are correct
-        const { carGeneralLayer: carGeneralEdits3 } = await db.core.dumpTable(
-          'carGeneralLayer',
-        );
-        expect(carGeneralEdits3).toBeDefined();
-        expect(carGeneralEdits3?._data).toBeDefined();
-        expect(carGeneralEdits3?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first remove
-
-        expect(carGeneralEdits3?._data[0]).toBeDefined();
-        expect(carGeneralEdits3?._data[1]).toBeDefined();
-        expect(carGeneralEdits3?._data[2]).toBeDefined();
-
-        expect(carGeneralEdits3?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first remove
-        expect(carGeneralEdits3?._data[0]).toBeDefined();
-        expect(carGeneralEdits3?._data[1]).toBeDefined();
-        expect(carGeneralEdits3?._data[2]).toBeDefined();
       });
     });
   });
@@ -600,7 +440,7 @@ describe('Controller', () => {
         expect(nonExistingRow).toBeUndefined();
       });
 
-      it('Add', async () => {
+      it('Run', async () => {
         //CakeController Refs
         const carCakeRefs = {
           sliceIdsTable: 'carSliceId',
@@ -631,7 +471,7 @@ describe('Controller', () => {
         };
 
         const editProtocolFirstRow = await carCakeController.run(
-          'add@rezIXkbWisvjRvYoyRAg0q',
+          'add',
           carCakeValue,
           origin,
         );
@@ -657,10 +497,9 @@ describe('Controller', () => {
         };
 
         const editProtocolSecondRow = await carCakeController.run(
-          'add@rezIXkbWisvjRvYoyRAg0q',
+          'add',
           carCakeValueSecond,
           origin,
-          [editProtocolFirstRow.timeId as string],
         );
         expect(editProtocolSecondRow).toBeDefined();
         expect(editProtocolSecondRow.timeId).toBeDefined();
@@ -669,19 +508,6 @@ describe('Controller', () => {
         //Check if EditProtocol was written correctly
         const { carCake: carCakeTable2 } = await db.core.dumpTable('carCake');
         expect(carCakeTable2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first add
-      });
-      it('Remove', async () => {
-        //Create CakeController without Refs
-        const carCakeController = (await createController(
-          'cakes',
-          core,
-          'carCake',
-        )) as CakeController<'CarCake'>;
-
-        //Remove should throw error, because not supported
-        await expect(carCakeController.remove()).rejects.toThrow(
-          'Remove is not supported on CakeController.',
-        );
       });
     });
   });

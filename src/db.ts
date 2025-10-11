@@ -5,9 +5,12 @@
 // found in the LICENSE file in the root of this package.
 
 import { Io, IoMem } from '@rljson/io';
+import { Json } from '@rljson/json';
 import {
   Edit,
   EditProtocolRow,
+  EditProtocolTimeId,
+  Ref,
   Rljson,
   Route,
   validateEdit,
@@ -38,7 +41,48 @@ export class Db {
    */
   readonly core: Core;
 
-  async resolve(edit: Edit<any>): Promise<EditProtocolRow<any>> {
+  async get(route: Route, where: string | Json): Promise<Rljson[]> {
+    // Validate Route
+    if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
+
+    // Get Controllers
+    const controllers = await this._indexedControllers(route);
+
+    // Fetch Data
+    return this._get(route, where, controllers);
+  }
+
+  private async _get(
+    route: Route,
+    where: string | Json,
+    controllers: Record<string, Controller<any, any>>,
+  ): Promise<Rljson[]> {
+    const rootRljson: Rljson = await controllers[route.root.tableKey].get(
+      where,
+    );
+    const rootRefs: Ref[] = rootRljson[route.root.tableKey]._data.map(
+      (r) => r._hash,
+    );
+
+    if (route.segments.length === 1) {
+      return [rootRljson];
+    }
+
+    const results: Rljson[] = [];
+    for (const ref of rootRefs) {
+      const res = await this._get(
+        new Route(route.segments.slice(0, -1)),
+        {
+          [route.root.tableKey + 'Ref']: ref,
+        },
+        controllers,
+      );
+      results.push(...res);
+    }
+    return results.map((r) => ({ ...r, ...rootRljson }));
+  }
+
+  async run(edit: Edit<any>): Promise<EditProtocolRow<any>> {
     const initialRoute = Route.fromFlat(edit.route);
     const runs = await this._resolveRuns(edit);
     const errors = validateEdit(edit);
@@ -66,6 +110,25 @@ export class Db {
     let result: EditProtocolRow<any>;
     let tableKey: string;
 
+    //Run parent controller with child refs as value
+    const segment = route.segment(0);
+    tableKey = segment.tableKey;
+
+    let previous: EditProtocolTimeId[] = [];
+    if (Route.segmentHasRef(segment)) {
+      const routeRef: EditProtocolTimeId = Route.segmentRef(segment)!;
+      if (Route.segmentHasProtocolRef(segment)) {
+        //Collect previous refs from child results
+        previous = [...previous, routeRef];
+      }
+      if (Route.segmentHasDefaultRef(segment)) {
+        const protocolRow = await this.getProtocolRow(tableKey, routeRef);
+        if (!!protocolRow) {
+          previous.push(protocolRow.timeId);
+        }
+      }
+    }
+
     if (!route.isRoot) {
       //Run nested controller first
       const childRoute = route.deeper(1);
@@ -78,37 +141,45 @@ export class Db {
       }
 
       //Iterate over child values and create edits for each
-      const childValues = Object.entries(edit.value);
+      const childKeys = this._childKeys(route, edit.value);
       const childRefs: Record<string, string> = {};
-      for (const [k, v] of childValues) {
-        const childEdit: Edit<any> = { ...edit, value: v };
+
+      for (const k of childKeys) {
+        const childValue = (edit.value as any)[k];
+        const childEdit: Edit<any> = { ...edit, value: childValue };
         const childResult = await this._run(childEdit, childRoute, runFns);
-        const childRefKey = childRoute.top + 'Ref';
+        const childRefKey = childRoute.top.tableKey + 'Ref';
         const childRef = (childResult as any)[childRefKey] as string;
 
         childRefs[k] = childRef;
       }
 
-      //Run parent controller with child refs as value
-      tableKey = route.segment(0);
       const runFn = runFns[tableKey];
       if (!runFn) {
-        throw new Error(`No controller found for route ${route.root}`);
+        throw new Error(`No controller found for route ${route.root.tableKey}`);
       }
-      result = await runFn(edit.command, childRefs, edit.origin, edit.previous);
+      result = {
+        ...(await runFn(
+          edit.command,
+          {
+            ...edit.value,
+            ...childRefs,
+          },
+          edit.origin,
+        )),
+        previous,
+      };
     } else {
       //Run root controller
-      tableKey = route.root;
+      tableKey = route.root.tableKey;
       const runFn = runFns[tableKey];
       if (!runFn) {
-        throw new Error(`No controller found for route ${route.root}`);
+        throw new Error(`No controller found for route ${route.root.tableKey}`);
       }
-      result = await runFn(
-        edit.command,
-        edit.value,
-        edit.origin,
-        edit.previous,
-      );
+      result = {
+        ...(await runFn(edit.command, edit.value, edit.origin)),
+        previous,
+      };
     }
 
     //Write protocol
@@ -137,6 +208,27 @@ export class Db {
     }
 
     return runFns;
+  }
+
+  // ...........................................................................
+  /**
+   * Returns the keys of child refs in a value based on a route
+   * @param route - The route to check
+   * @param value - The value to check
+   * @returns An array of keys of child refs in the value
+   */
+  private _childKeys(route: Route, value: Json): string[] {
+    if (typeof value !== 'object' || value === null) return [];
+
+    const keys = Object.keys(value);
+    const childKeys: string[] = [];
+    for (const k of keys) {
+      if (typeof (value as any)[k] !== 'object') continue;
+      if (k.endsWith('Ref') && route.next?.tableKey + 'Ref' !== k) continue;
+
+      childKeys.push(k);
+    }
+    return childKeys;
   }
 
   // ...........................................................................
@@ -179,7 +271,8 @@ export class Db {
     // Create Controllers
     const controllers: Record<string, Controller<any, any>> = {};
     for (let i = 0; i < route.segments.length; i++) {
-      const tableKey = route.segments[i];
+      const segment = route.segments[i];
+      const tableKey = segment.tableKey;
       controllers[tableKey] ??= await this.getController(tableKey);
     }
 
@@ -252,6 +345,26 @@ export class Db {
     }
 
     return this.core.dumpTable(protocolTable);
+  }
+
+  // ...........................................................................
+  /**
+   * Get a specific edit protocol row from a table
+   * @param table - The table to get the edit protocol row from
+   * @param ref - The reference of the edit protocol row to get
+   * @returns The edit protocol row or null if it does not exist
+   * @throws {Error} If the edits table does not exist
+   */
+  async getProtocolRow(
+    table: string,
+    ref: string,
+  ): Promise<EditProtocolRow<any> | null> {
+    const protocolTable = table + 'Edits';
+    const { [protocolTable]: result } = await this.core.readRows(
+      protocolTable,
+      { [table + 'Ref']: ref },
+    );
+    return result._data?.[0] || null;
   }
 
   /**

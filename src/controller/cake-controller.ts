@@ -19,6 +19,7 @@ import {
 
 import { Core } from '../core.ts';
 
+import { BaseController } from './base-controller.ts';
 import {
   Controller,
   ControllerCommands,
@@ -40,13 +41,16 @@ export interface CakeControllerRefs extends ControllerRefs {
 }
 
 export class CakeController<N extends string>
+  extends BaseController<CakesTable>
   implements Controller<CakesTable, N>
 {
   constructor(
-    private readonly _core: Core,
-    private readonly _tableKey: TableKey,
+    protected readonly _core: Core,
+    protected readonly _tableKey: TableKey,
     private _refs?: CakeControllerRefs,
-  ) {}
+  ) {
+    super(_core, _tableKey);
+  }
 
   async init() {
     // Validate Table
@@ -85,40 +89,10 @@ export class CakeController<N extends string>
     }
   }
 
-  async add(
-    value: CakeValue,
-    origin?: Ref,
-    previous?: string[],
-    refs?: CakeControllerRefs,
-  ): Promise<EditProtocolRow<N>> {
-    return this.run('add', value, origin, previous, refs || this._refs);
-  }
-
-  async remove(): Promise<EditProtocolRow<N>> {
-    throw new Error(`Remove is not supported on CakeController.`);
-  }
-
-  async get(ref: string): Promise<Cake | null> {
-    const row = await this._core.readRow(this._tableKey, ref);
-    if (!row || !row[this._tableKey] || !row[this._tableKey]._data) {
-      return null;
-    }
-    return row[this._tableKey]._data[0] as Cake;
-  }
-
-  async table(): Promise<CakesTable> {
-    const rljson = await this._core.dumpTable(this._tableKey);
-    if (!rljson[this._tableKey]) {
-      throw new Error(`Table ${this._tableKey} does not exist.`);
-    }
-    return rljson[this._tableKey] as CakesTable;
-  }
-
   async run(
     command: CakeControllerCommands,
     value: Json,
     origin?: Ref,
-    previous?: string[],
     refs?: CakeControllerRefs,
   ): Promise<EditProtocolRow<any>> {
     // Validate command
@@ -128,12 +102,18 @@ export class CakeController<N extends string>
 
     // Merge with given base ref
     const baseCakeRef = command.split('@')[1];
-    const { [this._tableKey]: baseCakesTable } = await this._core.readRow(
-      this._tableKey,
-      baseCakeRef,
-    );
-    const baseCake = baseCakesTable._data?.[0] as Cake;
-    const baseCakeLayers = rmhsh(baseCake.layers) || {};
+    let baseCakeLayers: {
+      [layerTable: string]: string;
+    } = {};
+    if (!!baseCakeRef) {
+      //Get base cake
+      const { [this._tableKey]: baseCakesTable } = await this._core.readRow(
+        this._tableKey,
+        baseCakeRef,
+      );
+      const baseCake = baseCakesTable._data?.[0] as Cake;
+      baseCakeLayers = rmhsh(baseCake.layers) || {};
+    }
 
     // Cake to add
     const cake = {
@@ -154,12 +134,47 @@ export class CakeController<N extends string>
       //Data from edit
       route: '',
       origin,
-      previous,
 
       //Unique id/timestamp
       timeId: timeId(),
     } as EditProtocolRow<any>;
 
     return result;
+  }
+
+  async get(where: string | Json): Promise<Rljson> {
+    if (typeof where === 'string') {
+      return this._getByHash(where);
+    } else if (typeof where === 'object' && where !== null) {
+      // If where is an object, we assume it's a partial match
+      const keys = Object.keys(where);
+      if (keys.length === 1 && keys[0].endsWith('Ref')) {
+        // If the only key is the tableRef, we can use the _getByRef method
+        const tableKey = keys[0].replace('Ref', '') as TableKey;
+        return this._getByRef(tableKey, where[keys[0]] as Ref);
+      } else {
+        return this._getByWhere(where);
+      }
+    } else {
+      return Promise.resolve({});
+    }
+  }
+
+  protected async _getByRef(tableKey: TableKey, ref: Ref): Promise<Rljson> {
+    const table = await this._core.dumpTable(this._tableKey);
+    const cakes = [];
+    for (const row of table[this._tableKey]._data) {
+      const cake = row as Cake;
+      const layers = cake.layers || {};
+
+      for (const layerTable of Object.keys(layers)) {
+        if (layerTable === tableKey && layers[layerTable] === ref) {
+          cakes.push(cake);
+        }
+      }
+    }
+    return {
+      [this._tableKey]: { _data: cakes, _type: 'cakes' } as CakesTable,
+    };
   }
 }

@@ -23,6 +23,7 @@ export interface CarsExample extends Rljson {
   carGeneral: ComponentsTable<CarGeneral>;
   carTechnical: ComponentsTable<Json>;
   carColor: ComponentsTable<Json>;
+  carDimensions: ComponentsTable<CarDimension>;
   carGeneralLayer: LayersTable;
   carTechnicalLayer: LayersTable;
   carColorLayer: LayersTable;
@@ -40,6 +41,19 @@ export interface CarGeneral extends JsonH {
   brand: string;
   type: string;
   doors: number;
+}
+
+export interface CarDimension extends JsonH {
+  height: number;
+  width: number;
+  length: number;
+}
+
+export interface CarTechnical extends JsonH {
+  engine: string;
+  transmission: string;
+  gears: number;
+  carDimensionsRef: string;
 }
 
 export const carsExample = (): CarsExample => {
@@ -105,6 +119,42 @@ export const carsExample = (): CarsExample => {
     _hash: '',
   }) as ComponentsTable<CarGeneral>;
 
+  //CarDimensions
+  //................................................................
+  const carDimensionsTableCfg = hip<any>({
+    key: 'carDimensions',
+    type: 'components',
+    columns: [
+      { key: '_hash', type: 'string' },
+      { key: 'height', type: 'number' },
+      { key: 'width', type: 'number' },
+      { key: 'length', type: 'number' },
+    ],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  }) as TableCfg;
+
+  const carDimensions = hip<any>({
+    _tableCfg: carDimensionsTableCfg._hash,
+    _type: 'components',
+    _data: [
+      {
+        height: 1400,
+        width: 1800,
+        length: 4000,
+        _hash: '',
+      },
+      {
+        height: 1450,
+        width: 1850,
+        length: 4100,
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  } as ComponentsTable<CarDimension>) as ComponentsTable<CarDimension>;
+
   //CarTechnical
   //................................................................
   const carTechnicalTableCfg = hip<any>({
@@ -115,6 +165,7 @@ export const carsExample = (): CarsExample => {
       { key: 'engine', type: 'string' },
       { key: 'transmission', type: 'string' },
       { key: 'gears', type: 'number' },
+      { key: 'carDimensionsRef', type: 'string' },
     ],
     isHead: false,
     isRoot: false,
@@ -129,12 +180,14 @@ export const carsExample = (): CarsExample => {
         engine: 'Diesel',
         transmission: 'Manual',
         gears: 6,
+        carDimensionsRef: carDimensions._data[0]._hash || '',
         _hash: '',
       },
       {
         engine: 'Petrol',
         transmission: 'Automatic',
         gears: 7,
+        carDimensionsRef: carDimensions._data[1]._hash || '',
         _hash: '',
       },
     ],
@@ -428,6 +481,7 @@ export const carsExample = (): CarsExample => {
     _data: [
       carSliceIdTableCfg,
       carGeneralTableCfg,
+      carDimensionsTableCfg,
       carTechnicalTableCfg,
       carColorTableCfg,
       carGeneralLayerTableCfg,
@@ -446,6 +500,7 @@ export const carsExample = (): CarsExample => {
   const carsExample = {
     carSliceId,
     carGeneral,
+    carDimensions,
     carTechnical,
     carColor,
     carGeneralLayer,

@@ -32,24 +32,45 @@
     ],
     "_hash": "3I7ne26DElPzW-SR1F1-Dn"
   },
+  "carDimensions": {
+    "_tableCfg": "XOdQaoIy829zQkONlQOM6Y",
+    "_type": "components",
+    "_data": [
+      {
+        "height": 1400,
+        "width": 1800,
+        "length": 4000,
+        "_hash": "z4adBmYIroEpybeCOCqmSx"
+      },
+      {
+        "height": 1450,
+        "width": 1850,
+        "length": 4100,
+        "_hash": "MZ_V8LvPrPnR00SrC8zwqG"
+      }
+    ],
+    "_hash": "e66zWAcEo5flhOHd-u_wVi"
+  },
   "carTechnical": {
-    "_tableCfg": "zNswnS5V9A4sowHEDWouMF",
+    "_tableCfg": "VylnoxfTiZRw_b6BSJ4seR",
     "_type": "components",
     "_data": [
       {
         "engine": "Diesel",
         "transmission": "Manual",
         "gears": 6,
-        "_hash": "bS4c-w-oYiodBMxv4cRPXs"
+        "carDimensionsRef": "z4adBmYIroEpybeCOCqmSx",
+        "_hash": "k4BpUzbuJcFF-JSM1aZPnM"
       },
       {
         "engine": "Petrol",
         "transmission": "Automatic",
         "gears": 7,
-        "_hash": "cE6GU1sf4CvCGuGozsgaa7"
+        "carDimensionsRef": "MZ_V8LvPrPnR00SrC8zwqG",
+        "_hash": "NswpC_mEjKgkUa05yzO7GM"
       }
     ],
-    "_hash": "uhrQ1DD0CMKjRyKc_K0KRR"
+    "_hash": "QboS9IekR3gnbW_vSPmKRe"
   },
   "carColor": {
     "_tableCfg": "ly3011-E3YdeftOYLKqzXd",
@@ -94,17 +115,17 @@
     "_data": [
       {
         "add": {
-          "VIN1": "bS4c-w-oYiodBMxv4cRPXs",
-          "VIN2": "cE6GU1sf4CvCGuGozsgaa7",
-          "_hash": "vui_APtNHzJHtoYF7-n228"
+          "VIN1": "k4BpUzbuJcFF-JSM1aZPnM",
+          "VIN2": "NswpC_mEjKgkUa05yzO7GM",
+          "_hash": "QlbvjPeKjHMulIPj1Sgkym"
         },
         "sliceIdsTable": "carSliceId",
         "sliceIdsTableRow": "gaY8E_pzUVZYJT1RTMWsrh",
         "componentsTable": "carTechnical",
-        "_hash": "3FqkEWxnPT6ctdPHk04XBL"
+        "_hash": "DizCiyw2L-jpvJiwQ7HK1k"
       }
     ],
-    "_hash": "d3dEWi5qau32oWrNEHqTbq"
+    "_hash": "2tZpLQrQ2PCgewingldzbP"
   },
   "carColorLayer": {
     "_tableCfg": "fI7zIiOObgrydSNUHXJlff",
@@ -133,14 +154,14 @@
         "sliceIdsRow": "gaY8E_pzUVZYJT1RTMWsrh",
         "layers": {
           "carGeneralLayer": "Gv1hBZjCrOPaW1T9qwB7i1",
-          "carTechnicalLayer": "3FqkEWxnPT6ctdPHk04XBL",
+          "carTechnicalLayer": "DizCiyw2L-jpvJiwQ7HK1k",
           "carColorLayer": "3-Xak37KCHtV-LXU084JCt",
-          "_hash": "ZdQHKpWw_Yeed_awuIQPdQ"
+          "_hash": "KIQiWx_B8fO42-MMCjHu8b"
         },
-        "_hash": "rezIXkbWisvjRvYoyRAg0q"
+        "_hash": "cMNjGCljyKOVmFlNaPsQGX"
       }
     ],
-    "_hash": "SKp4Sh19MMW2AXwRJtJr9_"
+    "_hash": "lvWZrNLAvoMRYCJVRHIJPK"
   },
   "wheelSliceId": {
     "_tableCfg": "cDE0YoD6c44uzCl7RzOBQh",
@@ -292,6 +313,36 @@
         "_hash": "jooz7vC4FmFkBl5saLMBsI"
       },
       {
+        "key": "carDimensions",
+        "type": "components",
+        "columns": [
+          {
+            "key": "_hash",
+            "type": "string",
+            "_hash": "df4oYftB-71Njv9FprRCeg"
+          },
+          {
+            "key": "height",
+            "type": "number",
+            "_hash": "yS68EwIGPkkJ038EDqSKST"
+          },
+          {
+            "key": "width",
+            "type": "number",
+            "_hash": "m0Py8KScUGSvqFodePuh9H"
+          },
+          {
+            "key": "length",
+            "type": "number",
+            "_hash": "ywZ4yVJ4jGWVootEWuA8Dj"
+          }
+        ],
+        "isHead": false,
+        "isRoot": false,
+        "isShared": true,
+        "_hash": "XOdQaoIy829zQkONlQOM6Y"
+      },
+      {
         "key": "carTechnical",
         "type": "components",
         "columns": [
@@ -314,12 +365,17 @@
             "key": "gears",
             "type": "number",
             "_hash": "xTbCb8xD548HCzjs3qKYlX"
+          },
+          {
+            "key": "carDimensionsRef",
+            "type": "string",
+            "_hash": "vk4FCkGerVxp0PWjiNmiuY"
           }
         ],
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "zNswnS5V9A4sowHEDWouMF"
+        "_hash": "VylnoxfTiZRw_b6BSJ4seR"
       },
       {
         "key": "carColor",

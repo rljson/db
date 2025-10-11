@@ -16,6 +16,7 @@ import {
 
 import { Core } from '../core.ts';
 
+import { BaseController } from './base-controller.ts';
 import {
   Controller,
   ControllerCommands,
@@ -23,13 +24,16 @@ import {
 } from './controller.ts';
 
 export class ComponentController<N extends string, T extends Json>
+  extends BaseController<ComponentsTable<T>>
   implements Controller<ComponentsTable<T>, N>
 {
   constructor(
-    private readonly _core: Core,
-    private readonly _tableKey: TableKey,
+    protected readonly _core: Core,
+    protected readonly _tableKey: TableKey,
     private _refs?: ControllerRefs,
-  ) {}
+  ) {
+    super(_core, _tableKey);
+  }
 
   async init() {
     // Validate Table
@@ -46,27 +50,10 @@ export class ComponentController<N extends string, T extends Json>
     }
   }
 
-  async add(
-    value: T,
-    origin?: Ref,
-    previous?: string[],
-    refs?: ControllerRefs,
-  ): Promise<EditProtocolRow<N>> {
-    if (!!refs)
-      throw new Error(`Refs are not supported on ComponentController.`);
-
-    return this.run('add', value, origin, previous);
-  }
-
-  async remove(): Promise<EditProtocolRow<N>> {
-    throw new Error(`Remove is not supported on ComponentController.`);
-  }
-
   async run(
     command: ControllerCommands,
     value: Json,
     origin?: Ref,
-    previous?: string[],
     refs?: ControllerRefs,
   ): Promise<EditProtocolRow<N>> {
     // Validate command
@@ -93,26 +80,8 @@ export class ComponentController<N extends string, T extends Json>
       //Data from edit
       route: '',
       origin,
-      previous,
-
       //Unique id/timestamp
       timeId: timeId(),
-    } as EditProtocolRow<N>;
-  }
-
-  async get(ref: string): Promise<T | null> {
-    const row = await this._core.readRow(this._tableKey, ref);
-    if (!row || !row[this._tableKey] || !row[this._tableKey]._data) {
-      return null;
-    }
-    return row[this._tableKey]._data[0] as T;
-  }
-
-  async table(): Promise<ComponentsTable<T>> {
-    const rljson = await this._core.dumpTable(this._tableKey);
-    if (!rljson[this._tableKey]) {
-      throw new Error(`Table ${this._tableKey} does not exist.`);
-    }
-    return rljson[this._tableKey] as ComponentsTable<T>;
+    } as any as EditProtocolRow<N>;
   }
 }

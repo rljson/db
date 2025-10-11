@@ -6,7 +6,15 @@
 
 import { Json } from '@rljson/json';
 import {
-  Cake, ContentType, EditCommand, EditProtocolRow, Layer, Ref, TableKey, TableType
+  Cake,
+  ContentType,
+  EditCommand,
+  EditProtocolRow,
+  Layer,
+  Ref,
+  Rljson,
+  TableKey,
+  TableType,
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
@@ -15,7 +23,6 @@ import { CakeController, CakeControllerRefs } from './cake-controller.ts';
 import { ComponentController } from './component-controller.ts';
 import { LayerController, LayerControllerRefs } from './layer-controller.ts';
 
-
 export type ControllerRefs = Partial<Layer> & Partial<Cake>;
 export type ControllerCommands = EditCommand;
 
@@ -23,7 +30,6 @@ export type ControllerRunFn<N extends string> = (
   command: ControllerCommands,
   value: Json,
   origin?: Ref,
-  previous?: string[],
   refs?: Partial<ControllerRefs>,
 ) => Promise<EditProtocolRow<N>>;
 
@@ -32,33 +38,31 @@ export type ControllerRunFn<N extends string> = (
  * Generic interface for a controller that manages a specific table in the database.
  * @template T The type of the table being managed.
  * @template N The name of the table being managed.
- * @method add Adds a new entry to the table.
- * @method remove Removes an entry from the table.
- * @method run Executes a command on the table.
- * @method init Initializes the controller, performing any necessary setup or validation.
- * @method table Retrieves the current state of the table.
- * @method get Fetches a specific entry from the table by its reference.
+ * @property {ControllerRunFn<N>} run - Function to execute a command on the table.
+ * @property {() => Promise<void>} init - Initializes the controller.
+ * @property {() => Promise<T>} table - Retrieves the current state of the table.
+ * @property {(where: string | { [column: string]: JsonValue }) => Promise<Rljson>} get - Fetches data from the table based on a condition.
+ * @param {string | Json }} where - The condition to filter the data.
+ * @returns {Promise<Json[] | null>} A promise that resolves to an array of JSON objects or null if no data is found.
  * @throws {Error} If the data is invalid.
  */
 export interface Controller<T extends TableType, N extends string> {
-  add(
-    value: Json,
-    origin?: Ref,
-    previous?: string[],
-    refs?: ControllerRefs,
-  ): Promise<EditProtocolRow<N>>;
-  remove(
-    value: Json,
-    origin?: Ref,
-    previous?: string[],
-    refs?: ControllerRefs,
-  ): Promise<EditProtocolRow<N>>;
   run: ControllerRunFn<N>;
   init(): Promise<void>;
   table(): Promise<T>;
-  get(ref: string): Promise<(Json & { _hash?: string }) | null>;
+  get(where: string | Json): Promise<Rljson>;
 }
 
+// ...........................................................................
+/**
+ * Factory function to create a controller based on the content type.
+ * @param {ContentType} type - The type of content (e.g., 'layers', 'components', 'cakes').
+ * @param {Core} core - The core instance managing the database.
+ * @param {TableKey} tableKey - The key identifying the table to be managed.
+ * @param {ControllerRefs} [refs] - Optional references for the controller.
+ * @returns {Promise<Controller<any, string>>} A promise that resolves to the created controller.
+ * @throws {Error} If the controller for the specified type is not implemented.
+ */
 export const createController = async (
   type: ContentType,
   core: Core,
