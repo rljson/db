@@ -180,14 +180,14 @@ export const carsExample = (): CarsExample => {
         engine: 'Diesel',
         transmission: 'Manual',
         gears: 6,
-        carDimensionsRef: carDimensions._data[0]._hash || '',
+        carDimensionsRef: carDimensions._data[0]._hash,
         _hash: '',
       },
       {
         engine: 'Petrol',
         transmission: 'Automatic',
         gears: 7,
-        carDimensionsRef: carDimensions._data[1]._hash || '',
+        carDimensionsRef: carDimensions._data[1]._hash,
         _hash: '',
       },
     ],
@@ -242,12 +242,12 @@ export const carsExample = (): CarsExample => {
     _data: [
       {
         add: {
-          VIN1: carGeneral._data[0]._hash || '',
-          VIN2: carGeneral._data[1]._hash || '',
+          VIN1: carGeneral._data[0]._hash,
+          VIN2: carGeneral._data[1]._hash,
           _hash: '',
         },
         sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[0]._hash || '',
+        sliceIdsTableRow: carSliceId._data[0]._hash,
         componentsTable: 'carGeneral',
         _hash: '',
       },
@@ -265,12 +265,12 @@ export const carsExample = (): CarsExample => {
     _data: [
       {
         add: {
-          VIN1: carTechnical._data[0]._hash || '',
-          VIN2: carTechnical._data[1]._hash || '',
+          VIN1: carTechnical._data[0]._hash,
+          VIN2: carTechnical._data[1]._hash,
           _hash: '',
         },
         sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[0]._hash || '',
+        sliceIdsTableRow: carSliceId._data[0]._hash,
         componentsTable: 'carTechnical',
         _hash: '',
       },
@@ -288,12 +288,12 @@ export const carsExample = (): CarsExample => {
     _data: [
       {
         add: {
-          VIN1: carColor._data[0]._hash || '',
-          VIN2: carColor._data[1]._hash || '',
+          VIN1: carColor._data[0]._hash,
+          VIN2: carColor._data[1]._hash,
           _hash: '',
         },
         sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[0]._hash || '',
+        sliceIdsTableRow: carSliceId._data[0]._hash,
         componentsTable: 'carColor',
         _hash: '',
       },
@@ -311,11 +311,11 @@ export const carsExample = (): CarsExample => {
     _data: [
       {
         sliceIdsTable: 'carSliceId',
-        sliceIdsRow: carSliceId._data[0]._hash || '',
+        sliceIdsRow: carSliceId._data[0]._hash,
         layers: {
-          carGeneralLayer: carGeneralLayer._data[0]._hash || '',
-          carTechnicalLayer: carTechnicalLayer._data[0]._hash || '',
-          carColorLayer: carColorLayer._data[0]._hash || '',
+          carGeneralLayer: carGeneralLayer._data[0]._hash,
+          carTechnicalLayer: carTechnicalLayer._data[0]._hash,
+          carColorLayer: carColorLayer._data[0]._hash,
         },
       },
     ],
@@ -422,12 +422,12 @@ export const carsExample = (): CarsExample => {
     _data: [
       {
         add: {
-          BOB37382: wheelBrand._data[0]._hash || '',
-          BOB37383: wheelBrand._data[1]._hash || '',
+          BOB37382: wheelBrand._data[0]._hash,
+          BOB37383: wheelBrand._data[1]._hash,
           _hash: '',
         },
         sliceIdsTable: 'wheelSliceId',
-        sliceIdsTableRow: wheelSliceId._data[0]._hash || '',
+        sliceIdsTableRow: wheelSliceId._data[0]._hash,
         componentsTable: 'wheelBrand',
         _hash: '',
       },
@@ -445,12 +445,12 @@ export const carsExample = (): CarsExample => {
     _data: [
       {
         add: {
-          BOB37382: wheelDimension._data[0]._hash || '',
-          BOB37383: wheelDimension._data[1]._hash || '',
+          BOB37382: wheelDimension._data[0]._hash,
+          BOB37383: wheelDimension._data[1]._hash,
           _hash: '',
         },
         sliceIdsTable: 'wheelSliceId',
-        sliceIdsTableRow: wheelSliceId._data[0]._hash || '',
+        sliceIdsTableRow: wheelSliceId._data[0]._hash,
         componentsTable: 'wheelDimension',
         _hash: '',
       },
@@ -468,10 +468,10 @@ export const carsExample = (): CarsExample => {
     _data: [
       {
         sliceIdsTable: 'wheelSliceId',
-        sliceIdsRow: wheelSliceId._data[0]._hash || '',
+        sliceIdsRow: wheelSliceId._data[0]._hash,
         layers: {
-          wheelBrandLayer: wheelBrandLayer._data[0]._hash || '',
-          wheelDimensionLayer: wheelDimensionLayer._data[0]._hash || '',
+          wheelBrandLayer: wheelBrandLayer._data[0]._hash,
+          wheelDimensionLayer: wheelDimensionLayer._data[0]._hash,
         },
       },
     ],

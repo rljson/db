@@ -49,6 +49,51 @@ describe('Controller', () => {
     await db.core.import(carsExample());
   });
 
+  describe('createController Factory', () => {
+    describe('create Controllers for Content Types', () => {
+      it('Layer', async () => {
+        const layerCtrl = await createController(
+          'layers',
+          core,
+          'carGeneralLayer',
+          {
+            sliceIdsTable: 'carSliceId',
+            sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+              '') as string,
+            componentsTable: 'carGeneral',
+          } as LayerControllerRefs,
+        );
+        expect(layerCtrl).toBeDefined();
+        expect(layerCtrl).toBeInstanceOf(LayerController);
+      });
+      it('Component', async () => {
+        const componentCtrl = await createController(
+          'components',
+          core,
+          'carGeneral',
+        );
+        expect(componentCtrl).toBeDefined();
+        expect(componentCtrl).toBeInstanceOf(ComponentController);
+      });
+      it('Cake', async () => {
+        const cakeCtrl = await createController('cakes', core, 'carCake', {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+            '') as string,
+        } as CakeControllerRefs);
+        expect(cakeCtrl).toBeDefined();
+        expect(cakeCtrl).toBeInstanceOf(CakeController);
+      });
+      it('Unknown', async () => {
+        await expect(
+          createController('unknown' as any, core, 'carGeneral'),
+        ).rejects.toThrow(
+          'Controller for type unknown is not implemented yet.',
+        );
+      });
+    });
+  });
+
   describe('ComponentController', () => {
     describe('Basic operation', () => {
       it('Init', async () => {
@@ -66,6 +111,21 @@ describe('Controller', () => {
         componentCtrl = new ComponentController(core, 'carSliceId');
         await expect(componentCtrl.init()).rejects.toThrow(
           'Table carSliceId is not of type components.',
+        );
+
+        //Base in Refs provided --> ignored
+        componentCtrl = new ComponentController(core, 'carGeneral', {
+          base: 'H45H',
+        });
+        await expect(componentCtrl.init()).toBeDefined();
+
+        //Refs provided --> throw
+        componentCtrl = new ComponentController(core, 'carGeneral', {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsRow: 'H45H',
+        });
+        await expect(componentCtrl.init()).rejects.toThrow(
+          'Refs are not required on ComponentController.',
         );
       });
       it('Table', async () => {
@@ -95,14 +155,82 @@ describe('Controller', () => {
 
         //Read existing Row
         const firstRowHash = carsExample().carGeneral._data[0]._hash as string;
-        const firstRow = await carGeneralComponentController.get(firstRowHash);
+        const {
+          ['carGeneral']: { _data: firstRows },
+        } = await carGeneralComponentController.get(firstRowHash);
+        const firstRow = firstRows[0];
         expect(firstRow).toBeDefined();
-        expect(firstRow!._hash!).toBeDefined();
-        expect(firstRow!._hash!).toStrictEqual(firstRowHash);
+        expect(firstRow._hash!).toBeDefined();
+        expect(firstRow._hash!).toStrictEqual(firstRowHash);
 
         //Read non-existing Row
         const nonExistingRow = await carGeneralComponentController.get('#');
-        expect(nonExistingRow).toBeUndefined();
+        expect(nonExistingRow['carGeneral']._data.length).toBe(0);
+
+        //Read by invalid where
+        const invalidWhere = await carGeneralComponentController.get(5 as any);
+        expect(invalidWhere).toEqual({});
+      });
+
+      it('Get by Hash w/ Filter', async () => {
+        //Create ComponentController
+        const carGeneralComponentController = await createController(
+          'components',
+          core,
+          'carGeneral',
+        );
+
+        //Read existing Row with Filter
+        const firstRowHash = carsExample().carGeneral._data[0]._hash as string;
+        const filter = { brand: 'Volkswagen' };
+        const {
+          ['carGeneral']: { _data: firstRows },
+        } = await carGeneralComponentController.get(firstRowHash, filter);
+        const firstRow = firstRows[0];
+        expect(firstRow).toBeDefined();
+        expect(firstRow._hash!).toBeDefined();
+        expect(firstRow._hash!).toStrictEqual(firstRowHash);
+
+        //Read existing Row with non-matching Filter
+        const {
+          ['carGeneral']: { _data: nonMatchingRows },
+        } = await carGeneralComponentController.get(firstRowHash, {
+          brand: 'Ford',
+        });
+        expect(nonMatchingRows.length).toBe(0);
+      });
+
+      it('Get by where object w/ Filter', async () => {
+        //Create ComponentController
+        const carGeneralComponentController = await createController(
+          'components',
+          core,
+          'carGeneral',
+        );
+
+        //Read existing Row with Filter
+        const where = carsExample().carGeneral._data[0];
+        const matchingFilter = { brand: 'Volkswagen' };
+        const {
+          ['carGeneral']: { _data: firstRows },
+        } = await carGeneralComponentController.get(
+          rmhsh(where),
+          matchingFilter,
+        );
+        const firstRow = firstRows[0];
+        expect(firstRow).toBeDefined();
+        expect(firstRow._hash!).toBeDefined();
+        expect(firstRow).toStrictEqual(where);
+
+        //Read existing Row with non-matching Filter
+        const nonMatchingFilter = { brand: 'Ford' };
+        const {
+          ['carGeneral']: { _data: nonMatchingRows },
+        } = await carGeneralComponentController.get(
+          rmhsh(where),
+          nonMatchingFilter,
+        );
+        expect(nonMatchingRows.length).toBe(0);
       });
 
       it('Run', async () => {
@@ -122,6 +250,21 @@ describe('Controller', () => {
           _hash: '', // hash will be generated automatically
         };
 
+        //Invalid Command
+        await expect(
+          carGeneralComponentController.run('update' as any, carGeneralValue),
+        ).rejects.toThrow(
+          'Command update is not supported by ComponentController.',
+        );
+
+        //Invalid Refs
+        await expect(
+          carGeneralComponentController.run('add', carGeneralValue, origin, {
+            base: 'H45H',
+          }),
+        ).rejects.toThrow('Refs are not supported on ComponentController.');
+
+        //Valid Run
         const editProtocolFirstRow = await carGeneralComponentController.run(
           'add',
           carGeneralValue,
@@ -206,16 +349,12 @@ describe('Controller', () => {
           'Table mockLayer is not of type layers.',
         );
 
-        //Missing Refs
-        layerCtrl = new LayerController(core, 'carGeneralLayer', {
-          sliceIdsTable: 'carSliceId',
-          componentsTable: 'carGeneral',
-        } as LayerControllerRefs);
-        await expect(layerCtrl.init()).rejects.toThrow(
-          'LayerController refs are not complete. Please provide sliceIdsTable, sliceIdsTableRow and componentsTable.',
-        );
+        //Valid w/o refs
+        layerCtrl = new LayerController(core, 'carGeneralLayer');
+        await layerCtrl.init();
+        expect(layerCtrl).toBeDefined();
 
-        //Valid
+        //Valid w/ refs
         layerCtrl = new LayerController(
           core,
           'carGeneralLayer',
@@ -223,6 +362,31 @@ describe('Controller', () => {
         );
         await layerCtrl.init();
         expect(layerCtrl).toBeDefined();
+
+        //Valid w/ base only
+        const carGeneralLayerRefsWithBase = {
+          base: (carsExample().carGeneralLayer._data[0]._hash || '') as string,
+        } as LayerControllerRefs;
+        layerCtrl = new LayerController(
+          core,
+          'carGeneralLayer',
+          carGeneralLayerRefsWithBase,
+        );
+        await layerCtrl.init();
+        expect(layerCtrl).toBeDefined();
+
+        //Base not existing
+        const missingBaseLayerRefs = {
+          base: 'NonExisting',
+        } as LayerControllerRefs;
+        layerCtrl = new LayerController(
+          core,
+          'carGeneralLayer',
+          missingBaseLayerRefs,
+        );
+        await expect(layerCtrl.init()).rejects.toThrow(
+          'Base layer NonExisting does not exist.',
+        );
       });
       it('Table', async () => {
         //LayerController Refs
@@ -266,14 +430,17 @@ describe('Controller', () => {
         //Read existing Row
         const firstRowHash = carsExample().carGeneralLayer._data[0]
           ._hash as string;
-        const firstRow = await carGeneralLayerController.get(firstRowHash);
+        const {
+          ['carGeneralLayer']: { _data: firstRows },
+        } = await carGeneralLayerController.get(firstRowHash);
+        const firstRow = firstRows[0];
         expect(firstRow).toBeDefined();
-        expect(firstRow!._hash!).toBeDefined();
-        expect(firstRow!._hash!).toStrictEqual(firstRowHash);
+        expect(firstRow._hash!).toBeDefined();
+        expect(firstRow._hash!).toStrictEqual(firstRowHash);
 
         //Read non-existing Row
         const nonExistingRow = await carGeneralLayerController.get('#');
-        expect(nonExistingRow).toBeUndefined();
+        expect(nonExistingRow['carGeneralLayer']._data.length).toBe(0);
       });
 
       it('Run', async () => {
@@ -378,15 +545,31 @@ describe('Controller', () => {
           'Table mockCake is not of type cakes.',
         );
 
-        //Missing Refs
-        cakeCtrl = new CakeController(core, 'carCake', {
-          sliceIdsTable: 'carSliceId',
-        } as CakeControllerRefs);
+        //Base cake not existing
+        const missingBaseCakeRefs = {
+          ...carCakeRefs,
+          ...{ base: 'NonExisting' },
+        } as CakeControllerRefs;
+        cakeCtrl = new CakeController(core, 'carCake', missingBaseCakeRefs);
         await expect(cakeCtrl.init()).rejects.toThrow(
-          'Refs are not complete on CakeController. Required: sliceIdsTable, sliceIdsRow',
+          'Base cake NonExisting does not exist.',
         );
 
-        //Valid
+        //Valid, w/o refs
+        cakeCtrl = new CakeController(core, 'carCake');
+        await cakeCtrl.init();
+        expect(cakeCtrl).toBeDefined();
+
+        //Valid, w/ base
+        const carCakeRefsWithBase = {
+          ...carCakeRefs,
+          ...{ base: (carsExample().carCake._data[0]._hash || '') as string },
+        } as CakeControllerRefs;
+        cakeCtrl = new CakeController(core, 'carCake', carCakeRefsWithBase);
+        await cakeCtrl.init();
+        expect(cakeCtrl).toBeDefined();
+
+        //Valid, w/ refs
         cakeCtrl = new CakeController(core, 'carCake', carCakeRefs);
         await cakeCtrl.init();
         expect(cakeCtrl).toBeDefined();
@@ -428,16 +611,32 @@ describe('Controller', () => {
           carCakeRefs,
         );
 
-        //Read existing Row
+        //Read existing Row By Hash
         const firstRowHash = carsExample().carCake._data[0]._hash as string;
-        const firstRow = await carCakeController.get(firstRowHash);
+        const {
+          ['carCake']: { _data: firstRows },
+        } = await carCakeController.get(firstRowHash);
+        const firstRow = firstRows[0];
         expect(firstRow).toBeDefined();
-        expect(firstRow!._hash!).toBeDefined();
-        expect(firstRow!._hash!).toStrictEqual(firstRowHash);
+        expect(firstRow._hash!).toBeDefined();
+        expect(firstRow._hash!).toStrictEqual(firstRowHash);
+
+        //Read existing Row By where object
+        const {
+          ['carCake']: { _data: firstRowsByWhere },
+        } = await carCakeController.get(rmhsh(firstRow) as string);
+        const firstRowByWhere = firstRowsByWhere[0];
+        expect(firstRowByWhere).toBeDefined();
+        expect(firstRowByWhere._hash!).toBeDefined();
+        expect(firstRowByWhere).toStrictEqual(firstRow);
 
         //Read non-existing Row
         const nonExistingRow = await carCakeController.get('#');
-        expect(nonExistingRow).toBeUndefined();
+        expect(nonExistingRow['carCake']._data.length).toBe(0);
+
+        //Read by invalid where
+        const invalidWhere = await carCakeController.get(5 as any);
+        expect(invalidWhere).toEqual({});
       });
 
       it('Run', async () => {
@@ -508,6 +707,41 @@ describe('Controller', () => {
         //Check if EditProtocol was written correctly
         const { carCake: carCakeTable2 } = await db.core.dumpTable('carCake');
         expect(carCakeTable2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first add
+      });
+
+      it('Invalid Run command', async () => {
+        //CakeController Refs
+        const carCakeRefs = {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+            '') as string,
+        } as CakeControllerRefs;
+
+        //Create CakeController
+        const carCakeController = await createController(
+          'cakes',
+          core,
+          'carCake',
+          carCakeRefs,
+        );
+
+        //Run with invalid command
+        const origin = 'H45H';
+        const carCakeValue: CakeValue = {
+          layers: {
+            carGeneralLayer:
+              (carsExample().carGeneralLayer._data[0]._hash as string) || '',
+            carTechnicalLayer:
+              (carsExample().carTechnicalLayer._data[0]._hash as string) || '',
+            carColorLayer:
+              (carsExample().carColorLayer._data[0]._hash as string) || '',
+          },
+          id: 'MyFirstCake',
+        };
+
+        await expect(
+          carCakeController.run('update' as any, carCakeValue, origin),
+        ).rejects.toThrow('Command update is not supported by CakeController.');
       });
     });
   });

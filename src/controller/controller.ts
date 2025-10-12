@@ -23,7 +23,7 @@ import { CakeController, CakeControllerRefs } from './cake-controller.ts';
 import { ComponentController } from './component-controller.ts';
 import { LayerController, LayerControllerRefs } from './layer-controller.ts';
 
-export type ControllerRefs = Partial<Layer> & Partial<Cake>;
+export type ControllerRefs = Partial<Layer> & Partial<Cake> & { base?: Ref };
 export type ControllerCommands = EditCommand;
 
 export type ControllerRunFn<N extends string> = (
@@ -50,7 +50,7 @@ export interface Controller<T extends TableType, N extends string> {
   run: ControllerRunFn<N>;
   init(): Promise<void>;
   table(): Promise<T>;
-  get(where: string | Json): Promise<Rljson>;
+  get(where: string | Json, filter?: Json): Promise<Rljson>;
 }
 
 // ...........................................................................
@@ -75,7 +75,7 @@ export const createController = async (
       ctrl = new LayerController(core, tableKey, refs as LayerControllerRefs);
       break;
     case 'components':
-      ctrl = new ComponentController(core, tableKey, refs);
+      ctrl = new ComponentController(core, tableKey, refs as ControllerRefs);
       break;
     case 'cakes':
       ctrl = new CakeController(core, tableKey, refs as CakeControllerRefs);

@@ -37,7 +37,7 @@ export class ComponentController<N extends string, T extends Json>
 
   async init() {
     // Validate Table
-    if (!!this._refs) {
+    if (!!this._refs && !this._refs.base) {
       // No specific refs required for components table
       throw new Error(`Refs are not required on ComponentController.`);
     }
