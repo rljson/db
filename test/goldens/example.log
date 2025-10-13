@@ -3,19 +3,179 @@ Create an example instance
 Create the tables
 Import Rljson
 Get the tables
-table
+_hash, tableCfgs, revisions, table
 Dump the database
 {
-  "_hash": "twhJ3SP_3wLV3viIkLq9Za",
+  "_hash": "RLAZ-qyMfX5bdKlkTuXh9t",
+  "tableCfgs": {
+    "_type": "tableCfgs",
+    "_data": [
+      {
+        "key": "revisions",
+        "type": "revisions",
+        "isHead": true,
+        "isRoot": true,
+        "isShared": false,
+        "columns": [
+          {
+            "key": "_hash",
+            "type": "string",
+            "_hash": "df4oYftB-71Njv9FprRCeg"
+          },
+          {
+            "key": "table",
+            "type": "string",
+            "_hash": "FmsYjsit04XJi02Sihdwl-"
+          },
+          {
+            "key": "predecessor",
+            "type": "string",
+            "_hash": "RlAk7Lj-lZf2KDlUk5fekZ"
+          },
+          {
+            "key": "successor",
+            "type": "string",
+            "_hash": "MJlFtQVty5oUJKVzzj5hyB"
+          },
+          {
+            "key": "timestamp",
+            "type": "number",
+            "_hash": "XpKYGh23thW6vONgQuoMHf"
+          },
+          {
+            "key": "id",
+            "type": "string",
+            "_hash": "eq2P3RIaSgy81i7PomNUvn"
+          }
+        ],
+        "_hash": "2ztQLyMtsFFIs0z_rvT6UL"
+      },
+      {
+        "version": 0,
+        "_hash": "9Ng57wo--dfSh3j4uwTvF5",
+        "key": "table",
+        "type": "components",
+        "isHead": false,
+        "isRoot": false,
+        "isShared": true,
+        "columns": [
+          {
+            "key": "_hash",
+            "type": "string",
+            "_hash": "df4oYftB-71Njv9FprRCeg"
+          },
+          {
+            "key": "int",
+            "type": "number",
+            "_hash": "J-rki_omMRDnv_GF0hqn39"
+          },
+          {
+            "key": "double",
+            "type": "number",
+            "_hash": "XD0G8ZLa0-tKYnVUuEwkdS"
+          },
+          {
+            "key": "string",
+            "type": "string",
+            "_hash": "eg0iPUTzUY2j_xTKwRIrUp"
+          },
+          {
+            "key": "boolean",
+            "type": "boolean",
+            "_hash": "16MfBHbWYzez1R4r8NoPYp"
+          },
+          {
+            "key": "null",
+            "type": "string",
+            "_hash": "hitpP-3Kxy0kcfrNU6YIo1"
+          },
+          {
+            "key": "jsonArray",
+            "type": "jsonArray",
+            "_hash": "PMwRJkviMj35S60qjN3UpG"
+          },
+          {
+            "key": "json",
+            "type": "json",
+            "_hash": "NuhgezXe-Mkdf-hg96MNLG"
+          },
+          {
+            "key": "jsonValue",
+            "type": "jsonValue",
+            "_hash": "1LtHkc_tVAXXqH2OFXQ8rG"
+          }
+        ]
+      },
+      {
+        "_hash": "er5aXXmEqihTA7Y1glILb4",
+        "key": "tableCfgs",
+        "type": "tableCfgs",
+        "isHead": false,
+        "isRoot": false,
+        "isShared": true,
+        "previous": "",
+        "columns": [
+          {
+            "key": "_hash",
+            "type": "string",
+            "_hash": "df4oYftB-71Njv9FprRCeg"
+          },
+          {
+            "key": "key",
+            "type": "string",
+            "_hash": "tapEY-QdaJwWhz1PPZoG35"
+          },
+          {
+            "key": "type",
+            "type": "string",
+            "_hash": "zE7ALsNzu5JPgDD4AxeRCh"
+          },
+          {
+            "key": "isHead",
+            "type": "boolean",
+            "_hash": "ar8Hajt2UZDn-F21QLMyC_"
+          },
+          {
+            "key": "isRoot",
+            "type": "boolean",
+            "_hash": "hedsCm_HtiiTuzJyTeMqhm"
+          },
+          {
+            "key": "isShared",
+            "type": "boolean",
+            "_hash": "pxXOf3-3qCo9Z3FzC9JXSH"
+          },
+          {
+            "key": "previous",
+            "type": "string",
+            "_hash": "e0TEeDmSvJcLEMtrVxc0oW"
+          },
+          {
+            "key": "columns",
+            "type": "jsonArray",
+            "_hash": "aPmGTcNng9E1RvlEj1LtxB"
+          }
+        ]
+      }
+    ],
+    "_tableCfg": "er5aXXmEqihTA7Y1glILb4",
+    "_hash": "qNmaGUq9dz0t0deFRFafEo"
+  },
+  "revisions": {
+    "_type": "revisions",
+    "_data": [],
+    "_tableCfg": "2ztQLyMtsFFIs0z_rvT6UL",
+    "_hash": "QaE-R7nOANTF7AshcaAQFr"
+  },
   "table": {
+    "_type": "components",
     "_data": [
       {
         "int": 5,
         "double": 5.5,
         "string": "a",
         "boolean": true,
-        "null": null,
-        "array": [
+        "jsonArray": [
           1,
           "a",
           true,
@@ -31,7 +191,7 @@ Dump the database
             "_hash": "AVq9f1zFei3ZS3WQ8ErYCE"
           }
         ],
-        "object": {
+        "json": {
           "a": 1,
           "b": {
             "c": 2,
@@ -39,24 +199,25 @@ Dump the database
           },
           "_hash": "hGgAD2SBqPnVvwk8nYUICW"
         },
-        "_hash": "sR1OyebvAsQn8_URi2cvId"
+        "jsonValue": 3,
+        "_hash": "Cxg2P0ZWlEbBX6pYOlOw8l"
       }
     ],
-    "_type": "properties",
-    "_hash": "TMRAxxBKEuPHWClkgLXakg"
+    "_tableCfg": "9Ng57wo--dfSh3j4uwTvF5",
+    "_hash": "ACB-8VVkgimOEHdrX6rHFF"
   }
 }
 Dump a single table
 {
   "table": {
+    "_type": "components",
     "_data": [
       {
         "int": 5,
         "double": 5.5,
         "string": "a",
         "boolean": true,
-        "null": null,
-        "array": [
+        "jsonArray": [
           1,
           "a",
           true,
@@ -72,7 +233,7 @@ Dump a single table
             "_hash": "AVq9f1zFei3ZS3WQ8ErYCE"
           }
         ],
-        "object": {
+        "json": {
           "a": 1,
           "b": {
             "c": 2,
@@ -80,10 +241,11 @@ Dump a single table
           },
           "_hash": "hGgAD2SBqPnVvwk8nYUICW"
         },
-        "_hash": "sR1OyebvAsQn8_URi2cvId"
+        "jsonValue": 3,
+        "_hash": "Cxg2P0ZWlEbBX6pYOlOw8l"
       }
     ],
-    "_type": "properties",
-    "_hash": "TMRAxxBKEuPHWClkgLXakg"
+    "_tableCfg": "9Ng57wo--dfSh3j4uwTvF5",
+    "_hash": "ACB-8VVkgimOEHdrX6rHFF"
   }
 }
