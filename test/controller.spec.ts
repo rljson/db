@@ -12,19 +12,13 @@ import { Layer, SliceId, TableCfg } from '@rljson/rljson';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { CarGeneral, carsExample } from '../src/cars-example';
-import {
-  CakeController,
-  CakeControllerRefs,
-  CakeValue,
-} from '../src/controller/cake-controller';
+import { CakeController, CakeControllerRefs, CakeValue } from '../src/controller/cake-controller';
 import { ComponentController } from '../src/controller/component-controller';
 import { createController } from '../src/controller/controller';
-import {
-  LayerController,
-  LayerControllerRefs,
-} from '../src/controller/layer-controller';
+import { LayerController, LayerControllerRefs } from '../src/controller/layer-controller';
 import { Core } from '../src/core';
 import { Db } from '../src/db';
+
 
 describe('Controller', () => {
   let db: Db;
@@ -42,7 +36,7 @@ describe('Controller', () => {
 
     //Create Tables for TableCfgs in carsExample
     for (const tableCfg of carsExample().tableCfgs._data) {
-      await db.core.createEditable(tableCfg);
+      await db.core.createTableWithHistory(tableCfg);
     }
 
     //Import Data

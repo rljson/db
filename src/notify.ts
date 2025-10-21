@@ -4,11 +4,10 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { EditProtocolRow, Route } from '@rljson/rljson';
+import { HistoryRow, Route } from '@rljson/rljson';
 
-type NotifyCallback<N extends string> = (
-  EditProtocolRow: EditProtocolRow<N>,
-) => void;
+
+type NotifyCallback<N extends string> = (HistoryRow: HistoryRow<N>) => void;
 
 // ...........................................................................
 /**
@@ -53,13 +52,13 @@ export class Notify {
   /**
    * Notifies all registered callbacks for a specific route with the provided edit protocol row.
    * @param route   The route to notify callbacks for.
-   * @param editProtocolRow  The edit protocol row to pass to the callbacks.
+   * @param historyRow  The edit protocol row to pass to the callbacks.
    */
-  notify<N extends string>(route: Route, editProtocolRow: EditProtocolRow<N>) {
+  notify<N extends string>(route: Route, historyRow: HistoryRow<N>) {
     const callbacks = this._callbacks.get(route.flat);
     if (callbacks) {
       for (const cb of callbacks) {
-        cb(editProtocolRow);
+        cb(historyRow);
       }
     }
   }

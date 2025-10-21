@@ -5,23 +5,13 @@ import { hsh } from '@rljson/hash';
 // Use of this source code is governed by terms that can be
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
-import {
-  ComponentsTable,
-  EditProtocolRow,
-  Ref,
-  Rljson,
-  TableKey,
-  timeId,
-} from '@rljson/rljson';
+import { ComponentsTable, HistoryRow, Ref, Rljson, TableKey, timeId } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
-import {
-  Controller,
-  ControllerCommands,
-  ControllerRefs,
-} from './controller.ts';
+import { Controller, ControllerCommands, ControllerRefs } from './controller.ts';
+
 
 export class ComponentController<N extends string, T extends Json>
   extends BaseController<ComponentsTable<T>>
@@ -55,7 +45,7 @@ export class ComponentController<N extends string, T extends Json>
     value: Json,
     origin?: Ref,
     refs?: ControllerRefs,
-  ): Promise<EditProtocolRow<N>> {
+  ): Promise<HistoryRow<N>> {
     // Validate command
     if (!command.startsWith('add')) {
       throw new Error(
@@ -82,6 +72,6 @@ export class ComponentController<N extends string, T extends Json>
       origin,
       //Unique id/timestamp
       timeId: timeId(),
-    } as any as EditProtocolRow<N>;
+    } as any as HistoryRow<N>;
   }
 }

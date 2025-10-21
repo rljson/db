@@ -6,25 +6,14 @@ import { hsh, rmhsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  Cake,
-  CakesTable,
-  EditProtocolRow,
-  LayerRef,
-  Ref,
-  Rljson,
-  SliceIdsRef,
-  TableKey,
-  timeId,
+  Cake, CakesTable, HistoryRow, LayerRef, Ref, Rljson, SliceIdsRef, TableKey, timeId
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
-import {
-  Controller,
-  ControllerCommands,
-  ControllerRefs,
-} from './controller.ts';
+import { Controller, ControllerCommands, ControllerRefs } from './controller.ts';
+
 
 export interface CakeValue extends Json {
   layers: {
@@ -111,7 +100,7 @@ export class CakeController<N extends string>
     value: Json,
     origin?: Ref,
     refs?: CakeControllerRefs,
-  ): Promise<EditProtocolRow<any>> {
+  ): Promise<HistoryRow<any>> {
     // Validate command
     if (!command.startsWith('add')) {
       throw new Error(`Command ${command} is not supported by CakeController.`);
@@ -128,7 +117,7 @@ export class CakeController<N extends string>
     //Write component to io
     await this._core.import(rlJson);
 
-    //Create EditProtocolRow
+    //Create HistoryRow
     const result = {
       //Ref to component
       [this._tableKey + 'Ref']: hsh(cake as Json)._hash as string,
@@ -139,7 +128,7 @@ export class CakeController<N extends string>
 
       //Unique id/timestamp
       timeId: timeId(),
-    } as EditProtocolRow<any>;
+    } as HistoryRow<any>;
 
     return result;
   }

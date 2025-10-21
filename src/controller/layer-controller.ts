@@ -6,17 +6,8 @@ import { hsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  ComponentRef,
-  EditCommand,
-  EditProtocolRow,
-  Layer,
-  LayersTable,
-  Ref,
-  Rljson,
-  SliceId,
-  SliceIdsRef,
-  TableKey,
-  timeId,
+  ComponentRef, HistoryRow, InsertCommand, Layer, LayersTable, Ref, Rljson, SliceId, SliceIdsRef,
+  TableKey, timeId
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
@@ -24,6 +15,7 @@ import { Core } from '../core.ts';
 import { BaseController } from './base-controller.ts';
 import { CakeControllerRefs } from './cake-controller.ts';
 import { Controller, ControllerRefs } from './controller.ts';
+
 
 export interface LayerControllerRefs extends ControllerRefs {
   sliceIdsTable?: TableKey;
@@ -100,11 +92,11 @@ export class LayerController<N extends string>
   }
 
   async run(
-    command: EditCommand,
+    command: InsertCommand,
     value: Json,
     origin?: Ref,
     refs?: LayerControllerRefs,
-  ): Promise<EditProtocolRow<any>> {
+  ): Promise<HistoryRow<any>> {
     // Validate command
     if (!command.startsWith('add') && !command.startsWith('remove')) {
       throw new Error(
@@ -130,7 +122,7 @@ export class LayerController<N extends string>
     //Write component to io
     await this._core.import(rlJson);
 
-    //Create EditProtocolRow
+    //Create HistoryRow
     const result = {
       //Ref to component
       [this._tableKey + 'Ref']: hsh(layer as Json)._hash as string,
@@ -141,7 +133,7 @@ export class LayerController<N extends string>
 
       //Unique id/timestamp
       timeId: timeId(),
-    } as EditProtocolRow<any>;
+    } as HistoryRow<any>;
 
     return result;
   }

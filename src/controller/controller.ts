@@ -6,15 +6,7 @@
 
 import { Json } from '@rljson/json';
 import {
-  Cake,
-  ContentType,
-  EditCommand,
-  EditProtocolRow,
-  Layer,
-  Ref,
-  Rljson,
-  TableKey,
-  TableType,
+  Cake, ContentType, HistoryRow, InsertCommand, Layer, Ref, Rljson, TableKey, TableType
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
@@ -23,15 +15,16 @@ import { CakeController, CakeControllerRefs } from './cake-controller.ts';
 import { ComponentController } from './component-controller.ts';
 import { LayerController, LayerControllerRefs } from './layer-controller.ts';
 
+
 export type ControllerRefs = Partial<Layer> & Partial<Cake> & { base?: Ref };
-export type ControllerCommands = EditCommand;
+export type ControllerCommands = InsertCommand;
 
 export type ControllerRunFn<N extends string> = (
   command: ControllerCommands,
   value: Json,
   origin?: Ref,
   refs?: Partial<ControllerRefs>,
-) => Promise<EditProtocolRow<N>>;
+) => Promise<HistoryRow<N>>;
 
 // ...........................................................................
 /**

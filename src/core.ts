@@ -7,13 +7,9 @@
 import { Io, IoMem } from '@rljson/io';
 import { JsonValue } from '@rljson/json';
 import {
-  BaseValidator,
-  ContentType,
-  createEditProtocolTableCfg,
-  Rljson,
-  TableCfg,
-  Validate,
+  BaseValidator, ContentType, createHistoryTableCfg, Rljson, TableCfg, Validate
 } from '@rljson/rljson';
+
 
 /** Implements core functionalities like importing data, setting tables  */
 export class Core {
@@ -26,12 +22,12 @@ export class Core {
 
   // ...........................................................................
   /**
-   * Creates a table and an edit protocol for the table
+   * Creates a table and an history for the table
    * @param tableCfg TableCfg of table to create
    */
-  async createEditable(tableCfg: TableCfg): Promise<void> {
+  async createTableWithHistory(tableCfg: TableCfg): Promise<void> {
     await this.createTable(tableCfg);
-    await this.createEditProtocol(tableCfg);
+    await this.createHistory(tableCfg);
   }
 
   /**
@@ -42,11 +38,11 @@ export class Core {
     return this._io.createOrExtendTable({ tableCfg });
   }
   /**
-   * Creates an edit protocol table for a given table
+   * Creates an history table for a given table
    * @param tableCfg TableCfg of table
    */
-  async createEditProtocol(tableCfg: TableCfg): Promise<void> {
-    const cfg = createEditProtocolTableCfg(tableCfg);
+  async createHistory(tableCfg: TableCfg): Promise<void> {
+    const cfg = createHistoryTableCfg(tableCfg);
     await this.createTable(cfg);
   }
 

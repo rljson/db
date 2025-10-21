@@ -7,18 +7,13 @@
 import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
-import {
-  Edit,
-  EditProtocol,
-  EditProtocolRow,
-  LayerRef,
-  Route,
-} from '@rljson/rljson';
+import { History, HistoryRow, Insert, LayerRef, Route } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
+
 
 describe('Db', () => {
   let db: Db;
@@ -34,7 +29,7 @@ describe('Db', () => {
 
     //Create Tables for TableCfgs in carsExample
     for (const tableCfg of carsExample().tableCfgs._data) {
-      await db.core.createEditable(tableCfg);
+      await db.core.createTableWithHistory(tableCfg);
     }
 
     //Import Data
@@ -129,7 +124,7 @@ describe('Db', () => {
     });
     it('get nested layer/component by hash w/ revision', async () => {
       //Add Layer with switching VIN -> CarGeneral relation
-      const edit: Edit<Json> = {
+      const Insert: Insert<Json> = {
         route: '/carGeneralLayer',
         command: 'add',
         value: {
@@ -141,9 +136,9 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const addedLayerProtocol = (await db.run(
-        edit,
-      )) as EditProtocolRow<'CarGeneralLayer'>;
+      const addedLayerHistory = (await db.run(
+        Insert,
+      )) as HistoryRow<'CarGeneralLayer'>;
 
       //Search for first carGeneral
       const where = carsExample().carGeneral._data[0]._hash ?? '';
@@ -153,7 +148,7 @@ describe('Db', () => {
       const route1 = `/carGeneralLayer@${layerRevHash1}/carGeneral`;
 
       //GET Result via second layer revision
-      const layerRevHash2 = addedLayerProtocol.carGeneralLayerRef ?? '';
+      const layerRevHash2 = addedLayerHistory.carGeneralLayerRef ?? '';
       const route2 = `/carGeneralLayer@${layerRevHash2}/carGeneral`;
 
       const result1 = await db.get(Route.fromFlat(route1), where);
@@ -246,8 +241,8 @@ describe('Db', () => {
       expect(result[0].carGeneral._data[0]._hash).toBe(where);
     });
     it('get nested cake/layer/component by hash w/ revision TimeId', async () => {
-      //Add new Protocol Entry to Layer Revisions, recursively adding it to the cake
-      const layerEdit: Edit<Json> = {
+      //Add new History Entry to Layer Revisions, recursively adding it to the cake
+      const layerInsert: Insert<Json> = {
         route: '/carCake/carGeneralLayer',
         command: 'add',
         value: {
@@ -260,14 +255,14 @@ describe('Db', () => {
         origin: 'H45H',
         acknowledged: false,
       };
-      const cakeProtocolRow = await db.run(layerEdit);
-      const cakeRevisionTimeId = cakeProtocolRow.timeId;
+      const cakeHistoryRow = await db.run(layerInsert);
+      const cakeRevisionTimeId = cakeHistoryRow.timeId;
 
       //Get layer revision TimeId
       const {
-        ['carGeneralLayerEdits']: { _data: layerProtocolRows },
-      } = await db.getProtocol('carGeneralLayer');
-      const layerRevisionTimeId = layerProtocolRows[0].timeId;
+        ['carGeneralLayerHistory']: { _data: layerHistoryRows },
+      } = await db.getHistory('carGeneralLayer');
+      const layerRevisionTimeId = layerHistoryRows[0].timeId;
 
       //Build route with TimeIds
       const route = `/carCake@${cakeRevisionTimeId}/carGeneralLayer@${layerRevisionTimeId}/carGeneral`;
@@ -280,7 +275,7 @@ describe('Db', () => {
       expect(result).toBeDefined();
       expect(result[0].carCake).toBeDefined();
       expect(result[0].carCake._data.length).toBe(1);
-      expect(result[0].carCake._data[0]._hash).toBe(cakeProtocolRow.carCakeRef);
+      expect(result[0].carCake._data[0]._hash).toBe(cakeHistoryRow.carCakeRef);
 
       expect(result[0].carGeneralLayer).toBeDefined();
       expect(result[0].carGeneralLayer._data.length).toBe(1);
@@ -292,7 +287,7 @@ describe('Db', () => {
 
       expect(result[1].carCake).toBeDefined();
       expect(result[1].carCake._data.length).toBe(1);
-      expect(result[1].carCake._data[0]._hash).toBe(cakeProtocolRow.carCakeRef);
+      expect(result[1].carCake._data[0]._hash).toBe(cakeHistoryRow.carCakeRef);
 
       expect(result[1].carGeneralLayer).toBeDefined();
       expect(result[1].carGeneralLayer._data.length).toBe(1);
@@ -305,7 +300,7 @@ describe('Db', () => {
   });
 
   describe('run', () => {
-    it('throws on invalid edit', async () => {
+    it('throws on invalid Insert', async () => {
       //Mismatched route/value depth
       await expect(
         db.run({
@@ -318,8 +313,8 @@ describe('Db', () => {
       ).rejects.toThrow();
     });
 
-    it('run edit on component route', async () => {
-      const edit: Edit<CarGeneral> = {
+    it('run Insert on component route', async () => {
+      const Insert: Insert<CarGeneral> = {
         route: '/carGeneral',
         command: 'add',
         value: {
@@ -332,7 +327,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(edit);
+      const result = await db.run(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
@@ -340,27 +335,27 @@ describe('Db', () => {
       expect(result.origin).toBe('H45H');
     });
 
-    it('run edit on component route, w/ previous by Hash', async () => {
+    it('run Insert on component route, w/ previous by Hash', async () => {
       //Add predecessor component to core db
       const previousTimeId = 'H45H:20240606T120000Z';
       await db.core.import({
-        carGeneralEdits: {
-          _type: 'edits',
+        carGeneralHistory: {
+          _type: 'history',
           _data: [
             {
               carGeneralRef: carsExample().carGeneral._data[0]._hash ?? '',
               timeId: previousTimeId,
               route: '/carGeneral',
-            } as EditProtocolRow<'CarGeneral'>,
+            } as HistoryRow<'CarGeneral'>,
           ],
-        } as EditProtocol<'CarGeneral'>,
+        } as History<'CarGeneral'>,
       });
 
-      //Create edit with predecessor ref in route
+      //Create Insert with predecessor ref in route
       //by hash
       const previousHash = carsExample().carGeneral._data[0]._hash ?? '';
       const route = ['/carGeneral', previousHash].join('@');
-      const edit: Edit<CarGeneral> = {
+      const Insert: Insert<CarGeneral> = {
         route,
         command: 'add',
         value: {
@@ -373,7 +368,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(edit);
+      const result = await db.run(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
@@ -382,26 +377,26 @@ describe('Db', () => {
       expect(result.previous).toEqual([previousTimeId]);
     });
 
-    it('run edit on component route, w/ previous by TimeID', async () => {
+    it('run Insert on component route, w/ previous by TimeID', async () => {
       //Add predecessor component to core db
       const previousTimeId = 'H45H:20240606T120000Z';
       await db.core.import({
-        carGeneralEdits: {
-          _type: 'edits',
+        carGeneralHistory: {
+          _type: 'history',
           _data: [
             {
               carGeneralRef: carsExample().carGeneral._data[0]._hash ?? '',
               timeId: previousTimeId,
               route: '/carGeneral',
-            } as EditProtocolRow<'CarGeneral'>,
+            } as HistoryRow<'CarGeneral'>,
           ],
-        } as EditProtocol<'CarGeneral'>,
+        } as History<'CarGeneral'>,
       });
 
-      //Create edit with predecessor ref in route
+      //Create Insert with predecessor ref in route
       //by timeId
       const route = ['/carGeneral', previousTimeId].join('@');
-      const edit: Edit<CarGeneral> = {
+      const Insert: Insert<CarGeneral> = {
         route,
         command: 'add',
         value: {
@@ -414,7 +409,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(edit);
+      const result = await db.run(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
@@ -423,8 +418,8 @@ describe('Db', () => {
       expect(result.previous).toEqual([previousTimeId]);
     });
 
-    it('run edit on layer route', async () => {
-      const edit: Edit<Json> = {
+    it('run Insert on layer route', async () => {
+      const Insert: Insert<Json> = {
         route: '/carGeneralLayer',
         command: 'add',
         value: {
@@ -436,7 +431,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(edit);
+      const result = await db.run(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralLayerRef).toBeDefined();
@@ -444,9 +439,9 @@ describe('Db', () => {
       expect(result.origin).toBe('H45H');
     });
 
-    it('run edit on cake route', async () => {
+    it('run Insert on cake route', async () => {
       const carCake = carsExample().carCake._data[0];
-      const edit: Edit<Record<string, LayerRef>> = {
+      const Insert: Insert<Record<string, LayerRef>> = {
         route: '/carCake',
         command: 'add',
         value: {
@@ -457,7 +452,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(edit);
+      const result = await db.run(Insert);
 
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
@@ -466,8 +461,8 @@ describe('Db', () => {
       expect(result.origin).toBe('H45H');
     });
 
-    it('run edit on nested: component/component', async () => {
-      const edit: Edit<Json> = {
+    it('run Insert on nested: component/component', async () => {
+      const Insert: Insert<Json> = {
         route: '/carTechnical/carDimensions',
         command: 'add',
         value: {
@@ -484,7 +479,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(edit);
+      const result = await db.run(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carTechnicalRef).toBeDefined();
@@ -516,8 +511,8 @@ describe('Db', () => {
       expect(writtenDimension.length).toBe(4700);
     });
 
-    it('run edit on nested: layer/component', async () => {
-      const edit: Edit<Json> = {
+    it('run Insert on nested: layer/component', async () => {
+      const Insert: Insert<Json> = {
         route: '/carGeneralLayer/carGeneral',
         command: 'add',
         value: {
@@ -537,7 +532,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(edit);
+      const result = await db.run(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralLayerRef).toBeDefined();
@@ -565,8 +560,8 @@ describe('Db', () => {
       expect(newComponents.length).toBe(2);
     });
 
-    it('run edit on nested: cake/layer/component', async () => {
-      const edit: Edit<Json> = {
+    it('run Insert on nested: cake/layer/component', async () => {
+      const Insert: Insert<Json> = {
         route: '/carCake/carGeneralLayer/carGeneral',
         command: 'add',
         value: {
@@ -587,7 +582,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(edit);
+      const result = await db.run(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carCakeRef).toBeDefined();
@@ -645,7 +640,7 @@ describe('Db', () => {
 
       db.registerObserver(route, callback);
 
-      const edit: Edit<CarGeneral> = {
+      const Insert: Insert<CarGeneral> = {
         route: '/carGeneral',
         command: 'add',
         value: {
@@ -658,7 +653,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(edit);
+      const result = await db.run(Insert);
 
       expect(callback).toHaveBeenCalledTimes(1);
       expect(callback).toHaveBeenCalledWith(result);
@@ -669,7 +664,7 @@ describe('Db', () => {
 
       db.registerObserver(route, callback);
 
-      const edit: Edit<CarGeneral> = {
+      const Insert: Insert<CarGeneral> = {
         route: '/carGeneral',
         command: 'add',
         value: {
@@ -682,7 +677,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const edit2: Edit<CarGeneral> = {
+      const Insert2: Insert<CarGeneral> = {
         route: '/carGeneral',
         command: 'add',
         value: {
@@ -695,8 +690,8 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(edit);
-      const result2 = await db.run(edit2);
+      const result = await db.run(Insert);
+      const result2 = await db.run(Insert2);
 
       expect(callback).toHaveBeenCalledTimes(2);
       expect(callback).toHaveBeenNthCalledWith(1, result);
@@ -709,7 +704,7 @@ describe('Db', () => {
 
       db.registerObserver(route, callback);
 
-      const edit: Edit<Json> = {
+      const Insert: Insert<Json> = {
         route: '/carTechnical/carDimensions',
         command: 'add',
         value: {
@@ -726,22 +721,22 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      await db.run(edit);
+      await db.run(Insert);
 
-      //Get written protocol rows
+      //Get written history rows
       const {
-        ['carTechnicalEdits']: { _data: carTechnicalProtocol },
-      } = await db.getProtocol('carTechnical');
-      const carTechnicalEditProtocolRow = rmhsh(carTechnicalProtocol[0]);
+        ['carTechnicalHistory']: { _data: carTechnicalHistory },
+      } = await db.getHistory('carTechnical');
+      const carTechnicalHistoryRow = rmhsh(carTechnicalHistory[0]);
 
       const {
-        ['carDimensionsEdits']: { _data: carDimensionsProtocol },
-      } = await db.getProtocol('carDimensions');
-      const carDimensionsEditProtocolRow = rmhsh(carDimensionsProtocol[0]);
+        ['carDimensionsHistory']: { _data: carDimensionsHistory },
+      } = await db.getHistory('carDimensions');
+      const carDimensionsHistoryRow = rmhsh(carDimensionsHistory[0]);
 
       expect(callback).toHaveBeenCalledTimes(2);
-      expect(callback).toHaveBeenNthCalledWith(2, carTechnicalEditProtocolRow);
-      expect(callback).toHaveBeenNthCalledWith(1, carDimensionsEditProtocolRow);
+      expect(callback).toHaveBeenNthCalledWith(2, carTechnicalHistoryRow);
+      expect(callback).toHaveBeenNthCalledWith(1, carDimensionsHistoryRow);
     });
     it('notify on nested cake/layer/component route', async () => {
       const callback = vi.fn();
@@ -749,7 +744,7 @@ describe('Db', () => {
 
       db.registerObserver(route, callback);
 
-      const edit: Edit<Json> = {
+      const Insert: Insert<Json> = {
         route: '/carCake/carGeneralLayer/carGeneral',
         command: 'add',
         value: {
@@ -770,41 +765,38 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      await db.run(edit);
+      await db.run(Insert);
 
-      //Get written protocol rows
+      //Get written history rows
       const {
-        ['carCakeEdits']: { _data: carCakeProtocol },
-      } = await db.getProtocol('carCake');
-      const carCakeEditProtocolRow = rmhsh(carCakeProtocol[0]);
-
-      const {
-        ['carGeneralLayerEdits']: { _data: carGeneralLayerProtocol },
-      } = await db.getProtocol('carGeneralLayer');
-      const carGeneralLayerEditProtocolRow = rmhsh(carGeneralLayerProtocol[0]);
+        ['carCakeHistory']: { _data: carCakeHistory },
+      } = await db.getHistory('carCake');
+      const carCakeHistoryRow = rmhsh(carCakeHistory[0]);
 
       const {
-        ['carGeneralEdits']: { _data: carGeneralProtocol },
-      } = await db.getProtocol('carGeneral');
-      const carGeneralEditProtocolRow1 = rmhsh(carGeneralProtocol[0]);
-      const carGeneralEditProtocolRow2 = rmhsh(carGeneralProtocol[1]);
+        ['carGeneralLayerHistory']: { _data: carGeneralLayerHistory },
+      } = await db.getHistory('carGeneralLayer');
+      const carGeneralLayerHistoryRow = rmhsh(carGeneralLayerHistory[0]);
+
+      const {
+        ['carGeneralHistory']: { _data: carGeneralHistory },
+      } = await db.getHistory('carGeneral');
+      const carGeneralHistoryRow1 = rmhsh(carGeneralHistory[0]);
+      const carGeneralHistoryRow2 = rmhsh(carGeneralHistory[1]);
 
       expect(callback).toHaveBeenCalledTimes(4);
-      expect(callback).toHaveBeenNthCalledWith(4, carCakeEditProtocolRow);
-      expect(callback).toHaveBeenNthCalledWith(
-        3,
-        carGeneralLayerEditProtocolRow,
-      );
-      //Order of component edits not guaranteed
+      expect(callback).toHaveBeenNthCalledWith(4, carCakeHistoryRow);
+      expect(callback).toHaveBeenNthCalledWith(3, carGeneralLayerHistoryRow);
+      //Order of component History not guaranteed
       expect([2, 1]).toContain(
-        (callback.mock.calls[1][0] as EditProtocolRow<'CarGeneral'>).timeId ===
-          carGeneralEditProtocolRow1.timeId
+        (callback.mock.calls[1][0] as HistoryRow<'CarGeneral'>).timeId ===
+          carGeneralHistoryRow1.timeId
           ? 2
           : 1,
       );
       expect([2, 1]).toContain(
-        (callback.mock.calls[1][0] as EditProtocolRow<'CarGeneral'>).timeId ===
-          carGeneralEditProtocolRow2.timeId
+        (callback.mock.calls[1][0] as HistoryRow<'CarGeneral'>).timeId ===
+          carGeneralHistoryRow2.timeId
           ? 2
           : 1,
       );
@@ -815,7 +807,7 @@ describe('Db', () => {
 
       db.registerObserver(route, callback);
 
-      const edit: Edit<CarGeneral> = {
+      const Insert: Insert<CarGeneral> = {
         route: '/carGeneral',
         command: 'add',
         value: {
@@ -828,7 +820,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      await db.run(edit, { skipNotification: true });
+      await db.run(Insert, { skipNotification: true });
 
       expect(callback).toHaveBeenCalledTimes(0);
     });
