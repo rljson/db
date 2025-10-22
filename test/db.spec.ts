@@ -14,7 +14,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
 
-
 describe('Db', () => {
   let db: Db;
 
@@ -56,6 +55,25 @@ describe('Db', () => {
       expect(result[0].carGeneral).toBeDefined();
       expect(result[0].carGeneral._data.length).toBe(1);
       expect(result[0].carGeneral._data[0]._hash).toBe(ref);
+    });
+    it('get component property by ref', async () => {
+      const componentKey = 'carGeneral';
+      const propertyKey = 'brand';
+      const route = `${componentKey}/${propertyKey}`;
+
+      const ref = carsExample().carGeneral._data[0]._hash ?? '';
+
+      const result = await db.get(Route.fromFlat(route), ref);
+
+      expect(result).toBeDefined();
+      expect(result[0][componentKey]).toBeDefined();
+      expect(result[0][componentKey]._data.length).toBe(1);
+      expect(result[0][componentKey]._data[0]).toEqual({
+        [propertyKey]: carsExample().carGeneral._data[0][propertyKey],
+      });
+      expect(result[0][componentKey]._data[0][propertyKey]).toBe(
+        carsExample().carGeneral._data[0][propertyKey],
+      );
     });
     it('get component by where', async () => {
       const route = '/carGeneral';

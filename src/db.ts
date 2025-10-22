@@ -7,15 +7,24 @@
 import { Io, IoMem } from '@rljson/io';
 import { Json } from '@rljson/json';
 import {
-  HistoryRow, HistoryTimeId, Insert, isTimeId, Ref, Rljson, Route, validateInsert
+  HistoryRow,
+  HistoryTimeId,
+  Insert,
+  isTimeId,
+  Ref,
+  Rljson,
+  Route,
+  validateInsert,
 } from '@rljson/rljson';
 
 import {
-  Controller, ControllerRefs, ControllerRunFn, createController
+  Controller,
+  ControllerRefs,
+  ControllerRunFn,
+  createController,
 } from './controller/controller.ts';
 import { Core } from './core.ts';
 import { Notify } from './notify.ts';
-
 
 /**
  * Access Rljson data
@@ -52,11 +61,14 @@ export class Db {
     // Validate Route
     if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
 
+    //Isolate Property Key
+    const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
+
     // Get Controllers
-    const controllers = await this._indexedControllers(route);
+    const controllers = await this._indexedControllers(isolatedRoute);
 
     // Fetch Data
-    return this._get(route, where, controllers);
+    return this._get(isolatedRoute, where, controllers);
   }
 
   // ...........................................................................
@@ -102,6 +114,12 @@ export class Db {
 
     //Base Case: If route has only one segment, return root data
     if (route.segments.length === 1) {
+      if (route.hasPropertyKey) {
+        return [
+          this.isolatePropertyFromComponents(rootRljson, route.propertyKey),
+        ];
+      }
+
       return [rootRljson];
     }
 
@@ -362,6 +380,7 @@ export class Db {
           ? await this.getRefOfTimeId(tableKey, segmentRef)
           : segmentRef
         : null;
+
       controllers[tableKey] ??= await this.getController(
         tableKey,
         base ? { base } : undefined,
@@ -509,6 +528,52 @@ export class Db {
       timeId,
     });
     return (result._data?.[0] as any)?.[table + 'Ref'] || null;
+  }
+
+  // ...........................................................................
+  /**
+   * Isolates the property key from the last segment of a route if it is a property of a component
+   * @param route - The route to extract property key from
+   * @returns A route with extracted property key
+   */
+  async isolatePropertyKeyFromRoute(route: Route): Promise<Route> {
+    //Check if last segment is property of component
+    const lastSegment = route.segments[route.segments.length - 1];
+    const tableKey = lastSegment.tableKey;
+    const tableExists = await this._io.tableExists(tableKey);
+    if (!Route.segmentHasRef(lastSegment) && !tableExists) {
+      //Last Segment is probably property of component
+      const result = route.upper();
+      result.propertyKey = lastSegment.tableKey;
+      return result;
+    }
+    return route;
+  }
+
+  // ...........................................................................
+  /**
+   * Isolates a property from all components in an Rljson
+   * @param rljson - The Rljson to isolate the property from
+   * @param propertyKey - The property key to isolate
+   * @returns A new Rljson with only the isolated property
+   */
+  isolatePropertyFromComponents(rljson: Rljson, propertyKey: string): Rljson {
+    const result: Rljson = {};
+    for (const tableKey of Object.keys(rljson)) {
+      const table = rljson[tableKey];
+      const newData = table._data.map((row: any) => {
+        if (row.hasOwnProperty(propertyKey)) {
+          return { [propertyKey]: row[propertyKey] };
+        } else {
+          return row;
+        }
+      });
+      result[tableKey] = {
+        _type: table._type,
+        _data: newData,
+      };
+    }
+    return result;
   }
 
   /**
