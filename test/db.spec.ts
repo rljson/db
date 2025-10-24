@@ -46,6 +46,12 @@ describe('Db', () => {
         'Route  is not valid.',
       );
     });
+    it.skip('get referenced components by ref', async () => {
+      expect(true).toBe(false);
+    });
+    it.skip('get referenced encapsulated components by ref', async () => {
+      expect(true).toBe(false);
+    });
     it('get component by ref', async () => {
       const route = '/carGeneral';
       const ref = carsExample().carGeneral._data[0]._hash ?? '';

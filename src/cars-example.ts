@@ -5,9 +5,10 @@
 // found in the LICENSE file in the root of this package.
 
 import { hip } from '@rljson/hash';
-import { Json, JsonH } from '@rljson/json';
+import { Json, JsonH, JsonValueH } from '@rljson/json';
 import {
   CakesTable,
+  ColumnCfg,
   ComponentsTable,
   createCakeTableCfg,
   createLayerTableCfg,
@@ -41,6 +42,10 @@ export interface CarGeneral extends JsonH {
   brand: string;
   type: string;
   doors: number;
+  energyConsumption: number;
+  units: JsonValueH;
+  serviceIntervals: number[];
+  isElectric: boolean;
 }
 
 export interface CarDimension extends JsonH {
@@ -63,8 +68,8 @@ export const carsExample = (): CarsExample => {
     key: 'carSliceId',
     type: 'sliceIds',
     columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'add', type: 'jsonArray' },
+      { key: '_hash', type: 'string', titleLong: 'Hash', titleShort: 'Hash' },
+      { key: 'add', type: 'jsonArray', titleLong: 'Add', titleShort: 'Add' },
     ],
     isHead: false,
     isRoot: false,
@@ -85,34 +90,109 @@ export const carsExample = (): CarsExample => {
 
   //CarGeneral
   //................................................................
-  const carGeneralTableCfg = hip<any>({
+  const carGeneralTableCfg = hip<TableCfg>({
     key: 'carGeneral',
     type: 'components',
     columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'brand', type: 'string' },
-      { key: 'type', type: 'string' },
-      { key: 'doors', type: 'number' },
-    ],
+      { key: '_hash', type: 'string', titleLong: 'Hash', titleShort: 'Hash' },
+      { key: 'brand', type: 'string', titleLong: 'Brand', titleShort: 'Brand' },
+      { key: 'type', type: 'string', titleLong: 'Type', titleShort: 'Type' },
+      { key: 'doors', type: 'number', titleLong: 'Doors', titleShort: 'Doors' },
+      {
+        key: 'energyConsumption',
+        type: 'number',
+        titleLong: 'Energy Consumption',
+        titleShort: 'Energy',
+      },
+      {
+        key: 'units',
+        type: 'json',
+        titleLong: 'Energy Unit',
+        titleShort: 'Unit',
+      },
+      {
+        key: 'serviceIntervals',
+        type: 'jsonArray',
+        titleLong: 'Service Intervals',
+        titleShort: 'Intervals',
+      },
+      {
+        key: 'isElectric',
+        type: 'boolean',
+        titleLong: 'Is Electric',
+        titleShort: 'Electric',
+      },
+      {
+        key: 'meta',
+        type: 'jsonValue',
+        titleLong: 'Meta Information',
+        titleShort: 'Meta',
+      },
+    ] as ColumnCfg[],
     isHead: false,
     isRoot: false,
     isShared: true,
-  }) as TableCfg;
+  } as TableCfg);
 
-  const carGeneral = hip<any>({
-    _tableCfg: carGeneralTableCfg._hash,
+  const carGeneral = hip<ComponentsTable<CarGeneral>>({
+    _tableCfg: carGeneralTableCfg._hash as string,
     _type: 'components',
     _data: [
       {
         brand: 'Volkswagen',
         type: 'Polo',
         doors: 5,
+        energyConsumption: 7.4,
+        units: {
+          energy: 'l/100km',
+          _hash: '',
+        },
+        serviceIntervals: [15000, 30000, 45000],
+        isElectric: false,
+        meta: {
+          pressText: 'A popular compact car.',
+          _hash: '',
+        },
         _hash: '',
       },
       {
         brand: 'Volkswagen',
         type: 'Golf',
         doors: 3,
+        energyConsumption: 6.2,
+        units: {
+          energy: 'l/100km',
+          _hash: '',
+        },
+        serviceIntervals: [15000, 30000, 45000],
+        isElectric: false,
+        meta: {
+          pressText: 'A well-known hatchback.',
+          _hash: '',
+        },
+        _hash: '',
+      },
+      {
+        brand: 'Audi',
+        type: 'Q4 E-tron',
+        doors: 5,
+        energyConsumption: 18.0,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: true,
+        meta: [
+          {
+            pressText: 'A stylish electric SUV.',
+            _hash: '',
+          },
+          {
+            pressText: 'Combines performance with sustainability.',
+            _hash: '',
+          },
+        ],
         _hash: '',
       },
     ],
@@ -328,8 +408,8 @@ export const carsExample = (): CarsExample => {
     key: 'wheelSliceId',
     type: 'sliceIds',
     columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'add', type: 'jsonArray' },
+      { key: '_hash', type: 'string', titleLong: 'Hash', titleShort: 'Hash' },
+      { key: 'add', type: 'jsonArray', titleLong: 'Add', titleShort: 'Add' },
     ],
     isHead: false,
     isRoot: false,
