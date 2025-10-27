@@ -1,0 +1,22 @@
+[
+  "Zero",
+  0,
+  0.01,
+  false,
+  {
+    "a": {
+      "b": 0,
+      "_hash": "9Iao-QHCqda6NiJKtRDGx4"
+    },
+    "_hash": "7nnKrH6KoTEC3e9xxliBiP"
+  },
+  [
+    0,
+    1,
+    [
+      2,
+      3
+    ]
+  ],
+  0
+]

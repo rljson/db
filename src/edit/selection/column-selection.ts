@@ -7,7 +7,7 @@
 import { Hash, hip } from '@rljson/hash';
 import { ColumnCfgWithRoute, Ref, Route } from '@rljson/rljson';
 
-export type ColumnAddress = string | string[] | number;
+export type ColumnRoute = string | string[] | number;
 
 export interface ColumnInfo extends ColumnCfgWithRoute {
   alias: string;
@@ -31,15 +31,27 @@ export class ColumnSelection {
 
   // ...........................................................................
   /**
-   * Returns a ColumnSelection from a list of address segments
-   * @param addressSegmentsList - A list of address segments
+   * Returns unique routes from a list of routes
+   * @param routes - The list of routes
+   * @returns Unique routes
+   */
+  static uniqueRoutes(routes: Route[]): Route[] {
+    return Array.from(new Set(routes.map((r) => r.flat))).map((flat) =>
+      Route.fromFlat(flat),
+    );
+  }
+
+  // ...........................................................................
+  /**
+   * Returns a ColumnSelection from a list of route segments
+   * @param routeSegmentsList - A list of route segments
    * @returns A ColumnSelection object
    */
   static fromRoutes(routes: Route[]): ColumnSelection {
     const definition: ColumnInfo[] = [];
     const aliasCountMap: Record<string, number> = {};
 
-    for (const route of routes) {
+    for (const route of this.uniqueRoutes(routes)) {
       const alias = route.root.tableKey;
       let uniqueAlias = alias;
       const aliasCount = aliasCountMap[alias] ?? 0;
@@ -52,7 +64,7 @@ export class ColumnSelection {
         key: uniqueAlias,
         type: 'jsonValue',
         alias: uniqueAlias,
-        route: route.flat,
+        route: route.flat.slice(1),
         titleLong: '',
         titleShort: '',
       });
@@ -91,27 +103,27 @@ export class ColumnSelection {
     return Hash.default.calcHash(str);
   }
 
-  route(aliasAddressOrHash: ColumnAddress): string {
-    return this.column(aliasAddressOrHash).route;
+  route(aliasRouteOrHash: ColumnRoute): string {
+    return this.column(aliasRouteOrHash).route;
   }
 
   // ...........................................................................
-  alias(aliasAddressOrHash: ColumnAddress): string {
-    return this.column(aliasAddressOrHash).alias;
+  alias(aliasRouteOrHash: ColumnRoute): string {
+    return this.column(aliasRouteOrHash).alias;
   }
 
   // ...........................................................................
   columnIndex(
-    hashAliasOrAddress: ColumnAddress,
+    hashAliasOrRoute: ColumnRoute,
     throwIfNotExisting: boolean = true,
   ): number {
-    if (typeof hashAliasOrAddress === 'number') {
-      return hashAliasOrAddress;
+    if (typeof hashAliasOrRoute === 'number') {
+      return hashAliasOrRoute;
     }
 
-    const str = Array.isArray(hashAliasOrAddress)
-      ? hashAliasOrAddress.join('/')
-      : hashAliasOrAddress;
+    const str = Array.isArray(hashAliasOrRoute)
+      ? hashAliasOrRoute.join('/')
+      : hashAliasOrRoute;
 
     const hashIndex = this.routeHashes.indexOf(str);
     if (hashIndex >= 0) {
@@ -123,23 +135,23 @@ export class ColumnSelection {
       return aliasIndex;
     }
 
-    const addressIndex = this.routes.indexOf(str);
+    const routeIndex = this.routes.indexOf(str);
 
-    if (addressIndex < 0) {
+    if (routeIndex < 0) {
       if (throwIfNotExisting) {
-        throw new Error(`Unknown column alias or address: ${str}`);
+        throw new Error(`Unknown column alias or route: ${str}`);
       }
       return -1;
     }
 
-    return addressIndex;
+    return routeIndex;
   }
 
   /***
-   * Returns the column config for a specific alias, address or hash.
+   * Returns the column config for a specific alias, route or hash.
    */
-  column(aliasAddressOrHash: ColumnAddress): ColumnInfo {
-    const index = this.columnIndex(aliasAddressOrHash);
+  column(aliasRouteOrHash: ColumnRoute): ColumnInfo {
+    const index = this.columnIndex(aliasRouteOrHash);
     return this.columns[index];
   }
 
@@ -151,7 +163,7 @@ export class ColumnSelection {
   // ...........................................................................
   addedColumns(columnSelection: ColumnSelection): string[] {
     const a = this.routes.filter(
-      (address) => !columnSelection.routes.includes(address),
+      (route) => !columnSelection.routes.includes(route),
     );
 
     return a;
@@ -177,7 +189,7 @@ export class ColumnSelection {
     );
     if (invalidValues.length > 0) {
       throw new Error(
-        `Invalid address "${invalidValues}". ` +
+        `Invalid route "${invalidValues}". ` +
           'Routes must only contain letters, numbers and slashes.',
       );
     }
@@ -190,24 +202,24 @@ export class ColumnSelection {
 
     if (invalidPathParts.length > 0) {
       throw new Error(
-        `Invalid address segment "${invalidPathParts[0]}". ` +
-          'Address segments must be lower camel case.',
+        `Invalid route segment "${invalidPathParts[0]}". ` +
+          'Route segments must be lower camel case.',
       );
     }
 
     // Routes must not occur more than once
-    const addressCountMap: Record<string, number> = {};
+    const routeCountMap: Record<string, number> = {};
     routes.forEach((value) => {
-      addressCountMap[value] = (addressCountMap[value] ?? 0) + 1;
+      routeCountMap[value] = (routeCountMap[value] ?? 0) + 1;
     });
 
-    const duplicateRoutes = Object.entries(addressCountMap)
+    const duplicateRoutes = Object.entries(routeCountMap)
       .filter(([, count]) => count > 1)
-      .map(([address]) => address);
+      .map(([route]) => route);
 
     if (duplicateRoutes.length > 0) {
       throw new Error(
-        `Duplicate address ${duplicateRoutes[0]}. A column must only occur once.`,
+        `Duplicate route ${duplicateRoutes[0]}. A column must only occur once.`,
       );
     }
   }
@@ -245,62 +257,83 @@ export class ColumnSelection {
   static example(): ColumnSelection {
     return new ColumnSelection([
       {
-        key: 'brand',
+        key: 'stringCol',
         alias: 'stringCol',
-        route: 'carGeneral/brand',
+        route: 'basicTypes/stringsRef/value',
         type: 'string',
         titleLong: 'String values',
         titleShort: 'Strings',
       },
       {
-        key: 'doors',
+        key: 'intCol',
         alias: 'intCol',
-        route: 'carGeneral/doors',
+        route: 'basicTypes/numbersRef/intsRef/value',
         type: 'number',
         titleLong: 'Int values',
         titleShort: 'Ints',
       },
       {
-        key: 'energyConsumption',
+        key: 'floatCol',
         alias: 'floatCol',
-        route: 'carGeneral/energyConsumption',
+        route: 'basicTypes/numbersRef/floatsRef/value',
         type: 'number',
         titleLong: 'Float values',
         titleShort: 'Floats',
       },
       {
-        key: 'isElectric',
+        key: 'booleanCol',
         alias: 'booleanCol',
-        route: 'carGeneral/isElectric',
+        route: 'basicTypes/booleansRef/value',
         type: 'boolean',
         titleLong: 'Boolean values',
         titleShort: 'Booleans',
       },
       {
-        key: 'energyUnit',
+        key: 'jsonObjectCol',
         alias: 'jsonObjectCol',
-        route: 'carGeneral/energyUnit',
+        route: 'complexTypes/jsonObjectsRef/value',
         type: 'json',
         titleLong: 'Json objects',
         titleShort: 'JO',
       },
       {
-        key: 'serviceIntervals',
+        key: 'jsonArrayCol',
         alias: 'jsonArrayCol',
-        route: 'carGeneral/serviceIntervals',
+        route: 'complexTypes/jsonArraysRef/value',
         type: 'jsonArray',
         titleLong: 'Array values',
         titleShort: 'JA',
       },
       {
-        key: 'meta',
+        key: 'jsonValueCol',
         alias: 'jsonValueCol',
-        route: 'carGeneral/meta',
+        route: 'complexTypes/jsonValuesRef/value',
         type: 'jsonValue',
         titleLong: 'Json values',
         titleShort: 'JV',
       },
     ]);
+  }
+
+  static exampleBroken(): ColumnInfo[] {
+    return [
+      {
+        key: 'stringCol',
+        alias: 'stringCol',
+        route: 'basicTypes/stringsRef/value',
+        type: 'string',
+        titleLong: 'String values',
+        titleShort: 'Strings',
+      },
+      {
+        key: 'stringCol2',
+        alias: 'stringCol', // ⚠️ Duplicate alias
+        route: 'basicTypes/stringsRef/value',
+        type: 'string',
+        titleLong: 'String values',
+        titleShort: 'Strings',
+      },
+    ];
   }
 
   // ...........................................................................

@@ -1,0 +1,9 @@
+[
+  "stringCol",
+  "intCol",
+  "floatCol",
+  "booleanCol",
+  "jsonObjectCol",
+  "jsonArrayCol",
+  "jsonValueCol"
+]

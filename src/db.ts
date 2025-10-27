@@ -116,7 +116,7 @@ export class Db {
     if (route.segments.length === 1) {
       if (route.hasPropertyKey) {
         return [
-          this.isolatePropertyFromComponents(rootRljson, route.propertyKey),
+          this.isolatePropertyFromComponents(rootRljson, route.propertyKey!),
         ];
       }
 

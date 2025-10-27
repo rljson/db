@@ -43,9 +43,9 @@ export class ColumnSelectionMixer {
 
       new ColumnSelection([
         {
-          key: 'doors',
+          key: 'intCol',
           alias: 'intCol',
-          route: 'carGeneral/doors',
+          route: 'basicTypes/numbersRef/intsRef/value',
           type: 'number',
           titleLong: 'Int values',
           titleShort: 'Ints',

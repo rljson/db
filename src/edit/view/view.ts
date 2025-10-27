@@ -150,8 +150,8 @@ export abstract class View {
       return existing.indexOf(columnInfo.route) < 0;
     });
 
-    const missingAddresses = missingCols.map(
-      (columnInfo) => `    - ${columnInfo.address}`,
+    const missingRoutes = missingCols.map(
+      (columnInfo) => `    - ${columnInfo.route}`,
     );
 
     const missingAliases = missingCols
@@ -164,10 +164,10 @@ export abstract class View {
           `Missing column(s) ${missingAliases}:`,
           '',
           '  Missing:',
-          ...missingAddresses,
+          ...missingRoutes,
           '',
           '  Available:',
-          ...existing.map((address) => `    -${address}`),
+          ...existing.map((route) => `    -${route}`),
         ].join('\n'),
       );
     }
@@ -260,4 +260,16 @@ export abstract class View {
       ['True', 12, 12.1, true, { a: { b: 11 } }, [1, 2, [3, 4]], 'True'],
     ];
   }
+
+  /**
+   * Example select function
+   * @param row - The row to select from
+   * @returns
+   */
+  static exampleSelect = (row: any) => [
+    row[0],
+    row[1],
+    row[3],
+    row[4]['done'] ? 'done' : 'todo',
+  ];
 }
