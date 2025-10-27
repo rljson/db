@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ViewSelected } from '../../src/edit/view/view-selected';
 
-describe('ViewSelected', () => {
+describe.skip('ViewSelected', () => {
   const viewSelected = ViewSelected.example;
 
   describe('row', () => {

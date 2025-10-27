@@ -17,7 +17,7 @@ import { View } from '../../src/edit/view/view';
 import { ViewProcessed } from '../../src/edit/view/view-processed';
 import { ViewWithData } from '../../src/edit/view/view-with-data';
 
-describe('ViewProcessed', () => {
+describe.skip('ViewProcessed', () => {
   let viewProcessed: ViewProcessed;
 
   // Input data

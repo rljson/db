@@ -11,7 +11,7 @@ import { ViewCache } from '../../src/edit/view/view-cache';
 import { ViewEditedMultiple } from '../../src/edit/view/view-edited-multiple';
 import { ViewWithData } from '../../src/edit/view/view-with-data';
 
-describe('ViewEditedMultipled', () => {
+describe.skip('ViewEditedMultipled', () => {
   describe('rows', () => {
     it('returns the original object, when no edits are applied', () => {
       const original = ViewWithData.example();

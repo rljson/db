@@ -7,9 +7,13 @@
 import { Io, IoMem } from '@rljson/io';
 import { JsonValue } from '@rljson/json';
 import {
-  BaseValidator, ContentType, createHistoryTableCfg, Rljson, TableCfg, Validate
+  BaseValidator,
+  ContentType,
+  createHistoryTableCfg,
+  Rljson,
+  TableCfg,
+  Validate,
 } from '@rljson/rljson';
-
 
 /** Implements core functionalities like importing data, setting tables  */
 export class Core {
@@ -101,11 +105,39 @@ export class Core {
   async hasTable(table: string): Promise<boolean> {
     return await this._io.tableExists(table);
   }
+
   // ...........................................................................
   async contentType(table: string): Promise<ContentType | null> {
     const t = await this._io.dumpTable({ table });
     const contentType = t[table]?._type;
     return contentType;
+  }
+
+  // ...........................................................................
+  async tableCfg(table: string): Promise<TableCfg> {
+    //TODO: Avoid dumping the whole table just to get the tableCfg ref
+    const { [table]: dump } = await this._io.dumpTable({ table });
+    const tableCfgRef = dump._tableCfg;
+    const tableCfgs = await this._io.rawTableCfgs();
+
+    if (!tableCfgs) {
+      throw new Error(`TableCfgs table not found.`);
+    }
+
+    let tableCfg: TableCfg;
+    if (!tableCfgRef) {
+      tableCfg = tableCfgs.find((tc) => tc.key === table) as TableCfg;
+    } else {
+      tableCfg = tableCfgs.find(
+        (tc) => tc.key === table && tc._hash === tableCfgRef,
+      ) as TableCfg;
+    }
+
+    if (!tableCfg) {
+      throw new Error(`TableCfg for table ${table} not found.`);
+    }
+
+    return tableCfg;
   }
 
   // ...........................................................................

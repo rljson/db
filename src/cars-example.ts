@@ -81,7 +81,7 @@ export const carsExample = (): CarsExample => {
     _type: 'sliceIds',
     _data: [
       {
-        add: ['VIN1', 'VIN2'],
+        add: ['VIN1', 'VIN2', 'VIN3'],
         _hash: '',
       },
     ],
@@ -231,6 +231,12 @@ export const carsExample = (): CarsExample => {
         length: 4100,
         _hash: '',
       },
+      {
+        height: 1600,
+        width: 1900,
+        length: 4500,
+        _hash: '',
+      },
     ],
     _hash: '',
   } as ComponentsTable<CarDimension>) as ComponentsTable<CarDimension>;
@@ -270,6 +276,13 @@ export const carsExample = (): CarsExample => {
         carDimensionsRef: carDimensions._data[1]._hash,
         _hash: '',
       },
+      {
+        engine: 'Electric',
+        transmission: 'Single-Speed',
+        gears: 1,
+        carDimensionsRef: carDimensions._data[1]._hash,
+        _hash: '',
+      },
     ],
     _hash: '',
   }) as ComponentsTable<Json>;
@@ -306,6 +319,12 @@ export const carsExample = (): CarsExample => {
         highlights: 'chrome',
         _hash: '',
       },
+      {
+        sides: 'red',
+        roof: 'red',
+        highlights: 'black',
+        _hash: '',
+      },
     ],
     _hash: '',
   }) as ComponentsTable<Json>;
@@ -324,6 +343,7 @@ export const carsExample = (): CarsExample => {
         add: {
           VIN1: carGeneral._data[0]._hash,
           VIN2: carGeneral._data[1]._hash,
+          VIN3: carGeneral._data[2]._hash,
           _hash: '',
         },
         sliceIdsTable: 'carSliceId',
@@ -347,6 +367,7 @@ export const carsExample = (): CarsExample => {
         add: {
           VIN1: carTechnical._data[0]._hash,
           VIN2: carTechnical._data[1]._hash,
+          VIN3: carTechnical._data[2]._hash,
           _hash: '',
         },
         sliceIdsTable: 'carSliceId',
@@ -370,6 +391,7 @@ export const carsExample = (): CarsExample => {
         add: {
           VIN1: carColor._data[0]._hash,
           VIN2: carColor._data[1]._hash,
+          VIN3: carColor._data[2]._hash,
           _hash: '',
         },
         sliceIdsTable: 'carSliceId',

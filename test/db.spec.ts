@@ -160,7 +160,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const addedLayerHistory = (await db.run(
+      const addedLayerHistory = (await db.insert(
         Insert,
       )) as HistoryRow<'CarGeneralLayer'>;
 
@@ -279,7 +279,7 @@ describe('Db', () => {
         origin: 'H45H',
         acknowledged: false,
       };
-      const cakeHistoryRow = await db.run(layerInsert);
+      const cakeHistoryRow = await db.insert(layerInsert);
       const cakeRevisionTimeId = cakeHistoryRow.timeId;
 
       //Get layer revision TimeId
@@ -308,26 +308,14 @@ describe('Db', () => {
       expect(result[0].carGeneral._data.length).toBe(2); //2 Volkswagens in example data
       expect(result[0].carGeneral._data[0].brand).toBe('Volkswagen');
       expect(result[0].carGeneral._data[1].brand).toBe('Volkswagen');
-
-      expect(result[1].carCake).toBeDefined();
-      expect(result[1].carCake._data.length).toBe(1);
-      expect(result[1].carCake._data[0]._hash).toBe(cakeHistoryRow.carCakeRef);
-
-      expect(result[1].carGeneralLayer).toBeDefined();
-      expect(result[1].carGeneralLayer._data.length).toBe(1);
-
-      expect(result[1].carGeneral).toBeDefined();
-      expect(result[1].carGeneral._data.length).toBe(2); //2 Volkswagens in example data
-      expect(result[1].carGeneral._data[0].brand).toBe('Volkswagen');
-      expect(result[1].carGeneral._data[1].brand).toBe('Volkswagen');
     });
   });
 
-  describe('run', () => {
+  describe('insert', () => {
     it('throws on invalid Insert', async () => {
       //Mismatched route/value depth
       await expect(
-        db.run({
+        db.insert({
           route: '/carCake/carGeneralLayer/carGeneral',
           command: 'add',
           value: { x: 1, y: 2 },
@@ -351,7 +339,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(Insert);
+      const result = await db.insert(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
@@ -392,7 +380,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(Insert);
+      const result = await db.insert(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
@@ -433,7 +421,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(Insert);
+      const result = await db.insert(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
@@ -455,7 +443,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(Insert);
+      const result = await db.insert(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralLayerRef).toBeDefined();
@@ -476,7 +464,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(Insert);
+      const result = await db.insert(Insert);
 
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
@@ -503,7 +491,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(Insert);
+      const result = await db.insert(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carTechnicalRef).toBeDefined();
@@ -556,7 +544,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(Insert);
+      const result = await db.insert(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralLayerRef).toBeDefined();
@@ -606,7 +594,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(Insert);
+      const result = await db.insert(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carCakeRef).toBeDefined();
@@ -677,7 +665,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(Insert);
+      const result = await db.insert(Insert);
 
       expect(callback).toHaveBeenCalledTimes(1);
       expect(callback).toHaveBeenCalledWith(result);
@@ -714,8 +702,8 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.run(Insert);
-      const result2 = await db.run(Insert2);
+      const result = await db.insert(Insert);
+      const result2 = await db.insert(Insert2);
 
       expect(callback).toHaveBeenCalledTimes(2);
       expect(callback).toHaveBeenNthCalledWith(1, result);
@@ -745,7 +733,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      await db.run(Insert);
+      await db.insert(Insert);
 
       //Get written history rows
       const {
@@ -789,7 +777,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      await db.run(Insert);
+      await db.insert(Insert);
 
       //Get written history rows
       const {
@@ -844,7 +832,7 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      await db.run(Insert, { skipNotification: true });
+      await db.insert(Insert, { skipNotification: true });
 
       expect(callback).toHaveBeenCalledTimes(0);
     });
