@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { ViewEmpty } from '../../src/edit/view/view-empty';
 
-describe.skip('ViewEmpty', () => {
+describe('ViewEmpty', () => {
   let viewEmpty: ViewEmpty;
 
   beforeAll(() => {

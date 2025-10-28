@@ -8,8 +8,8 @@ import { Io, IoMem } from '@rljson/io';
 import { Json } from '@rljson/json';
 import {
   CakesTable,
+  ColumnCfg,
   ComponentsTable,
-  ContentType,
   HistoryRow,
   HistoryTimeId,
   Insert,
@@ -32,18 +32,13 @@ import {
 } from './controller/controller.ts';
 import { Core } from './core.ts';
 import { Edit } from './edit/edit/edit.ts';
-import { RowFilterProcessor } from './edit/filter/row-filter-processor.ts';
 import { RowFilter } from './edit/filter/row-filter.ts';
+import { Join, JoinColumn, JoinRows } from './edit/join/join.ts';
+import {
+  ColumnInfo,
+  ColumnSelection,
+} from './edit/selection/column-selection.ts';
 import { Notify } from './notify.ts';
-
-export interface JoinColumn<T extends ContentType> {
-  route: Route;
-  value: T;
-}
-
-export type JoinRow<T extends ContentType> = JoinColumn<T>[];
-
-export type Join<T extends ContentType> = Record<SliceId, JoinRow<T>>;
 
 /**
  * Access Rljson data
@@ -179,13 +174,11 @@ export class Db {
    * @throws {Error} If the Edit is not valid or if any controller cannot be created
    */
   async edit(edit: Edit, cakeKey: string, cakeRef: Ref): Promise<void> {
-    const joinedData = await this._joinedDataForFilter(
-      edit.filter,
-      cakeKey,
-      cakeRef,
-    );
+    //Get Joined Data for Edit
+    const join = await this.joinForEdit(edit, cakeKey, cakeRef);
 
-    const filterProcessor = RowFilterProcessor.fromModel(edit.filter);
+    //Edit Data
+    const editedData = join.edit(edit);
 
     debugger;
   }
@@ -199,11 +192,11 @@ export class Db {
    * @param cakeRef - The cake reference
    * @returns
    */
-  async _joinedDataForFilter(
-    filter: RowFilter,
+  private async joinForEdit(
+    { filter }: { filter: RowFilter },
     cakeKey: string,
     cakeRef: Ref,
-  ): Promise<Join<any>> {
+  ): Promise<Join> {
     // Determine routes from filter
     const routes = filter.columnFilters
       .map((cf) => cf.column)
@@ -228,7 +221,7 @@ export class Db {
    * Joins data from layers in an Rljson into a single dataset
    * @param rljson - The Rljson to join data for
    */
-  async join(data: Rljson, cakeKey: string, cakeRef: Ref): Promise<Join<any>> {
+  async join(data: Rljson, cakeKey: string, cakeRef: Ref): Promise<Join> {
     //Get Cake
     const cakesTable = data[cakeKey] as CakesTable;
     const cake = cakesTable._data.find((c) => c._hash === cakeRef);
@@ -274,8 +267,39 @@ export class Db {
       }
     }
 
+    //TODO: What about encapsulated components?
+
+    // Build ColumnCfgs
+    const columnCfgs: Map<string, ColumnCfg[]> = new Map();
+    const columnInfos: Map<string, ColumnInfo[]> = new Map();
+    for (const [layerKey, layer] of layers.entries()) {
+      const componentKey = layer.componentsTable;
+      const { columns: colCfgs } = await this.core.tableCfg(componentKey);
+
+      const columnCfg: ColumnCfg[] = [];
+      const columnInfo: ColumnInfo[] = [];
+      for (let i = 0; i < colCfgs.length; i++) {
+        if (colCfgs[i].key === '_hash') continue;
+
+        const colCfg = colCfgs[i];
+        columnCfg.push(colCfg);
+        columnInfo.push({
+          ...colCfg,
+          alias: `${colCfg.key}`,
+          route: Route.fromFlat(
+            `/${cakeKey}/${layerKey}/${componentKey}/${colCfg.key}`,
+          ).flat.slice(1),
+          titleShort: colCfg.key,
+          titleLong: colCfg.key,
+        });
+      }
+
+      columnInfos.set(componentKey, columnInfo);
+      columnCfgs.set(componentKey, columnCfg);
+    }
+
     //Join Rows to SliceIds
-    const rows: Map<SliceId, JoinColumn<any>[]> = new Map();
+    const rowMap: Map<SliceId, JoinColumn<any>[]> = new Map();
     for (const sliceId of mergedSliceIds) {
       let sliceIdRow: JoinColumn<any>[] = [];
       for (const [layerKey, layer] of layers.entries()) {
@@ -287,32 +311,39 @@ export class Db {
         const component = componentsTable._data.find(
           (r) => r._hash === componentRef,
         );
-        const { columns: colCfgs } = await this.core.tableCfg(componentKey);
+        const colCfgs = columnCfgs.get(componentKey)!;
 
-        //Build Join Columns by Column Configs
-        const joinColumns = colCfgs
-          //Delete _hash column
-          .filter((colCfg) => colCfg.key !== '_hash')
-          .map(
-            (columnCfg) =>
-              ({
-                route: Route.fromFlat(
-                  `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}/${columnCfg.key}`,
-                ).toRouteWithProperty(),
-                value: component ? component[columnCfg.key] ?? null : null,
-              } as JoinColumn<any>),
-          );
+        // Build Join Columns by Column Configs (for loop)
+        const joinColumns: JoinColumn<any>[] = [];
+        for (let i = 0; i < colCfgs.length; i++) {
+          const columnCfg = colCfgs[i];
+          joinColumns.push({
+            route: Route.fromFlat(
+              `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}/${columnCfg.key}`,
+            ).toRouteWithProperty(),
+            value: component ? component[columnCfg.key] ?? null : null,
+          } as JoinColumn<any>);
+        }
 
-        sliceIdRow = [...sliceIdRow, ...joinColumns] as JoinRow<any>;
+        sliceIdRow = [...sliceIdRow, ...joinColumns];
       }
-      rows.set(sliceId, sliceIdRow);
+      rowMap.set(sliceId, sliceIdRow);
     }
 
-    const result: Join<any> = {};
-    for (const [sliceId, joinColumns] of rows.entries()) {
-      result[sliceId] = joinColumns;
+    //Build Result
+    const joinRows: JoinRows = {};
+    for (const [sliceId, joinColumns] of rowMap.entries()) {
+      Object.assign(joinRows, {
+        [sliceId]: joinColumns as JoinColumn<any>[],
+      });
     }
-    return result;
+
+    // Build ColumnSelection
+    const joinColumnInfos = Array.from(columnInfos.values()).flat();
+    const joinColumnSelection = new ColumnSelection(joinColumnInfos);
+
+    // Return Join
+    return new Join(joinRows, joinColumnSelection);
   }
 
   // ...........................................................................

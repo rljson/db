@@ -28,6 +28,15 @@ export interface EditAction extends Json {
 }
 
 // .............................................................................
+/**
+ * An edit action with the column index
+ *
+ */
+export interface EditActionWithIndex extends EditAction {
+  index: number;
+}
+
+// .............................................................................
 export const exampleEditAction = (): EditAction => {
   return hip({
     route: 'carGeneral/doors',

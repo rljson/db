@@ -11,7 +11,7 @@ import { StringFilterProcessor } from '../../src/edit/filter/string-filter-proce
 import { ViewFiltered } from '../../src/edit/view/view-filtered';
 import { ViewSelected } from '../../src/edit/view/view-selected';
 
-describe.skip('ViewFiltered', () => {
+describe('ViewFiltered', () => {
   describe('wth an empty filter', () => {
     let original: ViewSelected;
     let filtered: ViewFiltered;

@@ -21,7 +21,7 @@ import { View } from '../../src/edit/view/view';
 import { ViewEdited } from '../../src/edit/view/view-edited';
 import { ViewWithData } from '../../src/edit/view/view-with-data';
 
-describe.skip('ViewEdited', () => {
+describe('ViewEdited', () => {
   describe('rows', () => {
     it('returns the edited rows of the original view', () => {
       const original = ViewWithData.example();

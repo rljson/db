@@ -10,7 +10,7 @@ import { RowSort } from '../../src/edit/sort/row-sort';
 import { ViewSelected } from '../../src/edit/view/view-selected';
 import { ViewSorted } from '../../src/edit/view/view-sorted';
 
-describe.skip('ViewSorted', () => {
+describe('ViewSorted', () => {
   describe('wth an empty filter', () => {
     let original: ViewSelected;
     let sorted: ViewSorted;

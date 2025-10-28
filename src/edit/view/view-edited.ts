@@ -7,7 +7,7 @@
 import { Hash, hip } from '@rljson/hash';
 import { JsonValueType } from '@rljson/json';
 
-import { EditAction } from '../edit/edit-action.ts';
+import { EditActionWithIndex } from '../edit/edit-action.ts';
 import { Edit } from '../edit/edit.ts';
 import { NumberFilter } from '../filter/number-filter.ts';
 import { RowFilterProcessor } from '../filter/row-filter-processor.ts';
@@ -66,7 +66,7 @@ export class ViewEdited extends View {
   // ######################
 
   private _rows: any[][] = [];
-  private _actions: _EditActionWithIndex[];
+  private _actions: EditActionWithIndex[];
   private _editedRows: number[] = [];
 
   private _applyEdit(view: View) {
@@ -118,7 +118,7 @@ export class ViewEdited extends View {
   }
 
   // ...........................................................................
-  private get _initActions(): _EditActionWithIndex[] {
+  private get _initActions(): EditActionWithIndex[] {
     const cs = this.columnSelection;
 
     const result = this.edit.actions.map((action) => {
@@ -197,9 +197,4 @@ export class ViewEdited extends View {
 
     return new ViewEdited(view, edit);
   }
-}
-
-/// An edit action with the column index
-interface _EditActionWithIndex extends EditAction {
-  index: number;
 }

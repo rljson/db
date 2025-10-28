@@ -10,7 +10,7 @@ import { MultiEditResolved } from '../../src/edit/edit/multi-edit-resolved';
 import { View } from '../../src/edit/view/view';
 import { ViewCache } from '../../src/edit/view/view-cache';
 
-describe.skip('ViewCache', () => {
+describe('ViewCache', () => {
   let cache: ViewCache;
   let _cache: Map<string, any>;
   const view0: any = {};

@@ -14,7 +14,7 @@ import { ViewWithData } from '../../src/edit/view/view-with-data';
 
 import { expectGolden } from '../setup/goldens';
 
-describe.skip('View', () => {
+describe('View', () => {
   const view = ViewWithData.example();
 
   it('rowCount', () => {
