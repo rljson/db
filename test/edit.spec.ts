@@ -5,6 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import { IoMem } from '@rljson/io';
+import { Route } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -34,7 +35,7 @@ describe('Db', () => {
   });
 
   describe('Edit', () => {
-    it('Should Run Edits', () => {
+    it('Should Run Edits', async () => {
       const cakeKey = 'carCake';
       const cakeRef = carsExample().carCake._data[0]._hash as string;
 
@@ -65,11 +66,22 @@ describe('Db', () => {
             route: `${cakeKey}/carGeneralLayer/carGeneral/isElectric`,
             setValue: true,
           },
+          {
+            route: `${cakeKey}/carTechnicalLayer/carTechnical/gears`,
+            setValue: 5,
+          },
         ],
         _hash: '',
       };
 
-      expect(db.edit(edit, cakeKey, cakeRef)).toBeDefined();
+      const insertHistoryRows = await db.saveEdit(edit, cakeKey, cakeRef);
+
+      const result = await db.get(
+        Route.fromFlat(`${cakeKey}/carGeneralLayer/carGeneral/`),
+        {},
+      );
+
+      expect(insertHistoryRows).toBeDefined();
     });
   });
 });

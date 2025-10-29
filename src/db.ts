@@ -32,8 +32,8 @@ import {
 } from './controller/controller.ts';
 import { Core } from './core.ts';
 import { Edit } from './edit/edit/edit.ts';
-import { RowFilter } from './edit/filter/row-filter.ts';
 import { Join, JoinColumn, JoinRows } from './edit/join/join.ts';
+import { SetValue } from './edit/join/set-value/set-value.ts';
 import {
   ColumnInfo,
   ColumnSelection,
@@ -173,47 +173,28 @@ export class Db {
    * @returns void
    * @throws {Error} If the Edit is not valid or if any controller cannot be created
    */
-  async edit(edit: Edit, cakeKey: string, cakeRef: Ref): Promise<void> {
-    //Get Joined Data for Edit
-    const join = await this.joinForEdit(edit, cakeKey, cakeRef);
-
-    //Edit Data
-    const editedData = join.edit(edit);
-
-    debugger;
-  }
-
-  // ...........................................................................
-  /**
-   * Fetches joined data for the given RowFilter
-   *
-   * @param filter - The RowFilter to get joined data for
-   * @param cakeKey - The cake table key
-   * @param cakeRef - The cake reference
-   * @returns
-   */
-  private async joinForEdit(
-    { filter }: { filter: RowFilter },
+  async saveEdit(
+    edit: Edit,
     cakeKey: string,
     cakeRef: Ref,
-  ): Promise<Join> {
-    // Determine routes from filter
-    const routes = filter.columnFilters
-      .map((cf) => cf.column)
-      .map((route) => Route.fromFlat(route).toRouteWithProperty());
+  ): Promise<HistoryRow<any>[]> {
+    //Get ColumnSelection from Edit
+    const columnSelection = await this._getColumnSelectionFromEdit(edit);
+    const join = await this.join(columnSelection, cakeKey, cakeRef);
 
-    // Determine controller routes
-    const controllerRoutes = Array.from(
-      new Set(routes.map((r) => r.flatWithoutPropertyKey)),
-    ).map((flat) => Route.fromFlat(flat));
+    //Get Row Filter from Edit
+    const filter = edit.filter;
 
-    // Fetch Data from all controller routes
-    const data: Rljson = {};
-    for (const route of controllerRoutes) {
-      Object.assign(data, ...(await this.get(route, {})));
-    }
+    //Build SetValues from Edit Actions
+    const setValues = edit.actions.map(
+      (a) => ({ route: a.route, value: a.setValue } as SetValue),
+    );
 
-    return await this.join(data, cakeKey, cakeRef);
+    //Apply Edit
+    const editedJoin = join.filter(filter).setValues(setValues);
+
+    //Insert changed data
+    return await editedJoin.insert();
   }
 
   // ...........................................................................
@@ -221,7 +202,14 @@ export class Db {
    * Joins data from layers in an Rljson into a single dataset
    * @param rljson - The Rljson to join data for
    */
-  async join(data: Rljson, cakeKey: string, cakeRef: Ref): Promise<Join> {
+  async join(
+    columnSelection: ColumnSelection,
+    cakeKey: string,
+    cakeRef: Ref,
+  ): Promise<Join> {
+    //Fetch Data for ColumnSelection
+    const data = await this._getDataForColumnSelection(columnSelection);
+
     //Get Cake
     const cakesTable = data[cakeKey] as CakesTable;
     const cake = cakesTable._data.find((c) => c._hash === cakeRef);
@@ -322,6 +310,7 @@ export class Db {
               `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}/${columnCfg.key}`,
             ).toRouteWithProperty(),
             value: component ? component[columnCfg.key] ?? null : null,
+            insert: null,
           } as JoinColumn<any>);
         }
 
@@ -343,7 +332,55 @@ export class Db {
     const joinColumnSelection = new ColumnSelection(joinColumnInfos);
 
     // Return Join
-    return new Join(joinRows, joinColumnSelection);
+    return new Join(joinRows, joinColumnSelection, this);
+  }
+
+  // ...........................................................................
+  /**
+   * Get the ColumnSelection for an Edit
+   * @param edit - The Edit to get the ColumnSelection for
+   * @returns
+   */
+  private async _getColumnSelectionFromEdit(edit: Edit) {
+    // Determine routes from filter
+    const routes = edit.filter.columnFilters;
+    const columnInfos: ColumnInfo[] = [];
+    for (const cf of routes) {
+      const route = Route.fromFlat(cf.column).toRouteWithProperty();
+      const tableKey = route.root.tableKey;
+      const tableCfg = await this.core.tableCfg(tableKey);
+      const columnCfg = tableCfg.columns.find(
+        (c) => c.key === route.propertyKey,
+      );
+      if (!columnCfg) {
+        throw new Error(
+          `Db.getColumnSelection: Column "${route.propertyKey}" not found in table "${tableKey}".`,
+        );
+      }
+      columnInfos.push({
+        ...columnCfg,
+        alias: `${columnCfg.key}`,
+        route: route.flat.slice(1),
+        titleShort: columnCfg.key,
+        titleLong: columnCfg.key,
+      });
+    }
+    return new ColumnSelection(columnInfos);
+  }
+
+  // ...........................................................................
+  /**
+   * Fetches data for the given ColumnSelection
+   * @param columnSelection - The ColumnSelection to fetch data for
+   */
+  private async _getDataForColumnSelection(columnSelection: ColumnSelection) {
+    // Fetch Data from all controller routes
+    const data: Rljson = {};
+    for (const colInfo of columnSelection.columns) {
+      const route = Route.fromFlat(colInfo.route).toRouteWithProperty();
+      Object.assign(data, ...(await this.get(route, {})));
+    }
+    return data;
   }
 
   // ...........................................................................
@@ -354,32 +391,32 @@ export class Db {
    * @throws {Error} If the Insert is not valid or if any controller cannot be created
    */
   async insert(
-    Insert: Insert<any>,
+    insert: Insert<any>,
     options?: { skipNotification?: boolean },
   ): Promise<HistoryRow<any>> {
-    const initialRoute = Route.fromFlat(Insert.route);
-    const runs = await this._resolveInsert(Insert);
-    const errors = validateInsert(Insert);
+    const initialRoute = Route.fromFlat(insert.route);
+    const runs = await this._resolveInsert(insert);
+    const errors = validateInsert(insert);
     if (!!errors.hasErrors) {
       throw new Error(
         `Insert is not valid:\n${JSON.stringify(errors, null, 2)}`,
       );
     }
 
-    return this._insert(Insert, initialRoute, runs, options);
+    return this._insert(insert, initialRoute, runs, options);
   }
 
   // ...........................................................................
   /**
    * Recursively runs controllers based on the route of the Insert
-   * @param Insert - The Insert to run
+   * @param insert - The Insert to run
    * @param route - The route of the Insert
    * @param runFns - A record of controller run functions, keyed by table name
    * @returns The result of the Insert
    * @throws {Error} If the route is not valid or if any controller cannot be created
    */
   private async _insert(
-    Insert: Insert<any>,
+    insert: Insert<any>,
     route: Route,
     runFns: Record<string, ControllerRunFn<any>>,
     options?: { skipNotification?: boolean },
@@ -413,12 +450,12 @@ export class Db {
       const childRoute = route.deeper(1);
 
       //Iterate over child values and create Inserts for each
-      const childKeys = this._childKeys(route, Insert.value);
+      const childKeys = this._childKeys(route, insert.value);
       const childRefs: Record<string, string> = {};
 
       for (const k of childKeys) {
-        const childValue = (Insert.value as any)[k];
-        const childInsert: Insert<any> = { ...Insert, value: childValue };
+        const childValue = (insert.value as any)[k];
+        const childInsert: Insert<any> = { ...insert, value: childValue };
         const childResult = await this._insert(childInsert, childRoute, runFns);
         const childRefKey = childRoute.top.tableKey + 'Ref';
         const childRef = (childResult as any)[childRefKey] as string;
@@ -430,12 +467,12 @@ export class Db {
       const runFn = runFns[tableKey];
       result = {
         ...(await runFn(
-          Insert.command,
+          insert.command,
           {
-            ...Insert.value,
+            ...insert.value,
             ...childRefs,
           },
-          Insert.origin,
+          insert.origin,
         )),
         previous,
       };
@@ -446,20 +483,20 @@ export class Db {
 
       //Run on controller, get HistoryRow from return, pass previous revisions
       result = {
-        ...(await runFn(Insert.command, Insert.value, Insert.origin)),
+        ...(await runFn(insert.command, insert.value, insert.origin)),
         previous,
       };
     }
 
     //Write route to result
-    result.route = Insert.route;
+    result.route = insert.route;
 
     //Write history
     await this._writeHistory(tableKey, result);
 
     //Notify listeners
     if (!options?.skipNotification)
-      this.notify.notify(Route.fromFlat(Insert.route), result);
+      this.notify.notify(Route.fromFlat(insert.route), result);
 
     return result;
   }
@@ -572,8 +609,9 @@ export class Db {
 
     // Create Controllers
     const controllers: Record<string, Controller<any, any>> = {};
-    for (let i = 0; i < route.segments.length; i++) {
-      const segment = route.segments[i];
+    const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
+    for (let i = 0; i < isolatedRoute.segments.length; i++) {
+      const segment = isolatedRoute.segments[i];
       const tableKey = segment.tableKey;
       //Base is helpful for cake and layer controllers. It contains the ref of
       // the base cake for taking over default layers definitions
