@@ -252,6 +252,7 @@ export const carsExample = (): CarsExample => {
       { key: 'transmission', type: 'string' },
       { key: 'gears', type: 'number' },
       { key: 'carDimensionsRef', type: 'string' },
+      { key: 'repairedByWorkshop', type: 'string' },
     ],
     isHead: false,
     isRoot: false,
@@ -274,6 +275,7 @@ export const carsExample = (): CarsExample => {
         transmission: 'Automatic',
         gears: 7,
         carDimensionsRef: carDimensions._data[1]._hash,
+        repairedByWorkshop: 'Workshop A',
         _hash: '',
       },
       {

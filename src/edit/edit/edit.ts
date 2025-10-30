@@ -134,6 +134,43 @@ export const exampleEditSetAllTrueToDone = (): Edit =>
     _hash: '',
   });
 
+// .............................................................................
+export const exampleEditCarsExample = (): Edit =>
+  hip<Edit>({
+    name: 'Set all cars that are not electric to electric',
+    filter: {
+      columnFilters: [
+        {
+          type: 'boolean',
+          column: `carCake/carGeneralLayer/carGeneral/isElectric`,
+          operator: 'equals',
+          search: false,
+          _hash: '',
+        },
+        {
+          type: 'string',
+          column: `carCake/carTechnicalLayer/carTechnical/transmission`,
+          operator: 'equals',
+          search: 'Automatic',
+          _hash: '',
+        },
+      ],
+      operator: 'and',
+      _hash: '',
+    },
+    actions: [
+      {
+        route: `carCake/carGeneralLayer/carGeneral/isElectric`,
+        setValue: true,
+      },
+      {
+        route: `carCake/carTechnicalLayer/carTechnical/gears`,
+        setValue: 5,
+      },
+    ],
+    _hash: '',
+  });
+
 // ..............................................................................
 /// An example database with edits
 export const exampleEditDb = (): Record<string, Edit> => {

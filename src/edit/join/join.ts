@@ -171,6 +171,56 @@ export class Join {
 
   // ...........................................................................
   /**
+   * Selects columns from the join and returns the resulting join
+   *
+   * @param columnSelection The column selection to apply
+   */
+  select(columnSelection: ColumnSelection): Join {
+    const columnCount = columnSelection.count;
+    const masterColumnIndices = new Array(columnCount);
+
+    // Map selected columns to master column indices
+    let i = 0;
+    for (const hash of columnSelection.routeHashes) {
+      const index = this.columnSelection.columnIndex(hash);
+      masterColumnIndices[i] = index;
+      i++;
+    }
+
+    // Select the columns
+    const data: JoinRowsHashed = {};
+    for (let i = 0; i < this.rowCount; i++) {
+      const [sliceId, row] = Object.entries(this.data)[i];
+      const selectedColumns: JoinColumn<any>[] = [];
+      // Select only the requested columns
+      for (let j = 0; j < masterColumnIndices.length; j++) {
+        selectedColumns.push(row.columns[masterColumnIndices[j]]);
+      }
+      // Store the selected columns
+      data[sliceId] = {
+        rowHash: Hash.default.calcHash(
+          selectedColumns.map((c) => c.value) as any[],
+        ),
+        columns: selectedColumns,
+      };
+    }
+
+    // Create the process entry
+    const process: JoinProcess = {
+      type: 'selection',
+      instance: columnSelection,
+      data,
+      columnSelection,
+    };
+
+    // Store the process
+    this._processes.push(process);
+
+    return this;
+  }
+
+  // ...........................................................................
+  /**
    * Inserts changed values into RLJSON DB
    */
   async insert(): Promise<HistoryRow<any>[]> {
@@ -465,7 +515,7 @@ export class Join {
     for (const sliceId of sliceIds) {
       const dataColumns = (this.data[sliceId] as JoinRowHashed).columns;
       const row: any[] = [];
-      for (const colInfo of this._baseColumnSelection.columns) {
+      for (const colInfo of this.columnSelection.columns) {
         const joinCol = dataColumns.find((dataCol) => {
           const colInfoRoute = Route.fromFlat(colInfo.route);
           const dataColRoute = dataCol.route;

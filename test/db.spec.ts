@@ -4,7 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { rmhsh } from '@rljson/hash';
+import { hip, rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import { History, HistoryRow, Insert, LayerRef, Route } from '@rljson/rljson';
@@ -13,6 +13,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
+import { Edit, exampleEditCarsExample } from '../src/edit/edit/edit';
+import {
+  ColumnInfo,
+  ColumnSelection,
+} from '../src/edit/selection/column-selection';
 
 describe('Db', () => {
   let db: Db;
@@ -310,7 +315,6 @@ describe('Db', () => {
       expect(result[0].carGeneral._data[1].brand).toBe('Volkswagen');
     });
   });
-
   describe('insert', () => {
     it('throws on invalid Insert', async () => {
       //Mismatched route/value depth
@@ -835,6 +839,156 @@ describe('Db', () => {
       await db.insert(Insert, { skipNotification: true });
 
       expect(callback).toHaveBeenCalledTimes(0);
+    });
+  });
+  describe('join', () => {
+    const cakeKey = 'carCake';
+    const cakeRef = carsExample().carCake._data[0]._hash as string;
+
+    it('should be defined', () => {
+      expect(db.join).toBeDefined();
+    });
+
+    it('should join data of single route correctly', async () => {
+      const columnInfos = [
+        {
+          route: 'carCake/carGeneralLayer/carGeneral/brand',
+          key: 'brand',
+          alias: 'brand',
+          titleShort: 'Brand',
+          titleLong: 'Car Brand',
+          type: 'string',
+        },
+      ] as ColumnInfo[];
+
+      const columnSelection = new ColumnSelection(columnInfos);
+      const result = await db.join(columnSelection, cakeKey, cakeRef);
+
+      // Build expected data for validation
+      const exampleData = carsExample().carGeneral._data.map((c) => [c.brand]);
+
+      expect(result.rows).toEqual(exampleData);
+    });
+
+    it('should join data with missing/nulled values correctly', async () => {
+      const columnInfos = [
+        {
+          route: 'carCake/carTechnicalLayer/carTechnical/repairedByWorkshop',
+          key: 'repairedByWorkshop',
+          alias: 'repairedByWorkshop',
+          titleShort: 'Repaired By Workshop',
+          titleLong: 'Last Repaired By Workshop',
+          type: 'string',
+        },
+      ] as ColumnInfo[];
+
+      const columnSelection = new ColumnSelection(columnInfos);
+      const result = await db.join(columnSelection, cakeKey, cakeRef);
+
+      // Build expected data for validation
+      const exampleData = carsExample().carTechnical._data.map((c) => [
+        c.repairedByWorkshop || null,
+      ]);
+
+      expect(result.rows).toEqual(exampleData);
+    });
+
+    it('should join data of multiple routes correctly', async () => {
+      const columnInfos = [
+        {
+          route: 'carCake/carGeneralLayer/carGeneral/isElectric',
+          key: 'isElectric',
+          alias: 'isElectric',
+          titleShort: 'Is Electric',
+          titleLong: 'This Car is Electric',
+          type: 'boolean',
+        },
+        {
+          route: 'carCake/carTechnicalLayer/carTechnical/transmission',
+          key: 'transmission',
+          alias: 'transmission',
+          titleShort: 'Transmission',
+          titleLong: 'Type of Transmission',
+          type: 'string',
+        },
+      ] as ColumnInfo[];
+
+      const columnSelection = new ColumnSelection(columnInfos);
+      const result = await db.join(columnSelection, cakeKey, cakeRef);
+
+      // Build expected data for validation
+      const exampleCarGeneral = carsExample().carGeneral._data.map(
+        (c) => c.isElectric,
+      );
+      const exampleCarTechnical = carsExample().carTechnical._data.map(
+        (c) => c.transmission,
+      );
+      const exampleData = exampleCarGeneral.map((isElectric, index) => [
+        isElectric,
+        exampleCarTechnical[index],
+      ]);
+
+      expect(result.rows).toEqual(exampleData);
+    });
+
+    it('throws error if cake ref is not found', async () => {
+      const columnInfos = [
+        {
+          route: 'carCake/carGeneralLayer/carGeneral/brand',
+          key: 'brand',
+          alias: 'brand',
+          titleShort: 'Brand',
+          titleLong: 'Car Brand',
+          type: 'string',
+        },
+      ] as ColumnInfo[];
+
+      const columnSelection = new ColumnSelection(columnInfos);
+      await expect(
+        db.join(columnSelection, cakeKey, 'MISSING_CAKE_REF'),
+      ).rejects.toThrow(
+        'Db.join: Cake with ref "MISSING_CAKE_REF" not found in cake table "carCake".',
+      );
+    });
+  });
+  describe('getColumnSelectionFromEdit', () => {
+    it('should be defined', () => {
+      expect(db.getColumnSelectionFromEdit).toBeDefined();
+    });
+
+    it('returns correct column selection for example edit', async () => {
+      const exampleEdit = exampleEditCarsExample();
+      const columnSelection = await db.getColumnSelectionFromEdit(exampleEdit);
+
+      expect(columnSelection.routes).toEqual([
+        'carCake/carGeneralLayer/carGeneral/isElectric',
+        'carCake/carTechnicalLayer/carTechnical/transmission',
+      ]);
+    });
+
+    it('throws error if filter columns doesnt match tableCfg', async () => {
+      const brokenEdit: Edit = hip<Edit>({
+        name: 'Broken Edit',
+        filter: {
+          columnFilters: [
+            {
+              type: 'string',
+              column: 'carCake/carGeneralLayer/carGeneral/missingColumn',
+              operator: 'endsWith',
+              search: 'o',
+              _hash: '',
+            },
+          ],
+          operator: 'and',
+          _hash: '',
+        },
+        actions: [],
+        _hash: '',
+      });
+
+      await expect(db.getColumnSelectionFromEdit(brokenEdit)).rejects.toThrow(
+        'Db.getColumnSelection: Column "missingColumn" not found in table "carGeneral".',
+      );
     });
   });
 });

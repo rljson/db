@@ -179,7 +179,7 @@ export class Db {
     cakeRef: Ref,
   ): Promise<HistoryRow<any>[]> {
     //Get ColumnSelection from Edit
-    const columnSelection = await this._getColumnSelectionFromEdit(edit);
+    const columnSelection = await this.getColumnSelectionFromEdit(edit);
     const join = await this.join(columnSelection, cakeKey, cakeRef);
 
     //Get Row Filter from Edit
@@ -229,13 +229,9 @@ export class Db {
         (l) => l._hash === cake.layers[layerKey],
       );
 
-      if (!layer) {
-        throw new Error(
-          `Db.join: Layer with ref "${cake.layers[layerKey]}" not found in layers table "${layerKey}".`,
-        );
-      }
-
-      layers.set(layerKey, layer);
+      // We can expect that the layer exists because it
+      // passed get validation from _getDataForColumnSelection
+      layers.set(layerKey, layer!);
     }
 
     //Merge Layers Slice Ids,
@@ -332,7 +328,9 @@ export class Db {
     const joinColumnSelection = new ColumnSelection(joinColumnInfos);
 
     // Return Join
-    return new Join(joinRows, joinColumnSelection, this);
+    return new Join(joinRows, joinColumnSelection, this).select(
+      columnSelection,
+    );
   }
 
   // ...........................................................................
@@ -341,22 +339,28 @@ export class Db {
    * @param edit - The Edit to get the ColumnSelection for
    * @returns
    */
-  private async _getColumnSelectionFromEdit(edit: Edit) {
+  async getColumnSelectionFromEdit(edit: Edit) {
     // Determine routes from filter
     const routes = edit.filter.columnFilters;
     const columnInfos: ColumnInfo[] = [];
     for (const cf of routes) {
       const route = Route.fromFlat(cf.column).toRouteWithProperty();
       const tableKey = route.root.tableKey;
+
+      // Get ColumnCfg from Core out of tableCfg
       const tableCfg = await this.core.tableCfg(tableKey);
       const columnCfg = tableCfg.columns.find(
         (c) => c.key === route.propertyKey,
       );
+
+      //Guard: columnCfg must exist
       if (!columnCfg) {
         throw new Error(
           `Db.getColumnSelection: Column "${route.propertyKey}" not found in table "${tableKey}".`,
         );
       }
+
+      // Add ColumnInfo
       columnInfos.push({
         ...columnCfg,
         alias: `${columnCfg.key}`,
@@ -365,6 +369,7 @@ export class Db {
         titleLong: columnCfg.key,
       });
     }
+
     return new ColumnSelection(columnInfos);
   }
 

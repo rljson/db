@@ -336,6 +336,51 @@ export class ColumnSelection {
     ];
   }
 
+  static exampleCarsColumnSelection(): ColumnSelection {
+    return new ColumnSelection([
+      {
+        route: 'carCake/carGeneralLayer/carGeneral/brand',
+        key: 'brand',
+        alias: 'brand',
+        titleShort: 'Brand',
+        titleLong: 'Car Brand',
+        type: 'string',
+      },
+      {
+        route: 'carCake/carGeneralLayer/carGeneral/type',
+        key: 'type',
+        alias: 'type',
+        titleShort: 'Type',
+        titleLong: 'Car Type',
+        type: 'string',
+      },
+      {
+        route: 'carCake/carGeneralLayer/carGeneral/isElectric',
+        key: 'isElectric',
+        alias: 'isElectric',
+        titleShort: 'Is Electric',
+        titleLong: 'This Car is Electric',
+        type: 'boolean',
+      },
+      {
+        route: 'carCake/carTechnicalLayer/carTechnical/transmission',
+        key: 'transmission',
+        alias: 'transmission',
+        titleShort: 'Transmission',
+        titleLong: 'Type of Transmission',
+        type: 'string',
+      },
+      {
+        route: 'carCake/carColorLayer/carColor/sides',
+        key: 'sides',
+        alias: 'sides',
+        titleShort: 'Sides',
+        titleLong: 'Car Sides Color',
+        type: 'string',
+      },
+    ]);
+  }
+
   // ...........................................................................
   static empty(): ColumnSelection {
     return new ColumnSelection([]);
