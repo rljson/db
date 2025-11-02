@@ -6,14 +6,25 @@ import { hsh, rmhsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  Cake, CakesTable, HistoryRow, LayerRef, Ref, Rljson, SliceIdsRef, TableKey, timeId
+  Cake,
+  CakesTable,
+  HistoryRow,
+  LayerRef,
+  Ref,
+  Rljson,
+  SliceIdsRef,
+  TableKey,
+  timeId,
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
-import { Controller, ControllerCommands, ControllerRefs } from './controller.ts';
-
+import {
+  Controller,
+  ControllerCommands,
+  ControllerRefs,
+} from './controller.ts';
 
 export interface CakeValue extends Json {
   layers: {
@@ -33,6 +44,8 @@ export class CakeController<N extends string>
   extends BaseController<CakesTable>
   implements Controller<CakesTable, N>
 {
+  private _table: CakesTable | null = null;
+
   constructor(
     protected readonly _core: Core,
     protected readonly _tableKey: TableKey,
@@ -55,9 +68,9 @@ export class CakeController<N extends string>
 
     // Table must be of type cakes
     const rljson = await this._core.dumpTable(this._tableKey);
-    const table = rljson[this._tableKey] as CakesTable;
+    this._table = rljson[this._tableKey] as CakesTable;
 
-    if (table._type !== 'cakes') {
+    if (this._table._type !== 'cakes') {
       throw new Error(`Table ${this._tableKey} is not of type cakes.`);
     }
 
@@ -87,7 +100,7 @@ export class CakeController<N extends string>
       }
     } else {
       // Try to read refs from first row of cakes table (Fallback)
-      const cake = table._data[0] as CakeControllerRefs;
+      const cake = this._table._data[0] as CakeControllerRefs;
       this._refs = {
         sliceIdsTable: cake.sliceIdsTable,
         sliceIdsRow: cake.sliceIdsRow,
@@ -95,7 +108,32 @@ export class CakeController<N extends string>
     }
   }
 
-  async run(
+  async getChildRefs(
+    where: string | Json,
+    filter?: Json,
+  ): Promise<Array<{ tableKey: TableKey; ref: Ref }>> {
+    if (!this._table) {
+      throw new Error(`Controller not initialized.`);
+    }
+
+    const childRefs: Array<{ tableKey: TableKey; ref: Ref }> = [];
+    const { [this._tableKey]: table } = await this.get(where, filter);
+
+    const cakes = table._data as Cake[];
+    for (const cake of cakes) {
+      for (const layerTable of Object.keys(cake.layers)) {
+        if (layerTable.startsWith('_')) continue; // Skip internal keys
+        childRefs.push({
+          tableKey: layerTable as TableKey,
+          ref: cake.layers[layerTable],
+        });
+      }
+    }
+
+    return childRefs;
+  }
+
+  async insert(
     command: CakeControllerCommands,
     value: Json,
     origin?: Ref,
@@ -181,5 +219,15 @@ export class CakeController<N extends string>
     return {
       [this._tableKey]: { _data: cakes, _type: 'cakes' } as CakesTable,
     };
+  }
+
+  filterRow(row: Json, key: string, value: JsonValue): boolean {
+    const cake = row as Cake;
+    for (const [layerKey, layerRef] of Object.entries(cake.layers)) {
+      if (layerKey === key && layerRef === value) {
+        return true;
+      }
+    }
+    return false;
   }
 }

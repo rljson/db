@@ -6,8 +6,17 @@ import { hsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  ComponentRef, HistoryRow, InsertCommand, Layer, LayersTable, Ref, Rljson, SliceId, SliceIdsRef,
-  TableKey, timeId
+  ComponentRef,
+  HistoryRow,
+  InsertCommand,
+  Layer,
+  LayersTable,
+  Ref,
+  Rljson,
+  SliceId,
+  SliceIdsRef,
+  TableKey,
+  timeId,
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
@@ -15,7 +24,6 @@ import { Core } from '../core.ts';
 import { BaseController } from './base-controller.ts';
 import { CakeControllerRefs } from './cake-controller.ts';
 import { Controller, ControllerRefs } from './controller.ts';
-
 
 export interface LayerControllerRefs extends ControllerRefs {
   sliceIdsTable?: TableKey;
@@ -91,7 +99,7 @@ export class LayerController<N extends string>
     }
   }
 
-  async run(
+  async insert(
     command: InsertCommand,
     value: Json,
     origin?: Ref,
@@ -188,5 +196,39 @@ export class LayerController<N extends string>
     return {
       [this._tableKey]: { _data: layers, _type: 'layers' } as LayersTable,
     };
+  }
+
+  async getChildRefs(
+    where: string | Json,
+    filter?: Json,
+  ): Promise<Array<{ tableKey: TableKey; ref: Ref }>> {
+    const { [this._tableKey]: table } = await this.get(where, filter);
+    const childRefs: Array<{ tableKey: TableKey; ref: Ref }> = [];
+
+    for (const row of table._data) {
+      const layer = row as Layer;
+
+      for (const ref of Object.values(layer.add)) {
+        childRefs.push({
+          tableKey: layer.componentsTable,
+          ref: ref,
+        });
+      }
+    }
+
+    return childRefs;
+  }
+
+  filterRow(row: Json, _: string, value: JsonValue): boolean {
+    const layer = row as Layer;
+    const compRef = value as ComponentRef;
+
+    for (const componentRef of Object.values(layer.add)) {
+      if (componentRef === compRef) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

@@ -5,7 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import { Io, IoMem } from '@rljson/io';
-import { Json } from '@rljson/json';
+import { Json, merge } from '@rljson/json';
 import {
   CakesTable,
   ColumnCfg,
@@ -19,6 +19,7 @@ import {
   Ref,
   Rljson,
   Route,
+  RouteSegment,
   SliceId,
   SliceIds,
   validateInsert,
@@ -82,85 +83,134 @@ export class Db {
     const controllers = await this._indexedControllers(isolatedRoute);
 
     // Fetch Data
-    return this._get(isolatedRoute, where, controllers);
+    return [await this._get(isolatedRoute, where, controllers)];
+  }
+
+  async _get(
+    route: Route,
+    where: string | Json,
+    controllers: Record<string, Controller<any, any>>,
+    segmentLevel?: number,
+  ): Promise<Rljson> {
+    //Start at top segment
+    if (segmentLevel === undefined) segmentLevel = 0;
+
+    const segment = route.segments[segmentLevel];
+    const segmentIsDeepest = segmentLevel === route.segments.length - 1;
+    const segmentController = controllers[segment.tableKey];
+    const segmentRef = await this._getReferenceOfRouteSegment(segment);
+
+    //Build where for segment
+    //If string given -> build _hash object
+    let segmentWhere =
+      typeof where === 'object' ? where : ({ _hash: where } as Json);
+
+    //If encapsulated, drill into object
+    segmentWhere =
+      segment.tableKey in segmentWhere
+        ? (segmentWhere[segment.tableKey] as Json)
+        : segmentWhere;
+
+    //If ref through route given, add to where object
+    segmentWhere = segmentRef
+      ? ({ ...segmentWhere, ...{ _hash: segmentRef } } as Json)
+      : segmentWhere;
+
+    const childSegmentLevel = segmentLevel + 1;
+    const childSegment = route.segments[childSegmentLevel];
+
+    const segmentWhereWithoutChildWhere = { ...segmentWhere };
+    //Delete child segment key from where
+    if (!segmentIsDeepest && childSegment.tableKey in segmentWhere)
+      delete segmentWhereWithoutChildWhere[childSegment.tableKey];
+
+    let parent = await segmentController.get(segmentWhereWithoutChildWhere, {});
+
+    //Isolate Property if deepest segment has property key
+    if (segmentIsDeepest && route.hasPropertyKey) {
+      parent = this.isolatePropertyFromComponents(parent, route.propertyKey!);
+    }
+
+    const children: Rljson[] = [];
+    const filteredParentRows: Map<string, Json> = new Map();
+
+    if (!segmentIsDeepest) {
+      const childRefs = await segmentController.getChildRefs(
+        segmentWhereWithoutChildWhere,
+        {},
+      );
+      for (const { tableKey, columnKey, ref } of childRefs) {
+        if (tableKey !== childSegment.tableKey) continue;
+
+        const child = await this._get(
+          route,
+          { ...segmentWhere, ...{ _hash: ref } },
+          controllers,
+          childSegmentLevel,
+        );
+        children.push(child);
+
+        //Filter parent to only include rows that have the child ref
+
+        for (const childObjs of child[tableKey]._data) {
+          const childRef = (childObjs as Json)['_hash'] as string;
+          for (const row of parent[segment.tableKey]._data) {
+            if (filteredParentRows.has((row as Json)['_hash'] as string))
+              continue;
+
+            const includesChild = segmentController.filterRow(
+              row,
+              columnKey ?? tableKey,
+              childRef,
+            );
+            if (includesChild) {
+              filteredParentRows.set(
+                (row as Json)['_hash'] as string,
+                row as Json,
+              );
+            }
+          }
+        }
+      }
+
+      //Build final parent with filtered rows
+      const parentWithFilteredRows = {
+        [segment.tableKey]: {
+          ...parent[segment.tableKey],
+          ...{
+            _data: Array.from(filteredParentRows.values()),
+          },
+        },
+      };
+
+      return merge(parentWithFilteredRows, ...children) as Rljson;
+    }
+
+    return parent;
   }
 
   // ...........................................................................
   /**
-   * Recursively fetches data from the given route using the provided controllers
-   * @param route - The route to fetch data from
-   * @param where - The filter to apply to the root table
-   * @param controllers - A record of controllers keyed by table name
-   * @returns An array of Rljson objects matching the route and filter
+   * Get the reference (hash) of a route segment, considering default refs and history refs
+   * @param segment - The route segment to get the reference for
+   * @returns
    */
-  private async _get(
-    route: Route,
-    where: string | Json,
-    controllers: Record<string, Controller<any, any>>,
-  ): Promise<Rljson[]> {
-    //Extract given Revision
-    let filter = {};
-    if (Route.segmentHasRef(route.root)) {
-      let revision: Ref = '';
-      if (Route.segmentHasDefaultRef(route.root)) {
+  private async _getReferenceOfRouteSegment(
+    segment: RouteSegment<any>,
+  ): Promise<string | null> {
+    if (Route.segmentHasRef(segment)) {
+      if (Route.segmentHasDefaultRef(segment)) {
         // Use given ref
-        revision = Route.segmentRef(route.root)!;
+        return Route.segmentRef(segment)!;
       } else {
         // Get ref from history
-        revision = (await this.getRefOfTimeId(
-          route.root.tableKey,
-          Route.segmentRef(route.root)!,
+        return (await this.getRefOfTimeId(
+          segment.tableKey,
+          Route.segmentRef(segment)!,
         ))!;
       }
-      // Build where clause
-      filter = { _hash: revision };
     }
-
-    //Fetch Root Data
-    const rootRljson: Rljson = await controllers[route.root.tableKey].get(
-      where,
-      filter,
-    );
-    //Extract Root Refs
-    const rootRefs: Ref[] = rootRljson[route.root.tableKey]._data.map(
-      (r) => r._hash,
-    );
-
-    //Base Case: If route has only one segment, return root data
-    if (route.segments.length === 1) {
-      if (route.hasPropertyKey) {
-        return [
-          this.isolatePropertyFromComponents(rootRljson, route.propertyKey!),
-        ];
-      }
-
-      return [rootRljson];
-    }
-
-    //Recursive Case: Fetch Child Data for each Root Ref
-    const results: Rljson[] = [];
-    const superiorMap = new Map<string, Rljson>();
-    for (const ref of rootRefs) {
-      //Build superior route
-      const superiorRoute = new Route(route.segments.slice(0, -1));
-
-      if (superiorMap.has(superiorRoute.flat)) continue; //Already fetched
-
-      //Fetch Superior Data
-      const res = await this._get(
-        superiorRoute,
-        {
-          [route.root.tableKey + 'Ref']: ref,
-        },
-        controllers,
-      );
-
-      //Add to Map
-      superiorMap.set(superiorRoute.flat, res[0]);
-    }
-
-    results.push(...superiorMap.values());
-    return results.map((r) => ({ ...r, ...rootRljson }));
+    return null;
   }
 
   // ...........................................................................
@@ -177,7 +227,7 @@ export class Db {
     edit: Edit,
     cakeKey: string,
     cakeRef: Ref,
-  ): Promise<HistoryRow<any>[]> {
+  ): Promise<HistoryRow<any>> {
     //Get ColumnSelection from Edit
     const columnSelection = await this.getColumnSelectionFromEdit(edit);
     const join = await this.join(columnSelection, cakeKey, cakeRef);
@@ -383,7 +433,8 @@ export class Db {
     const data: Rljson = {};
     for (const colInfo of columnSelection.columns) {
       const route = Route.fromFlat(colInfo.route).toRouteWithProperty();
-      Object.assign(data, ...(await this.get(route, {})));
+      const result = await this.get(route, {});
+      Object.assign(data, ...result);
     }
     return data;
   }
@@ -404,7 +455,7 @@ export class Db {
     const errors = validateInsert(insert);
     if (!!errors.hasErrors) {
       throw new Error(
-        `Insert is not valid:\n${JSON.stringify(errors, null, 2)}`,
+        `Db.insert: Insert is not valid:\n${JSON.stringify(errors, null, 2)}`,
       );
     }
 
@@ -548,7 +599,9 @@ export class Db {
     );
     const runFns: Record<string, ControllerRunFn<any>> = {};
     for (const tableKey of Object.keys(controllers)) {
-      runFns[tableKey] = controllers[tableKey].run.bind(controllers[tableKey]);
+      runFns[tableKey] = controllers[tableKey].insert.bind(
+        controllers[tableKey],
+      );
     }
 
     return runFns;
@@ -809,7 +862,10 @@ export class Db {
       const table = rljson[tableKey];
       const newData = table._data.map((row: any) => {
         if (row.hasOwnProperty(propertyKey)) {
-          return { [propertyKey]: row[propertyKey] };
+          return {
+            [propertyKey]: row[propertyKey],
+            _hash: row._hash,
+          };
         } else {
           return row;
         }

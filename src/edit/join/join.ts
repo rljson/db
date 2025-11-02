@@ -5,7 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import { Hash } from '@rljson/hash';
-import { Json, JsonValueType } from '@rljson/json';
+import { Json, JsonValueType, merge } from '@rljson/json';
 import {
   ContentType,
   HistoryRow,
@@ -19,11 +19,9 @@ import { Db } from '../../db.ts';
 
 import { Edit } from '../edit/edit.ts';
 import { ColumnSelection } from '../selection/column-selection.ts';
-import { View } from '../view/view.ts';
 
 import { RowFilterProcessor } from './filter/row-filter-processor.ts';
 import { RowFilter } from './filter/row-filter.ts';
-import { JoinView } from './join-view.ts';
 import { SetValue } from './set-value/set-value.ts';
 
 export type JoinProcessType = 'filter' | 'setValue' | 'selection' | 'sort';
@@ -50,7 +48,7 @@ export type JoinRowHashed = {
 };
 export type JoinRowsHashed = Record<SliceId, JoinRowHashed>;
 
-export type CakeInsertObject = {
+type CakeInsertObject = {
   [cakeRoute: string]: {
     route: Route;
     value: {
@@ -61,7 +59,7 @@ export type CakeInsertObject = {
   };
 };
 
-export type LayerInsertObject = {
+type LayerInsertObject = {
   [layerRoute: string]: {
     route: Route;
     value: {
@@ -70,7 +68,7 @@ export type LayerInsertObject = {
   };
 };
 
-export type ComponentInsertObject = {
+type ComponentInsertObject = {
   [componentRoute: string]: {
     route: Route;
     value: Json | null;
@@ -223,140 +221,45 @@ export class Join {
   /**
    * Inserts changed values into RLJSON DB
    */
-  async insert(): Promise<HistoryRow<any>[]> {
-    const historyRows: HistoryRow<any>[] = [];
+  async insert(): Promise<HistoryRow<any>> {
     const cakeInserts = this._insertCakeObject(this.data);
+    const mergedCakeInsertObj = merge(...cakeInserts) as CakeInsertObject;
 
-    for (const cakeInsert of cakeInserts) {
-      const route = cakeInsert[this.cakeRoute.root.tableKey].route.flat;
-      const value = cakeInsert[this.cakeRoute.root.tableKey].value;
+    const route = mergedCakeInsertObj[this.cakeRoute.root.tableKey].route.flat;
+    const value = mergedCakeInsertObj[this.cakeRoute.root.tableKey].value;
 
-      const insert: Insert<any> = {
-        command: 'add',
-        route,
-        value,
-      };
+    const insert: Insert<any> = {
+      command: 'add',
+      route,
+      value,
+    };
 
-      const historyRow = await this._db.insert(insert);
-      historyRows.push(historyRow);
-    }
-
-    return historyRows;
+    return await this._db.insert(insert);
   }
 
   // ...........................................................................
   /**
-   * Builds cake insert objects from the given join rows
-   * @param rows - The join rows
-   * @returns The cake insert objects
+   * Returns the value at the given row and column index
+   *
+   * @param row The row index
+   * @param column The column index
+   * @returns The value at the given row and column
    */
-  private _insertCakeObject(rows: JoinRowsHashed): CakeInsertObject[] {
-    const cakeInsertObjects: CakeInsertObject[] = [];
-    const cakeRoute = this.cakeRoute;
-
-    for (const [sliceId, row] of Object.entries(rows)) {
-      const layerInsertObjectList = this._insertLayerObjects(
-        sliceId,
-        row.columns,
-      );
-
-      for (const layerInsertObject of layerInsertObjectList) {
-        const cakeInsertObject: CakeInsertObject = {};
-        for (const [layerRoute, layerInsertObj] of Object.entries(
-          layerInsertObject,
-        )) {
-          cakeInsertObject[cakeRoute.root.tableKey] = {
-            route: layerInsertObj.route,
-            value: {
-              [layerRoute]: layerInsertObj.value,
-            },
-          };
-        }
-        cakeInsertObjects.push(cakeInsertObject);
-      }
-    }
-
-    return cakeInsertObjects;
+  value(row: number, column: number): any {
+    return this.rows[row][column];
   }
 
   // ...........................................................................
   /**
-   * Wraps component insert objects into layer insert objects
-   * @param sliceId - The slice id
-   * @param componentInsertObjects - The component insert objects
-   * @returns
+   * Clones the join
+   *
+   * @returns The cloned join
    */
-  private _insertLayerObjects(
-    sliceId: SliceId,
-    row: JoinRow,
-  ): LayerInsertObject[] {
-    const layerRoutes: Route[] = this.layerRoutes;
-    const layerInsertObjects: LayerInsertObject[] = [];
-    const insertComponentObjects = this._insertComponentObjects(row);
-
-    for (const layerRoute of layerRoutes) {
-      for (const [compRouteFlat, compInsertObj] of Object.entries(
-        insertComponentObjects,
-      )) {
-        const compRoute = Route.fromFlat(compRouteFlat);
-
-        if (layerRoute.includes(compRoute)) {
-          const layerInsertObj: {
-            [layerRoute: string]: {
-              route: Route;
-              value: {
-                [sliceId: string]: Json | null;
-              };
-            };
-          } = {};
-          layerInsertObj[layerRoute.root.tableKey] = {
-            route: compInsertObj.route,
-            value: {
-              [sliceId]: compInsertObj.value,
-            },
-          };
-          layerInsertObjects.push(layerInsertObj);
-        }
-      }
-    }
-    return layerInsertObjects;
-  }
-  // ...........................................................................
-  /**
-   * Merges columns into component insert objects
-   * @param columns - The columns to merge
-   * @returns
-   */
-  private _insertComponentObjects(
-    columns: JoinColumn<any>[],
-  ): ComponentInsertObject {
-    // Find all component routes
-    const componentRoutes = this.componentRoutes;
-
-    // Create insert objects for all component routes
-    const result = {} as ComponentInsertObject;
-    for (const compRoute of componentRoutes) {
-      let compChanged: boolean = false;
-      const compInsert = {} as Json;
-
-      // Find all columns that belong to the component
-      for (const c of columns) {
-        if (compRoute.includes(c.route)) {
-          if (c.insert !== null) {
-            compChanged = true;
-            compInsert[c.route.propertyKey! as string] = c.insert;
-          } else {
-            compInsert[c.route.propertyKey! as string] = c.value;
-          }
-        }
-      }
-      result[compRoute.flat] = {
-        route: compRoute,
-        value: compChanged ? compInsert : null,
-      };
-    }
-
-    return result;
+  clone(): Join {
+    const cloned = Object.create(this);
+    cloned._data = this._base;
+    cloned._processes = [...this._processes];
+    return cloned;
   }
 
   // ...........................................................................
@@ -366,9 +269,9 @@ export class Join {
   get componentRoutes(): Route[] {
     return Array.from(
       new Set(
-        Object.values(this.data)
-          .flatMap((r) => r.columns)
-          .map((c) => c.route.flatWithoutPropertyKey),
+        Object.values(this.columnSelection.columns).map(
+          (c) => Route.fromFlat(c.route).upper().flatWithoutRefs,
+        ),
       ),
     ).map((r) => Route.fromFlat(r));
   }
@@ -403,54 +306,6 @@ export class Join {
 
   // ...........................................................................
   /**
-   * Hashes the given join rows
-   *
-   * @param rows The join rows to hash
-   * @returns The hashed join rows
-   */
-  private _hashedRows(rows: JoinRows) {
-    const sliceIds = Object.keys(rows);
-    const hashedRows: JoinRowsHashed = {};
-    for (const sliceId of sliceIds) {
-      const columns = rows[sliceId];
-      const rowHash = Hash.default.calcHash(
-        columns.map((col) => col.value) as any[],
-      );
-      hashedRows[sliceId] = {
-        rowHash,
-        columns,
-      };
-    }
-    return hashedRows;
-  }
-
-  // ...........................................................................
-  /**
-   * Returns the value at the given row and column index
-   *
-   * @param row The row index
-   * @param column The column index
-   * @returns The value at the given row and column
-   */
-  value(row: number, column: number): any {
-    return this.rows[row][column];
-  }
-
-  // ...........................................................................
-  /**
-   * Clones the join
-   *
-   * @returns The cloned join
-   */
-  clone(): Join {
-    const cloned = Object.create(this);
-    cloned._data = this._base;
-    cloned._processes = [...this._processes];
-    return cloned;
-  }
-
-  // ...........................................................................
-  /**
    * Returns the number of rows in the join
    */
   get rowCount(): number {
@@ -462,15 +317,7 @@ export class Join {
    * Returns the number of columns in the join
    */
   get columnCount(): number {
-    return this._baseColumnSelection.count;
-  }
-
-  // ...........................................................................
-  /**
-   * Returns a view representation of the join
-   */
-  get view(): View {
-    return new JoinView(this);
+    return this.columnSelection.count;
   }
 
   // ...........................................................................
@@ -521,10 +368,191 @@ export class Join {
           const dataColRoute = dataCol.route;
           return colInfoRoute.equalsWithoutRefs(dataColRoute);
         });
-        row.push(joinCol ? joinCol.value : null);
+        row.push(joinCol ? joinCol.insert ?? joinCol.value : null);
       }
       result.push(row);
     }
     return result;
+  }
+
+  //#############################################################
+  // ############# Private Methods ##############################
+  //#############################################################
+
+  // ...........................................................................
+  /**
+   * Builds cake insert objects from the given join rows
+   * @param rows - The join rows
+   * @returns The cake insert objects
+   */
+  private _insertCakeObject(rows: JoinRowsHashed): CakeInsertObject[] {
+    const cakeInsertObjects: CakeInsertObject[] = [];
+    const cakeRoute = this.cakeRoute;
+
+    for (const [sliceId, row] of Object.entries(rows)) {
+      const layerInsertObjectList = this._insertLayerObjects(
+        sliceId,
+        row.columns,
+      );
+
+      for (const layerInsertObject of layerInsertObjectList) {
+        const cakeInsertObject: CakeInsertObject = {};
+        for (const [layerRoute, layerInsertObj] of Object.entries(
+          layerInsertObject,
+        )) {
+          cakeInsertObject[cakeRoute.root.tableKey] = {
+            route: layerInsertObj.route,
+            value: {
+              [layerRoute]: layerInsertObj.value,
+            },
+          };
+        }
+        cakeInsertObjects.push(cakeInsertObject);
+      }
+    }
+
+    return cakeInsertObjects;
+  }
+
+  // ...........................................................................
+  /**
+   * Wraps component insert objects into layer insert objects
+   * @param sliceId - The slice id
+   * @param componentInsertObjects - The component insert objects
+   * @returns
+   */
+  private _insertLayerObjects(
+    sliceId: SliceId,
+    insertRow: JoinRow,
+  ): LayerInsertObject[] {
+    const layerRoutes: Route[] = this.layerRoutes;
+    const layerInsertObjects: LayerInsertObject[] = [];
+    const insertComponentObjects = this._insertComponentObjects(
+      sliceId,
+      insertRow,
+    );
+
+    for (const layerRoute of layerRoutes) {
+      for (const [compRouteFlat, compInsertObj] of Object.entries(
+        insertComponentObjects,
+      )) {
+        const compRoute = Route.fromFlat(compRouteFlat);
+
+        if (layerRoute.includes(compRoute)) {
+          const layerInsertObj: {
+            [layerRoute: string]: {
+              route: Route;
+              value: {
+                [sliceId: string]: Json | null;
+              };
+            };
+          } = {};
+          layerInsertObj[layerRoute.root.tableKey] = {
+            route: compInsertObj.route,
+            value: {
+              [sliceId]: compInsertObj.value,
+            },
+          };
+          layerInsertObjects.push(layerInsertObj);
+        }
+      }
+    }
+    return layerInsertObjects;
+  }
+  // ...........................................................................
+  /**
+   * Merges columns into component insert objects
+   * @param insertColumns - The columns to merge
+   * @returns
+   */
+  private _insertComponentObjects(
+    sliceId: SliceId,
+    insertColumns: JoinColumn<any>[],
+  ): ComponentInsertObject {
+    // Find all component routes
+    const componentRoutes = this.componentRoutes;
+
+    // Get merged columns (with insert values)
+    const columns = this._mergeInsertRow(sliceId, insertColumns);
+
+    // Create insert objects for all component routes
+    const result = {} as ComponentInsertObject;
+    for (const compRoute of componentRoutes) {
+      let compChanged: boolean = false;
+      const compInsert = {} as Json;
+
+      // Find all columns that belong to the component
+      for (const c of columns) {
+        if (compRoute.includes(c.route)) {
+          if (c.insert !== null) {
+            compChanged = true;
+            compInsert[c.route.propertyKey! as string] = c.insert;
+          } else {
+            compInsert[c.route.propertyKey! as string] = c.value;
+          }
+        }
+      }
+      result[compRoute.flat] = {
+        route: compRoute,
+        value: compChanged ? compInsert : null,
+      };
+    }
+
+    return result;
+  }
+
+  // ...........................................................................
+  /**
+   * Merges the insert values into the base row
+   * @param sliceId - The slice id
+   * @param insertRow - The insert row
+   * @returns The merged join row
+   */
+  private _mergeInsertRow(
+    sliceId: SliceId,
+    insertRow: JoinColumn<any>[],
+  ): JoinRow {
+    const baseColumns = this._base[sliceId].columns;
+    const mergedRow: JoinRow = [];
+
+    for (const baseCol of baseColumns) {
+      const insertCol = insertRow.find((col) =>
+        col.route.equalsWithoutRefs(baseCol.route),
+      );
+      if (insertCol) {
+        mergedRow.push({
+          route: baseCol.route,
+          value: baseCol.value,
+          insert: insertCol.insert,
+        });
+      } else {
+        mergedRow.push(baseCol);
+      }
+    }
+
+    return mergedRow;
+  }
+
+  // ...........................................................................
+  /**
+   * Hashes the given join rows. If insert value is present, it is used for hashing.
+   *
+   * @param rows The join rows to hash
+   * @returns The hashed join rows
+   */
+  private _hashedRows(rows: JoinRows) {
+    const sliceIds = Object.keys(rows);
+    const hashedRows: JoinRowsHashed = {};
+    for (const sliceId of sliceIds) {
+      const columns = rows[sliceId];
+      const rowHash = Hash.default.calcHash(
+        columns.map((col) => col.insert ?? col.value) as any[],
+      );
+      hashedRows[sliceId] = {
+        rowHash,
+        columns,
+      };
+    }
+    return hashedRows;
   }
 }
