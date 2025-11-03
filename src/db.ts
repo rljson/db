@@ -72,7 +72,7 @@ export class Db {
    * @returns An array of Rljson objects matching the route and filter
    * @throws {Error} If the route is not valid or if any controller cannot be created
    */
-  async get(route: Route, where: string | Json): Promise<Rljson[]> {
+  async get(route: Route, where: string | Json): Promise<Rljson> {
     // Validate Route
     if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
 
@@ -83,7 +83,7 @@ export class Db {
     const controllers = await this._indexedControllers(isolatedRoute);
 
     // Fetch Data
-    return [await this._get(isolatedRoute, where, controllers)];
+    return await this._get(isolatedRoute, where, controllers);
   }
 
   async _get(
@@ -258,7 +258,7 @@ export class Db {
     cakeRef: Ref,
   ): Promise<Join> {
     //Fetch Data for ColumnSelection
-    const data = await this._getDataForColumnSelection(columnSelection);
+    const data = await this._getBaseDataForColumnSelection(columnSelection);
 
     //Get Cake
     const cakesTable = data[cakeKey] as CakesTable;
@@ -300,8 +300,6 @@ export class Db {
         }
       }
     }
-
-    //TODO: What about encapsulated components?
 
     // Build ColumnCfgs
     const columnCfgs: Map<string, ColumnCfg[]> = new Map();
@@ -428,13 +426,23 @@ export class Db {
    * Fetches data for the given ColumnSelection
    * @param columnSelection - The ColumnSelection to fetch data for
    */
-  private async _getDataForColumnSelection(columnSelection: ColumnSelection) {
-    // Fetch Data from all controller routes
-    const data: Rljson = {};
+  private async _getBaseDataForColumnSelection(
+    columnSelection: ColumnSelection,
+  ) {
+    //Make Component Routes unique
+    const uniqueComponentRoutes: Set<string> = new Set();
     for (const colInfo of columnSelection.columns) {
       const route = Route.fromFlat(colInfo.route).toRouteWithProperty();
-      const result = await this.get(route, {});
-      Object.assign(data, ...result);
+      uniqueComponentRoutes.add(route.toRouteWithoutProperty().flat);
+    }
+
+    // Fetch Data from all controller routes
+    const data: Rljson = {};
+    for (const compRouteFlat of uniqueComponentRoutes) {
+      const uniqueComponentRoute = Route.fromFlat(compRouteFlat);
+      const componentData = await this.get(uniqueComponentRoute, {});
+
+      Object.assign(data, componentData);
     }
     return data;
   }

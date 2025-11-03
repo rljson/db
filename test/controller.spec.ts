@@ -252,20 +252,23 @@ describe('Controller', () => {
 
         //Invalid Command
         await expect(
-          carGeneralComponentController.run('update' as any, carGeneralValue),
+          carGeneralComponentController.insert(
+            'update' as any,
+            carGeneralValue,
+          ),
         ).rejects.toThrow(
           'Command update is not supported by ComponentController.',
         );
 
         //Invalid Refs
         await expect(
-          carGeneralComponentController.run('add', carGeneralValue, origin, {
+          carGeneralComponentController.insert('add', carGeneralValue, origin, {
             base: 'H45H',
           }),
         ).rejects.toThrow('Refs are not supported on ComponentController.');
 
         //Valid Run
-        const editProtocolFirstRow = await carGeneralComponentController.run(
+        const editProtocolFirstRow = await carGeneralComponentController.insert(
           'add',
           carGeneralValue,
           origin,
@@ -290,11 +293,12 @@ describe('Controller', () => {
           _hash: '', // hash will be generated automatically
         };
 
-        const editProtocolSecondRow = await carGeneralComponentController.run(
-          'add',
-          carGeneralValueSecond,
-          origin,
-        );
+        const editProtocolSecondRow =
+          await carGeneralComponentController.insert(
+            'add',
+            carGeneralValueSecond,
+            origin,
+          );
         expect(editProtocolSecondRow).toBeDefined();
         expect(editProtocolSecondRow.timeId).toBeDefined();
         expect(editProtocolSecondRow.carGeneralRef).toBeDefined();
@@ -473,7 +477,7 @@ describe('Controller', () => {
           } as Record<SliceId, string>,
         };
 
-        const editProtocolFirstRow = await carGeneralLayerController.run(
+        const editProtocolFirstRow = await carGeneralLayerController.insert(
           'add',
           carGeneralLayerValue,
           origin,
@@ -494,7 +498,7 @@ describe('Controller', () => {
           } as Record<SliceId, string>,
         };
 
-        const editProtocolSecondRow = await carGeneralLayerController.run(
+        const editProtocolSecondRow = await carGeneralLayerController.insert(
           'add',
           carGeneralLayerValueSecond,
           origin,
@@ -673,7 +677,7 @@ describe('Controller', () => {
           id: 'MyFirstCake',
         };
 
-        const editProtocolFirstRow = await carCakeController.run(
+        const editProtocolFirstRow = await carCakeController.insert(
           'add',
           carCakeValue,
           origin,
@@ -699,7 +703,7 @@ describe('Controller', () => {
           id: 'MySecondCake',
         };
 
-        const editProtocolSecondRow = await carCakeController.run(
+        const editProtocolSecondRow = await carCakeController.insert(
           'add',
           carCakeValueSecond,
           origin,
@@ -744,7 +748,7 @@ describe('Controller', () => {
         };
 
         await expect(
-          carCakeController.run('update' as any, carCakeValue, origin),
+          carCakeController.insert('update' as any, carCakeValue, origin),
         ).rejects.toThrow('Command update is not supported by CakeController.');
       });
     });

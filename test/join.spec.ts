@@ -215,9 +215,12 @@ describe('Join', () => {
         {},
       );
 
-      //TODO: Writte Data includes too many components, only the components w/ brand=opel is expected
-
-      debugger;
+      expect(writtenData['carGeneral']._data.length).toBe(4);
+      const writtenDataSet = new Set(
+        writtenData['carGeneral']._data.map((d: any) => d['brand']),
+      );
+      expect(writtenDataSet.has('Opel')).toBe(true);
+      expect(writtenDataSet.size).toBe(1);
     });
   });
 });

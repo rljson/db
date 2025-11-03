@@ -65,9 +65,9 @@ describe('Db', () => {
 
       const result = await db.get(Route.fromFlat(route), ref);
       expect(result).toBeDefined();
-      expect(result[0].carGeneral).toBeDefined();
-      expect(result[0].carGeneral._data.length).toBe(1);
-      expect(result[0].carGeneral._data[0]._hash).toBe(ref);
+      expect(result.carGeneral).toBeDefined();
+      expect(result.carGeneral._data.length).toBe(1);
+      expect(result.carGeneral._data[0]._hash).toBe(ref);
     });
     it('get component property by ref', async () => {
       const componentKey = 'carGeneral';
@@ -79,13 +79,13 @@ describe('Db', () => {
       const result = await db.get(Route.fromFlat(route), ref);
 
       expect(result).toBeDefined();
-      expect(result[0][componentKey]).toBeDefined();
-      expect(result[0][componentKey]._data.length).toBe(1);
-      expect(result[0][componentKey]._data[0]).toEqual({
+      expect(result[componentKey]).toBeDefined();
+      expect(result[componentKey]._data.length).toBe(1);
+      expect(result[componentKey]._data[0]).toEqual({
         _hash: ref,
         [propertyKey]: carsExample().carGeneral._data[0][propertyKey],
       });
-      expect(result[0][componentKey]._data[0][propertyKey]).toBe(
+      expect(result[componentKey]._data[0][propertyKey]).toBe(
         carsExample().carGeneral._data[0][propertyKey],
       );
     });
@@ -97,9 +97,9 @@ describe('Db', () => {
 
       const result = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
-      expect(result[0].carGeneral).toBeDefined();
-      expect(result[0].carGeneral._data.length).toBe(1);
-      expect(result[0].carGeneral._data[0]._hash).toBe(
+      expect(result.carGeneral).toBeDefined();
+      expect(result.carGeneral._data.length).toBe(1);
+      expect(result.carGeneral._data[0]._hash).toBe(
         carsExample().carGeneral._data[0]._hash,
       );
     });
@@ -109,10 +109,10 @@ describe('Db', () => {
 
       const result = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
-      expect(result[0].carGeneral).toBeDefined();
-      expect(result[0].carGeneral._data.length).toBe(2); //2 Volkswagens in example data
-      expect(result[0].carGeneral._data[0].brand).toBe('Volkswagen');
-      expect(result[0].carGeneral._data[1].brand).toBe('Volkswagen');
+      expect(result.carGeneral).toBeDefined();
+      expect(result.carGeneral._data.length).toBe(2); //2 Volkswagens in example data
+      expect(result.carGeneral._data[0].brand).toBe('Volkswagen');
+      expect(result.carGeneral._data[1].brand).toBe('Volkswagen');
     });
     it('get layer by ref', async () => {
       const route = '/carGeneralLayer';
@@ -121,9 +121,9 @@ describe('Db', () => {
 
       const result = await db.get(Route.fromFlat(route), ref);
       expect(result).toBeDefined();
-      expect(result[0].carGeneralLayer).toBeDefined();
-      expect(result[0].carGeneralLayer._data.length).toBe(1);
-      expect(result[0].carGeneralLayer._data[0]._hash).toBe(ref);
+      expect(result.carGeneralLayer).toBeDefined();
+      expect(result.carGeneralLayer._data.length).toBe(1);
+      expect(result.carGeneralLayer._data[0]._hash).toBe(ref);
     });
     it('get cake by ref', async () => {
       const route = '/carCake';
@@ -131,9 +131,9 @@ describe('Db', () => {
 
       const result = await db.get(Route.fromFlat(`${route}@${ref}`), {});
       expect(result).toBeDefined();
-      expect(result[0].carCake).toBeDefined();
-      expect(result[0].carCake._data.length).toBe(1);
-      expect(result[0].carCake._data[0]._hash).toBe(ref);
+      expect(result.carCake).toBeDefined();
+      expect(result.carCake._data.length).toBe(1);
+      expect(result.carCake._data[0]._hash).toBe(ref);
     });
     it('get cake/layer by ref', async () => {
       const cakeRoute = '/carCake';
@@ -144,9 +144,9 @@ describe('Db', () => {
         {},
       );
       expect(result).toBeDefined();
-      expect(result[0].carCake).toBeDefined();
-      expect(result[0].carCake._data.length).toBe(1);
-      expect(result[0].carCake._data[0]._hash).toBe(cakeRef);
+      expect(result.carCake).toBeDefined();
+      expect(result.carCake._data.length).toBe(1);
+      expect(result.carCake._data[0]._hash).toBe(cakeRef);
     });
     it('get nested layer/component by where', async () => {
       const route = '/carGeneralLayer/carGeneral';
@@ -158,14 +158,14 @@ describe('Db', () => {
 
       const result = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
-      expect(result[0].carGeneralLayer).toBeDefined();
-      expect(result[0].carGeneralLayer._data.length).toBe(1);
-      expect(result[0].carGeneralLayer._data[0]._hash).toBe(
+      expect(result.carGeneralLayer).toBeDefined();
+      expect(result.carGeneralLayer._data.length).toBe(1);
+      expect(result.carGeneralLayer._data[0]._hash).toBe(
         carsExample().carGeneralLayer._data[0]._hash,
       );
-      expect(result[0].carGeneral).toBeDefined();
-      expect(result[0].carGeneral._data.length).toBe(1);
-      expect(result[0].carGeneral._data[0]._hash).toBe(
+      expect(result.carGeneral).toBeDefined();
+      expect(result.carGeneral._data.length).toBe(1);
+      expect(result.carGeneral._data[0]._hash).toBe(
         carsExample().carGeneral._data[0]._hash,
       );
     });
@@ -209,25 +209,25 @@ describe('Db', () => {
       expect(result1).toBeDefined();
       expect(result2).toBeDefined();
 
-      expect(result1[0].carGeneral).toBeDefined();
-      expect(result1[0].carGeneral._data.length).toBe(1);
-      expect(result1[0].carGeneral._data[0]._hash).toBe(
+      expect(result1.carGeneral).toBeDefined();
+      expect(result1.carGeneral._data.length).toBe(1);
+      expect(result1.carGeneral._data[0]._hash).toBe(
         carsExample().carGeneral._data[0]._hash,
       );
 
-      expect(result2[0].carGeneral).toBeDefined();
-      expect(result2[0].carGeneral._data.length).toBe(1);
-      expect(result2[0].carGeneral._data[0]._hash).toBe(
+      expect(result2.carGeneral).toBeDefined();
+      expect(result2.carGeneral._data.length).toBe(1);
+      expect(result2.carGeneral._data[0]._hash).toBe(
         carsExample().carGeneral._data[0]._hash,
       );
 
-      expect(result1[0].carGeneralLayer).toBeDefined();
-      expect(result1[0].carGeneralLayer._data.length).toBe(1);
-      expect(result1[0].carGeneralLayer._data[0]._hash).toBe(layerRevHash1);
+      expect(result1.carGeneralLayer).toBeDefined();
+      expect(result1.carGeneralLayer._data.length).toBe(1);
+      expect(result1.carGeneralLayer._data[0]._hash).toBe(layerRevHash1);
 
-      expect(result2[0].carGeneralLayer).toBeDefined();
-      expect(result2[0].carGeneralLayer._data.length).toBe(1);
-      expect(result2[0].carGeneralLayer._data[0]._hash).toBe(layerRevHash2);
+      expect(result2.carGeneralLayer).toBeDefined();
+      expect(result2.carGeneralLayer._data.length).toBe(1);
+      expect(result2.carGeneralLayer._data[0]._hash).toBe(layerRevHash2);
     });
     it('get nested component/component by where', async () => {
       const route = '/carTechnical/carDimensions';
@@ -239,14 +239,14 @@ describe('Db', () => {
 
       const result = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
-      expect(result[0].carTechnical).toBeDefined();
-      expect(result[0].carTechnical._data.length).toBe(1);
-      expect(result[0].carTechnical._data[0]._hash).toBe(
+      expect(result.carTechnical).toBeDefined();
+      expect(result.carTechnical._data.length).toBe(1);
+      expect(result.carTechnical._data[0]._hash).toBe(
         carsExample().carTechnical._data[0]._hash,
       );
-      expect(result[0].carDimensions).toBeDefined();
-      expect(result[0].carDimensions._data.length).toBe(1);
-      expect(result[0].carDimensions._data[0]._hash).toBe(
+      expect(result.carDimensions).toBeDefined();
+      expect(result.carDimensions._data.length).toBe(1);
+      expect(result.carDimensions._data[0]._hash).toBe(
         carsExample().carDimensions._data[0]._hash,
       );
     });
@@ -262,19 +262,19 @@ describe('Db', () => {
 
       const result = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
-      expect(result[0].carCake).toBeDefined();
-      expect(result[0].carCake._data.length).toBe(1);
-      expect(result[0].carCake._data[0]._hash).toBe(
+      expect(result.carCake).toBeDefined();
+      expect(result.carCake._data.length).toBe(1);
+      expect(result.carCake._data[0]._hash).toBe(
         carsExample().carCake._data[0]._hash,
       );
-      expect(result[0].carGeneralLayer).toBeDefined();
-      expect(result[0].carGeneralLayer._data.length).toBe(1);
-      expect(result[0].carGeneralLayer._data[0]._hash).toBe(
+      expect(result.carGeneralLayer).toBeDefined();
+      expect(result.carGeneralLayer._data.length).toBe(1);
+      expect(result.carGeneralLayer._data[0]._hash).toBe(
         carsExample().carGeneralLayer._data[0]._hash,
       );
-      expect(result[0].carGeneral).toBeDefined();
-      expect(result[0].carGeneral._data.length).toBe(1);
-      expect(result[0].carGeneral._data[0]._hash).toBe(
+      expect(result.carGeneral).toBeDefined();
+      expect(result.carGeneral._data.length).toBe(1);
+      expect(result.carGeneral._data[0]._hash).toBe(
         carsExample().carGeneral._data[0]._hash,
       );
     });
@@ -295,17 +295,17 @@ describe('Db', () => {
       const result = await db.get(Route.fromFlat(route), where);
 
       expect(result).toBeDefined();
-      expect(result[0].carCake).toBeDefined();
-      expect(result[0].carCake._data.length).toBe(1);
-      expect(result[0].carCake._data[0]._hash).toBe(cakeRevisionHash);
+      expect(result.carCake).toBeDefined();
+      expect(result.carCake._data.length).toBe(1);
+      expect(result.carCake._data[0]._hash).toBe(cakeRevisionHash);
 
-      expect(result[0].carGeneralLayer).toBeDefined();
-      expect(result[0].carGeneralLayer._data.length).toBe(1);
-      expect(result[0].carGeneralLayer._data[0]._hash).toBe(layerRevisionHash);
+      expect(result.carGeneralLayer).toBeDefined();
+      expect(result.carGeneralLayer._data.length).toBe(1);
+      expect(result.carGeneralLayer._data[0]._hash).toBe(layerRevisionHash);
 
-      expect(result[0].carGeneral).toBeDefined();
-      expect(result[0].carGeneral._data.length).toBe(1);
-      expect(result[0].carGeneral._data[0]._hash).toBe(
+      expect(result.carGeneral).toBeDefined();
+      expect(result.carGeneral._data.length).toBe(1);
+      expect(result.carGeneral._data[0]._hash).toBe(
         carsExample().carGeneral._data[0]._hash,
       );
     });
@@ -346,17 +346,17 @@ describe('Db', () => {
       const result = await db.get(Route.fromFlat(route), where);
 
       expect(result).toBeDefined();
-      expect(result[0].carCake).toBeDefined();
-      expect(result[0].carCake._data.length).toBe(1);
-      expect(result[0].carCake._data[0]._hash).toBe(cakeHistoryRow.carCakeRef);
+      expect(result.carCake).toBeDefined();
+      expect(result.carCake._data.length).toBe(1);
+      expect(result.carCake._data[0]._hash).toBe(cakeHistoryRow.carCakeRef);
 
-      expect(result[0].carGeneralLayer).toBeDefined();
-      expect(result[0].carGeneralLayer._data.length).toBe(1);
+      expect(result.carGeneralLayer).toBeDefined();
+      expect(result.carGeneralLayer._data.length).toBe(1);
 
-      expect(result[0].carGeneral).toBeDefined();
-      expect(result[0].carGeneral._data.length).toBe(2);
-      expect(result[0].carGeneral._data[0].brand).toBe('Volkswagen');
-      expect(result[0].carGeneral._data[1].brand).toBe('Volkswagen');
+      expect(result.carGeneral).toBeDefined();
+      expect(result.carGeneral._data.length).toBe(2);
+      expect(result.carGeneral._data[0].brand).toBe('Volkswagen');
+      expect(result.carGeneral._data[1].brand).toBe('Volkswagen');
     });
   });
   describe('insert', () => {
