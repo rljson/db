@@ -8,7 +8,7 @@ import { Json, JsonValue } from '@rljson/json';
 import {
   Cake,
   CakesTable,
-  HistoryRow,
+  InsertHistoryRow,
   LayerRef,
   Ref,
   Rljson,
@@ -138,7 +138,7 @@ export class CakeController<N extends string>
     value: Json,
     origin?: Ref,
     refs?: CakeControllerRefs,
-  ): Promise<HistoryRow<any>> {
+  ): Promise<InsertHistoryRow<any>> {
     // Validate command
     if (!command.startsWith('add')) {
       throw new Error(`Command ${command} is not supported by CakeController.`);
@@ -155,7 +155,7 @@ export class CakeController<N extends string>
     //Write component to io
     await this._core.import(rlJson);
 
-    //Create HistoryRow
+    //Create InsertHistoryRow
     const result = {
       //Ref to component
       [this._tableKey + 'Ref']: hsh(cake as Json)._hash as string,
@@ -166,7 +166,7 @@ export class CakeController<N extends string>
 
       //Unique id/timestamp
       timeId: timeId(),
-    } as HistoryRow<any>;
+    } as InsertHistoryRow<any>;
 
     return result;
   }

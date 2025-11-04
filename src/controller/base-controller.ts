@@ -5,7 +5,13 @@
 // found in the LICENSE file in the root of this package.
 
 import { equals, Json, JsonValue } from '@rljson/json';
-import { HistoryRow, Ref, Rljson, TableKey, TableType } from '@rljson/rljson';
+import {
+  InsertHistoryRow,
+  Ref,
+  Rljson,
+  TableKey,
+  TableType,
+} from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
@@ -29,7 +35,7 @@ export abstract class BaseController<T extends TableType>
     value: Json,
     origin?: Ref,
     refs?: CakeControllerRefs,
-  ): Promise<HistoryRow<any>>;
+  ): Promise<InsertHistoryRow<any>>;
 
   // ...........................................................................
   abstract init(): Promise<void>;

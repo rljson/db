@@ -42,7 +42,7 @@ describe('Controller', () => {
 
     //Create Tables for TableCfgs in carsExample
     for (const tableCfg of carsExample().tableCfgs._data) {
-      await db.core.createTableWithHistory(tableCfg);
+      await db.core.createTableWithInsertHistory(tableCfg);
     }
 
     //Import Data

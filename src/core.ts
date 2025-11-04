@@ -9,7 +9,7 @@ import { JsonValue } from '@rljson/json';
 import {
   BaseValidator,
   ContentType,
-  createHistoryTableCfg,
+  createInsertHistoryTableCfg,
   Rljson,
   TableCfg,
   Validate,
@@ -26,12 +26,12 @@ export class Core {
 
   // ...........................................................................
   /**
-   * Creates a table and an history for the table
+   * Creates a table and an insertHistory for the table
    * @param tableCfg TableCfg of table to create
    */
-  async createTableWithHistory(tableCfg: TableCfg): Promise<void> {
+  async createTableWithInsertHistory(tableCfg: TableCfg): Promise<void> {
     await this.createTable(tableCfg);
-    await this.createHistory(tableCfg);
+    await this.createInsertHistory(tableCfg);
   }
 
   /**
@@ -42,11 +42,11 @@ export class Core {
     return this._io.createOrExtendTable({ tableCfg });
   }
   /**
-   * Creates an history table for a given table
+   * Creates an insertHistory table for a given table
    * @param tableCfg TableCfg of table
    */
-  async createHistory(tableCfg: TableCfg): Promise<void> {
-    const cfg = createHistoryTableCfg(tableCfg);
+  async createInsertHistory(tableCfg: TableCfg): Promise<void> {
+    const cfg = createInsertHistoryTableCfg(tableCfg);
     await this.createTable(cfg);
   }
 
@@ -120,21 +120,14 @@ export class Core {
     const tableCfgRef = dump._tableCfg;
     const tableCfgs = await this._io.rawTableCfgs();
 
-    if (!tableCfgs) {
-      throw new Error(`TableCfgs table not found.`);
-    }
-
     let tableCfg: TableCfg;
+    /* v8 ignore if -- @preserve */
     if (!tableCfgRef) {
       tableCfg = tableCfgs.find((tc) => tc.key === table) as TableCfg;
     } else {
       tableCfg = tableCfgs.find(
         (tc) => tc.key === table && tc._hash === tableCfgRef,
       ) as TableCfg;
-    }
-
-    if (!tableCfg) {
-      throw new Error(`TableCfg for table ${table} not found.`);
     }
 
     return tableCfg;

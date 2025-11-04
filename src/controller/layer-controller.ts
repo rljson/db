@@ -7,8 +7,8 @@ import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
   ComponentRef,
-  HistoryRow,
   InsertCommand,
+  InsertHistoryRow,
   Layer,
   LayersTable,
   Ref,
@@ -104,7 +104,7 @@ export class LayerController<N extends string>
     value: Json,
     origin?: Ref,
     refs?: LayerControllerRefs,
-  ): Promise<HistoryRow<any>> {
+  ): Promise<InsertHistoryRow<any>> {
     // Validate command
     if (!command.startsWith('add') && !command.startsWith('remove')) {
       throw new Error(
@@ -130,7 +130,7 @@ export class LayerController<N extends string>
     //Write component to io
     await this._core.import(rlJson);
 
-    //Create HistoryRow
+    //Create InsertHistoryRow
     const result = {
       //Ref to component
       [this._tableKey + 'Ref']: hsh(layer as Json)._hash as string,
@@ -141,7 +141,7 @@ export class LayerController<N extends string>
 
       //Unique id/timestamp
       timeId: timeId(),
-    } as HistoryRow<any>;
+    } as InsertHistoryRow<any>;
 
     return result;
   }

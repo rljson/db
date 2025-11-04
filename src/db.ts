@@ -7,18 +7,37 @@
 import { Io, IoMem } from '@rljson/io';
 import { Json, merge } from '@rljson/json';
 import {
-  CakesTable, ColumnCfg, ComponentsTable, HistoryRow, HistoryTimeId, Insert, isTimeId, Layer,
-  LayersTable, Ref, Rljson, Route, RouteSegment, SliceId, SliceIds, validateInsert
+  CakesTable,
+  ColumnCfg,
+  ComponentsTable,
+  Insert,
+  InsertHistoryRow,
+  InsertHistoryTimeId,
+  isTimeId,
+  Layer,
+  LayersTable,
+  Ref,
+  Rljson,
+  Route,
+  RouteSegment,
+  SliceId,
+  SliceIds,
+  validateInsert,
 } from '@rljson/rljson';
 
 import {
-  Controller, ControllerRefs, ControllerRunFn, createController
+  Controller,
+  ControllerRefs,
+  ControllerRunFn,
+  createController,
 } from './controller/controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRows } from './join/join.ts';
-import { ColumnInfo, ColumnSelection } from './join/selection/column-selection.ts';
+import {
+  ColumnInfo,
+  ColumnSelection,
+} from './join/selection/column-selection.ts';
 import { Notify } from './notify.ts';
-
 
 /**
  * Access Rljson data
@@ -182,7 +201,7 @@ export class Db {
 
   // ...........................................................................
   /**
-   * Get the reference (hash) of a route segment, considering default refs and history refs
+   * Get the reference (hash) of a route segment, considering default refs and insertHistory refs
    * @param segment - The route segment to get the reference for
    * @returns
    */
@@ -194,7 +213,7 @@ export class Db {
         // Use given ref
         return Route.segmentRef(segment)!;
       } else {
-        // Get ref from history
+        // Get ref from insertHistory
         return (await this.getRefOfTimeId(
           segment.tableKey,
           Route.segmentRef(segment)!,
@@ -366,13 +385,13 @@ export class Db {
   /**
    * Runs an Insert by executing the appropriate controller(s) based on the Insert's route
    * @param Insert - The Insert to run
-   * @returns The result of the Insert as an HistoryRow
+   * @returns The result of the Insert as an InsertHistoryRow
    * @throws {Error} If the Insert is not valid or if any controller cannot be created
    */
   async insert(
     insert: Insert<any>,
     options?: { skipNotification?: boolean },
-  ): Promise<HistoryRow<any>> {
+  ): Promise<InsertHistoryRow<any>> {
     const initialRoute = Route.fromFlat(insert.route);
     const runs = await this._resolveInsert(insert);
     const errors = validateInsert(insert);
@@ -399,18 +418,18 @@ export class Db {
     route: Route,
     runFns: Record<string, ControllerRunFn<any>>,
     options?: { skipNotification?: boolean },
-  ): Promise<HistoryRow<any>> {
-    let result: HistoryRow<any>;
+  ): Promise<InsertHistoryRow<any>> {
+    let result: InsertHistoryRow<any>;
     let tableKey: string;
 
     //Run parent controller with child refs as value
     const segment = route.segment(0);
     tableKey = segment.tableKey;
 
-    let previous: HistoryTimeId[] = [];
+    let previous: InsertHistoryTimeId[] = [];
     if (Route.segmentHasRef(segment)) {
-      const routeRef: HistoryTimeId = Route.segmentRef(segment)!;
-      if (Route.segmentHasHistoryRef(segment)) {
+      const routeRef: InsertHistoryTimeId = Route.segmentRef(segment)!;
+      if (Route.segmentHasInsertHistoryRef(segment)) {
         //Collect previous refs from child results
         previous = [...previous, routeRef];
       }
@@ -460,7 +479,7 @@ export class Db {
       tableKey = route.root.tableKey;
       const runFn = runFns[tableKey];
 
-      //Run on controller, get HistoryRow from return, pass previous revisions
+      //Run on controller, get InsertHistoryRow from return, pass previous revisions
       result = {
         ...(await runFn(insert.command, insert.value, insert.origin)),
         previous,
@@ -470,8 +489,8 @@ export class Db {
     //Write route to result
     result.route = insert.route;
 
-    //Write history
-    await this._writeHistory(tableKey, result);
+    //Write insertHistory
+    await this._writeInsertHistory(tableKey, result);
 
     //Notify listeners
     if (!options?.skipNotification)
@@ -488,7 +507,7 @@ export class Db {
    */
   registerObserver(
     route: Route,
-    callback: (HistoryRow: HistoryRow<any>) => void,
+    callback: (InsertHistoryRow: InsertHistoryRow<any>) => void,
   ) {
     this.notify.register(route, callback);
   }
@@ -501,7 +520,7 @@ export class Db {
    */
   unregisterObserver(
     route: Route,
-    callback: (HistoryRow: HistoryRow<any>) => void,
+    callback: (InsertHistoryRow: InsertHistoryRow<any>) => void,
   ) {
     this.notify.unregister(route, callback);
   }
@@ -614,42 +633,42 @@ export class Db {
 
   // ...........................................................................
   /**
-   * Adds an History row to the History table of a table
+   * Adds an InsertHistory row to the InsertHistory table of a table
    * @param table - The table the Insert was made on
-   * @param HistoryRow - The History row to add
-   * @throws {Error} If the History table does not exist
+   * @param InsertHistoryRow - The InsertHistory row to add
+   * @throws {Error} If the InsertHistory table does not exist
    */
-  private async _writeHistory(
+  private async _writeInsertHistory(
     table: string,
-    historyRow: HistoryRow<any>,
+    insertHistoryRow: InsertHistoryRow<any>,
   ): Promise<void> {
-    const historyTable = table + 'History';
-    const hasTable = await this.core.hasTable(historyTable);
+    const insertHistoryTable = table + 'InsertHistory';
+    const hasTable = await this.core.hasTable(insertHistoryTable);
     if (!hasTable) {
       throw new Error(`Table ${table} does not exist`);
     }
 
-    //Write History row to io
+    //Write InsertHistory row to io
     await this.core.import({
-      [historyTable]: {
-        _data: [historyRow],
-        _type: 'history',
+      [insertHistoryTable]: {
+        _data: [insertHistoryRow],
+        _type: 'insertHistory',
       },
     });
   }
 
   // ...........................................................................
   /**
-   * Get the History of a table
-   * @param table - The table to get the History for
-   * @throws {Error} If the History table does not exist
+   * Get the InsertHistory of a table
+   * @param table - The table to get the InsertHistory for
+   * @throws {Error} If the InsertHistory table does not exist
    */
-  async getHistory(
+  async getInsertHistory(
     table: string,
     options?: { sorted?: boolean; ascending?: boolean },
   ): Promise<Rljson> {
-    const historyTable = table + 'History';
-    const hasTable = await this.core.hasTable(historyTable);
+    const insertHistoryTable = table + 'InsertHistory';
+    const hasTable = await this.core.hasTable(insertHistoryTable);
     if (!hasTable) {
       throw new Error(`Table ${table} does not exist`);
     }
@@ -659,8 +678,9 @@ export class Db {
     }
 
     if (options.sorted) {
-      const dumpedTable = await this.core.dumpTable(historyTable);
-      const tableData = dumpedTable[historyTable]._data as HistoryRow<any>[];
+      const dumpedTable = await this.core.dumpTable(insertHistoryTable);
+      const tableData = dumpedTable[insertHistoryTable]
+        ._data as InsertHistoryRow<any>[];
 
       //Sort table
       tableData.sort((a, b) => {
@@ -673,47 +693,52 @@ export class Db {
         }
       });
 
-      return { [historyTable]: { _data: tableData, _type: 'history' } };
+      return {
+        [insertHistoryTable]: { _data: tableData, _type: 'insertHistory' },
+      };
     }
 
-    return this.core.dumpTable(historyTable);
+    return this.core.dumpTable(insertHistoryTable);
   }
 
   // ...........................................................................
   /**
-   * Get a specific History row from a table
-   * @param table - The table to get the History row from
-   * @param ref - The reference of the History row to get
-   * @returns The History row or null if it does not exist
+   * Get a specific InsertHistory row from a table
+   * @param table - The table to get the InsertHistory row from
+   * @param ref - The reference of the InsertHistory row to get
+   * @returns The InsertHistory row or null if it does not exist
    * @throws {Error} If the Inserts table does not exist
    */
-  async getHistoryRowsByRef(
+  async getInsertHistoryRowsByRef(
     table: string,
     ref: string,
-  ): Promise<HistoryRow<any>[] | null> {
-    const historyTable = table + 'History';
+  ): Promise<InsertHistoryRow<any>[] | null> {
+    const insertHistoryTable = table + 'InsertHistory';
     const {
-      [historyTable]: { _data: history },
-    } = await this.core.readRows(historyTable, { [table + 'Ref']: ref });
-    return (history as HistoryRow<any>[]) || null;
+      [insertHistoryTable]: { _data: insertHistory },
+    } = await this.core.readRows(insertHistoryTable, { [table + 'Ref']: ref });
+    return (insertHistory as InsertHistoryRow<any>[]) || null;
   }
 
   // ...........................................................................
   /**
-   * Get a specific History row from a table by its timeId
-   * @param table - The table to get the History row from
-   * @param timeId - The timeId of the History row to get
-   * @returns The History row or null if it does not exist
+   * Get a specific InsertHistory row from a table by its timeId
+   * @param table - The table to get the InsertHistory row from
+   * @param timeId - The timeId of the InsertHistory row to get
+   * @returns The InsertHistory row or null if it does not exist
    * @throws {Error} If the Inserts table does not exist
    */
-  async getHistoryRowByTimeId(
+  async getInsertHistoryRowByTimeId(
     table: string,
-    timeId: HistoryTimeId,
-  ): Promise<HistoryRow<any> | null> {
-    const historyTable = table + 'History';
-    const { [historyTable]: result } = await this.core.readRows(historyTable, {
-      timeId,
-    });
+    timeId: InsertHistoryTimeId,
+  ): Promise<InsertHistoryRow<any> | null> {
+    const insertHistoryTable = table + 'InsertHistory';
+    const { [insertHistoryTable]: result } = await this.core.readRows(
+      insertHistoryTable,
+      {
+        timeId,
+      },
+    );
     return result._data?.[0] || null;
   }
 
@@ -725,11 +750,17 @@ export class Db {
    * @returns An array of timeIds
    * @throws {Error} If the Inserts table does not exist
    */
-  async getTimeIdsForRef(table: string, ref: Ref): Promise<HistoryTimeId[]> {
-    const historyTable = table + 'History';
-    const { [historyTable]: result } = await this.core.readRows(historyTable, {
-      [table + 'Ref']: ref,
-    });
+  async getTimeIdsForRef(
+    table: string,
+    ref: Ref,
+  ): Promise<InsertHistoryTimeId[]> {
+    const insertHistoryTable = table + 'InsertHistory';
+    const { [insertHistoryTable]: result } = await this.core.readRows(
+      insertHistoryTable,
+      {
+        [table + 'Ref']: ref,
+      },
+    );
     return result._data?.map((r) => r.timeId) || [];
   }
 
@@ -743,12 +774,15 @@ export class Db {
    */
   async getRefOfTimeId(
     table: string,
-    timeId: HistoryTimeId,
+    timeId: InsertHistoryTimeId,
   ): Promise<Ref | null> {
-    const historyTable = table + 'History';
-    const { [historyTable]: result } = await this.core.readRows(historyTable, {
-      timeId,
-    });
+    const insertHistoryTable = table + 'InsertHistory';
+    const { [insertHistoryTable]: result } = await this.core.readRows(
+      insertHistoryTable,
+      {
+        timeId,
+      },
+    );
     return (result._data?.[0] as any)?.[table + 'Ref'] || null;
   }
 

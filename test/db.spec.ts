@@ -8,15 +8,23 @@ import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import {
-  History, HistoryRow, Insert, LayerRef, LayersTable, Route, SliceIdsTable
+  Insert,
+  InsertHistory,
+  InsertHistoryRow,
+  LayerRef,
+  LayersTable,
+  Route,
+  SliceIdsTable,
 } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
-import { ColumnInfo, ColumnSelection } from '../src/join/selection/column-selection';
-
+import {
+  ColumnInfo,
+  ColumnSelection,
+} from '../src/join/selection/column-selection';
 
 describe('Db', () => {
   let db: Db;
@@ -32,7 +40,7 @@ describe('Db', () => {
 
     //Create Tables for TableCfgs in carsExample
     for (const tableCfg of carsExample().tableCfgs._data) {
-      await db.core.createTableWithHistory(tableCfg);
+      await db.core.createTableWithInsertHistory(tableCfg);
     }
 
     //Import Data
@@ -174,9 +182,9 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const addedLayerHistory = (await db.insert(
+      const addedLayerInsertHistory = (await db.insert(
         Insert,
-      )) as HistoryRow<'CarGeneralLayer'>;
+      )) as InsertHistoryRow<'CarGeneralLayer'>;
 
       //Search for first carGeneral
       const where = {
@@ -190,7 +198,7 @@ describe('Db', () => {
       const route1 = `/carGeneralLayer@${layerRevHash1}/carGeneral`;
 
       //GET Result via second layer revision
-      const layerRevHash2 = addedLayerHistory.carGeneralLayerRef ?? '';
+      const layerRevHash2 = addedLayerInsertHistory.carGeneralLayerRef ?? '';
       const route2 = `/carGeneralLayer@${layerRevHash2}/carGeneral`;
 
       const result1 = await db.get(Route.fromFlat(route1), where);
@@ -301,7 +309,7 @@ describe('Db', () => {
       );
     });
     it('get nested cake/layer/component by hash w/ revision TimeId', async () => {
-      //Add new History Entry to Layer Revisions, recursively adding it to the cake
+      //Add new InsertHistory Entry to Layer Revisions, recursively adding it to the cake
       const layerInsert: Insert<Json> = {
         route: '/carCake/carGeneralLayer',
         command: 'add',
@@ -315,14 +323,14 @@ describe('Db', () => {
         origin: 'H45H',
         acknowledged: false,
       };
-      const cakeHistoryRow = await db.insert(layerInsert);
-      const cakeRevisionTimeId = cakeHistoryRow.timeId;
+      const cakeInsertHistoryRow = await db.insert(layerInsert);
+      const cakeRevisionTimeId = cakeInsertHistoryRow.timeId;
 
       //Get layer revision TimeId
       const {
-        ['carGeneralLayerHistory']: { _data: layerHistoryRows },
-      } = await db.getHistory('carGeneralLayer');
-      const layerRevisionTimeId = layerHistoryRows[0].timeId;
+        ['carGeneralLayerInsertHistory']: { _data: layerInsertHistoryRows },
+      } = await db.getInsertHistory('carGeneralLayer');
+      const layerRevisionTimeId = layerInsertHistoryRows[0].timeId;
 
       //Build route with TimeIds
       const route = `/carCake@${cakeRevisionTimeId}/carGeneralLayer@${layerRevisionTimeId}/carGeneral`;
@@ -339,7 +347,9 @@ describe('Db', () => {
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
       expect(result.carCake._data.length).toBe(1);
-      expect(result.carCake._data[0]._hash).toBe(cakeHistoryRow.carCakeRef);
+      expect(result.carCake._data[0]._hash).toBe(
+        cakeInsertHistoryRow.carCakeRef,
+      );
 
       expect(result.carGeneralLayer).toBeDefined();
       expect(result.carGeneralLayer._data.length).toBe(1);
@@ -390,16 +400,16 @@ describe('Db', () => {
       //Add predecessor component to core db
       const previousTimeId = 'H45H:20240606T120000Z';
       await db.core.import({
-        carGeneralHistory: {
-          _type: 'history',
+        carGeneralInsertHistory: {
+          _type: 'insertHistory',
           _data: [
             {
               carGeneralRef: carsExample().carGeneral._data[0]._hash ?? '',
               timeId: previousTimeId,
               route: '/carGeneral',
-            } as HistoryRow<'CarGeneral'>,
+            } as InsertHistoryRow<'CarGeneral'>,
           ],
-        } as History<'CarGeneral'>,
+        } as InsertHistory<'CarGeneral'>,
       });
 
       //Create Insert with predecessor ref in route
@@ -432,16 +442,16 @@ describe('Db', () => {
       //Add predecessor component to core db
       const previousTimeId = 'H45H:20240606T120000Z';
       await db.core.import({
-        carGeneralHistory: {
-          _type: 'history',
+        carGeneralInsertHistory: {
+          _type: 'insertHistory',
           _data: [
             {
               carGeneralRef: carsExample().carGeneral._data[0]._hash ?? '',
               timeId: previousTimeId,
               route: '/carGeneral',
-            } as HistoryRow<'CarGeneral'>,
+            } as InsertHistoryRow<'CarGeneral'>,
           ],
-        } as History<'CarGeneral'>,
+        } as InsertHistory<'CarGeneral'>,
       });
 
       //Create Insert with predecessor ref in route
@@ -774,20 +784,25 @@ describe('Db', () => {
 
       await db.insert(Insert);
 
-      //Get written history rows
+      //Get written insertHistory rows
       const {
-        ['carTechnicalHistory']: { _data: carTechnicalHistory },
-      } = await db.getHistory('carTechnical');
-      const carTechnicalHistoryRow = rmhsh(carTechnicalHistory[0]);
+        ['carTechnicalInsertHistory']: { _data: carTechnicalInsertHistory },
+      } = await db.getInsertHistory('carTechnical');
+      const carTechnicalInsertHistoryRow = rmhsh(carTechnicalInsertHistory[0]);
 
       const {
-        ['carDimensionsHistory']: { _data: carDimensionsHistory },
-      } = await db.getHistory('carDimensions');
-      const carDimensionsHistoryRow = rmhsh(carDimensionsHistory[0]);
+        ['carDimensionsInsertHistory']: { _data: carDimensionsInsertHistory },
+      } = await db.getInsertHistory('carDimensions');
+      const carDimensionsInsertHistoryRow = rmhsh(
+        carDimensionsInsertHistory[0],
+      );
 
       expect(callback).toHaveBeenCalledTimes(2);
-      expect(callback).toHaveBeenNthCalledWith(2, carTechnicalHistoryRow);
-      expect(callback).toHaveBeenNthCalledWith(1, carDimensionsHistoryRow);
+      expect(callback).toHaveBeenNthCalledWith(2, carTechnicalInsertHistoryRow);
+      expect(callback).toHaveBeenNthCalledWith(
+        1,
+        carDimensionsInsertHistoryRow,
+      );
     });
     it('notify on nested cake/layer/component route', async () => {
       const callback = vi.fn();
@@ -818,36 +833,43 @@ describe('Db', () => {
 
       await db.insert(Insert);
 
-      //Get written history rows
+      //Get written insertHistory rows
       const {
-        ['carCakeHistory']: { _data: carCakeHistory },
-      } = await db.getHistory('carCake');
-      const carCakeHistoryRow = rmhsh(carCakeHistory[0]);
+        ['carCakeInsertHistory']: { _data: carCakeInsertHistory },
+      } = await db.getInsertHistory('carCake');
+      const carCakeInsertHistoryRow = rmhsh(carCakeInsertHistory[0]);
 
       const {
-        ['carGeneralLayerHistory']: { _data: carGeneralLayerHistory },
-      } = await db.getHistory('carGeneralLayer');
-      const carGeneralLayerHistoryRow = rmhsh(carGeneralLayerHistory[0]);
+        ['carGeneralLayerInsertHistory']: {
+          _data: carGeneralLayerInsertHistory,
+        },
+      } = await db.getInsertHistory('carGeneralLayer');
+      const carGeneralLayerInsertHistoryRow = rmhsh(
+        carGeneralLayerInsertHistory[0],
+      );
 
       const {
-        ['carGeneralHistory']: { _data: carGeneralHistory },
-      } = await db.getHistory('carGeneral');
-      const carGeneralHistoryRow1 = rmhsh(carGeneralHistory[0]);
-      const carGeneralHistoryRow2 = rmhsh(carGeneralHistory[1]);
+        ['carGeneralInsertHistory']: { _data: carGeneralInsertHistory },
+      } = await db.getInsertHistory('carGeneral');
+      const carGeneralInsertHistoryRow1 = rmhsh(carGeneralInsertHistory[0]);
+      const carGeneralInsertHistoryRow2 = rmhsh(carGeneralInsertHistory[1]);
 
       expect(callback).toHaveBeenCalledTimes(4);
-      expect(callback).toHaveBeenNthCalledWith(4, carCakeHistoryRow);
-      expect(callback).toHaveBeenNthCalledWith(3, carGeneralLayerHistoryRow);
-      //Order of component History not guaranteed
+      expect(callback).toHaveBeenNthCalledWith(4, carCakeInsertHistoryRow);
+      expect(callback).toHaveBeenNthCalledWith(
+        3,
+        carGeneralLayerInsertHistoryRow,
+      );
+      //Order of component InsertHistory not guaranteed
       expect([2, 1]).toContain(
-        (callback.mock.calls[1][0] as HistoryRow<'CarGeneral'>).timeId ===
-          carGeneralHistoryRow1.timeId
+        (callback.mock.calls[1][0] as InsertHistoryRow<'CarGeneral'>).timeId ===
+          carGeneralInsertHistoryRow1.timeId
           ? 2
           : 1,
       );
       expect([2, 1]).toContain(
-        (callback.mock.calls[1][0] as HistoryRow<'CarGeneral'>).timeId ===
-          carGeneralHistoryRow2.timeId
+        (callback.mock.calls[1][0] as InsertHistoryRow<'CarGeneral'>).timeId ===
+          carGeneralInsertHistoryRow2.timeId
           ? 2
           : 1,
       );

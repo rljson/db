@@ -5,6 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import { hip, hsh, rmhsh } from '@rljson/hash';
+import { IoMem } from '@rljson/io';
 import { JsonArray, JsonValue } from '@rljson/json';
 import {
   Example,
@@ -22,13 +23,16 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { Core } from '../src/core';
 
 describe('Core', () => {
+  let io: IoMem;
   let core: Core;
   let data: Rljson;
   let dataTable: TableType;
   let tableCfg: TableCfg;
 
   beforeEach(async () => {
-    core = await Core.example();
+    io = await IoMem.example();
+
+    core = new Core(io);
     tableCfg = exampleTableCfgTable()._data[0];
     await core.createTable(tableCfg);
 
@@ -111,6 +115,24 @@ describe('Core', () => {
     });
   });
 
+  describe('contentType(table)', () => {
+    it('returns the content type of a table', async () => {
+      const contentType = await core.contentType('table');
+      expect(contentType).toBe('components');
+    });
+  });
+
+  describe('tableCfg(table)', () => {
+    it('returns the TableCfg of a table', async () => {
+      // Test normal case
+      const tableCfgResult = await core.tableCfg('table');
+      expect(rmhsh(tableCfgResult)).toEqual(rmhsh(tableCfg));
+
+      const tableCfgWithoutRefResult = await core.tableCfg('table');
+      expect(rmhsh(tableCfgWithoutRefResult)).toEqual(rmhsh(tableCfg));
+    });
+  });
+
   describe('hasTable(table)', () => {
     it('returns true if the table exists', async () => {
       const result = await core.hasTable('table');
@@ -148,14 +170,20 @@ describe('Core', () => {
             isShared: true,
             columns: [
               {
+                titleLong: 'Hash',
+                titleShort: 'Hash',
                 key: '_hash',
                 type: 'string',
               },
               {
+                titleLong: 'A',
+                titleShort: 'A',
                 key: 'a',
                 type: 'boolean',
               },
               {
+                titleLong: 'B',
+                titleShort: 'B',
                 key: 'b',
                 type: 'boolean',
               },

@@ -8,7 +8,7 @@ import { equals, Json, JsonValue, merge } from '@rljson/json';
 import {
   ColumnCfg,
   ComponentsTable,
-  HistoryRow,
+  InsertHistoryRow,
   Ref,
   Rljson,
   TableCfg,
@@ -70,7 +70,7 @@ export class ComponentController<N extends string, T extends Json>
     value: Json,
     origin?: Ref,
     refs?: ControllerRefs,
-  ): Promise<HistoryRow<N>> {
+  ): Promise<InsertHistoryRow<N>> {
     // Validate command
     if (!command.startsWith('add')) {
       throw new Error(
@@ -97,7 +97,7 @@ export class ComponentController<N extends string, T extends Json>
       origin,
       //Unique id/timestamp
       timeId: timeId(),
-    } as any as HistoryRow<N>;
+    } as any as InsertHistoryRow<N>;
   }
 
   // ...........................................................................

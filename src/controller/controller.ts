@@ -8,8 +8,8 @@ import { Json, JsonValue } from '@rljson/json';
 import {
   Cake,
   ContentType,
-  HistoryRow,
   InsertCommand,
+  InsertHistoryRow,
   Layer,
   Ref,
   Rljson,
@@ -31,7 +31,7 @@ export type ControllerRunFn<N extends string> = (
   value: Json,
   origin?: Ref,
   refs?: Partial<ControllerRefs>,
-) => Promise<HistoryRow<N>>;
+) => Promise<InsertHistoryRow<N>>;
 
 // ...........................................................................
 /**
