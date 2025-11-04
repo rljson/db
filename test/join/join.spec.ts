@@ -14,7 +14,7 @@ import { Db } from '../../src/db';
 import { RowFilter } from '../../src/join/filter/row-filter';
 import { ColumnSelection } from '../../src/join/selection/column-selection';
 import { SetValue } from '../../src/join/set-value/set-value';
-
+import { RowSort } from '../../src/join/sort/row-sort';
 
 describe('Join', () => {
   let db: Db;
@@ -240,6 +240,22 @@ describe('Join', () => {
 
       expect(selectedResult.length).toBe(2);
       expect(selectedResult).toEqual(['Volkswagen', 'Audi']);
+    });
+  });
+
+  describe('sort', () => {
+    it('should sort a join', async () => {
+      const join = await db.join(columnSelection, cakeKey, cakeRef);
+
+      const rowSort = new RowSort({
+        'carCake/carGeneralLayer/carGeneral/brand': 'desc',
+      });
+
+      const sorted = join.sort(rowSort);
+      const sortedResult = sorted.rows.map((r) => r[0]);
+
+      const expected = ['Volkswagen', 'Volkswagen', 'Audi', 'Audi'];
+      expect(sortedResult).toEqual(expected);
     });
   });
 

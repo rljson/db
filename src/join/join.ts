@@ -12,13 +12,13 @@ import { RowFilterProcessor } from './filter/row-filter-processor.ts';
 import { RowFilter } from './filter/row-filter.ts';
 import { ColumnSelection } from './selection/column-selection.ts';
 import { SetValue } from './set-value/set-value.ts';
-
+import { RowSort } from './sort/row-sort.ts';
 
 export type JoinProcessType = 'filter' | 'setValue' | 'selection' | 'sort';
 
 export type JoinProcess = {
   type: JoinProcessType;
-  instance: RowFilter | ColumnSelection | SetValue;
+  instance: RowFilter | SetValue | ColumnSelection | RowSort;
   data: JoinRowsHashed;
   columnSelection: ColumnSelection;
 };
@@ -198,6 +198,35 @@ export class Join {
       instance: columnSelection,
       data,
       columnSelection,
+    };
+
+    // Store the process
+    this._processes.push(process);
+
+    return this;
+  }
+
+  // ...........................................................................
+  /**
+   * Sorts the join rows and returns the sorted join
+   *
+   * @param rowSort The row sort to apply
+   */
+  sort(rowSort: RowSort): Join {
+    const sortedIndices = rowSort.applyTo(this);
+
+    const data: JoinRowsHashed = {};
+    for (let i = 0; i < sortedIndices.length; i++) {
+      const sliceId = sortedIndices[i];
+      data[sliceId] = this.data[sliceId];
+    }
+
+    // Create the process entry
+    const process: JoinProcess = {
+      type: 'sort',
+      instance: rowSort,
+      data,
+      columnSelection: this.columnSelection,
     };
 
     // Store the process
