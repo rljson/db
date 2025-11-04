@@ -8,7 +8,8 @@ import { hsh } from '@rljson/hash';
 
 import { describe, expect, it } from 'vitest';
 
-import { exampleEditAction } from '../../src/edit/edit/edit-action.ts';
+import { exampleEditAction } from '../../src/edit/edit-action.ts';
+
 
 describe('EditAction', function () {
   it('exampleEditAction', function () {

@@ -13,14 +13,14 @@ import {
   exampleEditSetAllStartingWithOToTrue,
   exampleEditSetAllTrueToDone,
   initialEdit,
-} from '../../src/edit/edit/edit';
+} from '../../src/edit/edit';
 import {
   emptyMultiEdit,
   exampleMultiEdit0,
   exampleMultiEdit1,
   exampleMultiEdit2,
   exampleMultiEditDb,
-} from '../../src/edit/edit/multi-edit';
+} from '../../src/edit/multi-edit';
 
 describe('MultiEdit', () => {
   const multiEdit0 = exampleMultiEdit0();

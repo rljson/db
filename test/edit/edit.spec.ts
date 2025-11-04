@@ -15,9 +15,9 @@ import {
   exampleEditSetAllStartingWithOToTrue,
   exampleEditSetAllTrueToDone,
   initialEdit,
-} from '../../src/edit/edit/edit';
-import { exampleEditAction } from '../../src/edit/edit/edit-action';
-import { exampleRowFilter } from '../../src/edit/filter/row-filter';
+} from '../../src/edit/edit';
+import { exampleEditAction } from '../../src/edit/edit-action';
+import { exampleRowFilter } from '../../src/join/filter/row-filter';
 
 describe('Edit', () => {
   it('exampleEdit', () => {

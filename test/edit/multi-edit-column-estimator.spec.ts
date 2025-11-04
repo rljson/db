@@ -6,8 +6,8 @@
 
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { MultiEditColumnEstimator } from '../../src/edit/edit/multi-edit-column-estimator';
-import { MultiEditResolved } from '../../src/edit/edit/multi-edit-resolved';
+import { MultiEditColumnEstimator } from '../../src/edit/multi-edit-column-estimator';
+import { MultiEditResolved } from '../../src/edit/multi-edit-resolved';
 
 describe('MultiEditColumnEstimator', () => {
   let columnEstimator: MultiEditColumnEstimator;

@@ -4,28 +4,19 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { hip, rmhsh } from '@rljson/hash';
+import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import {
-  History,
-  HistoryRow,
-  Insert,
-  LayerRef,
-  LayersTable,
-  Route,
-  SliceIdsTable,
+  History, HistoryRow, Insert, LayerRef, LayersTable, Route, SliceIdsTable
 } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
-import { Edit, exampleEditCarsExample } from '../src/edit/edit/edit';
-import {
-  ColumnInfo,
-  ColumnSelection,
-} from '../src/edit/selection/column-selection';
+import { ColumnInfo, ColumnSelection } from '../src/join/selection/column-selection';
+
 
 describe('Db', () => {
   let db: Db;
@@ -1077,46 +1068,6 @@ describe('Db', () => {
         db.join(columnSelection, cakeKey, 'MISSING_CAKE_REF'),
       ).rejects.toThrow(
         'Db.join: Cake with ref "MISSING_CAKE_REF" not found in cake table "carCake".',
-      );
-    });
-  });
-  describe('getColumnSelectionFromEdit', () => {
-    it('should be defined', () => {
-      expect(db.getColumnSelectionFromEdit).toBeDefined();
-    });
-
-    it('returns correct column selection for example edit', async () => {
-      const exampleEdit = exampleEditCarsExample();
-      const columnSelection = await db.getColumnSelectionFromEdit(exampleEdit);
-
-      expect(columnSelection.routes).toEqual([
-        'carCake/carGeneralLayer/carGeneral/isElectric',
-        'carCake/carTechnicalLayer/carTechnical/transmission',
-      ]);
-    });
-
-    it('throws error if filter columns doesnt match tableCfg', async () => {
-      const brokenEdit: Edit = hip<Edit>({
-        name: 'Broken Edit',
-        filter: {
-          columnFilters: [
-            {
-              type: 'string',
-              column: 'carCake/carGeneralLayer/carGeneral/missingColumn',
-              operator: 'endsWith',
-              search: 'o',
-              _hash: '',
-            },
-          ],
-          operator: 'and',
-          _hash: '',
-        },
-        actions: [],
-        _hash: '',
-      });
-
-      await expect(db.getColumnSelectionFromEdit(brokenEdit)).rejects.toThrow(
-        'Db.getColumnSelection: Column "missingColumn" not found in table "carGeneral".',
       );
     });
   });

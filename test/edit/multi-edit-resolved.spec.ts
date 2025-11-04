@@ -6,7 +6,7 @@
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { MultiEditResolved } from '../../src/edit/edit/multi-edit-resolved';
+import { MultiEditResolved } from '../../src/edit/multi-edit-resolved';
 
 describe('MultiEditResolved', () => {
   let current: MultiEditResolved;

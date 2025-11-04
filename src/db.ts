@@ -7,39 +7,18 @@
 import { Io, IoMem } from '@rljson/io';
 import { Json, merge } from '@rljson/json';
 import {
-  CakesTable,
-  ColumnCfg,
-  ComponentsTable,
-  HistoryRow,
-  HistoryTimeId,
-  Insert,
-  isTimeId,
-  Layer,
-  LayersTable,
-  Ref,
-  Rljson,
-  Route,
-  RouteSegment,
-  SliceId,
-  SliceIds,
-  validateInsert,
+  CakesTable, ColumnCfg, ComponentsTable, HistoryRow, HistoryTimeId, Insert, isTimeId, Layer,
+  LayersTable, Ref, Rljson, Route, RouteSegment, SliceId, SliceIds, validateInsert
 } from '@rljson/rljson';
 
 import {
-  Controller,
-  ControllerRefs,
-  ControllerRunFn,
-  createController,
+  Controller, ControllerRefs, ControllerRunFn, createController
 } from './controller/controller.ts';
 import { Core } from './core.ts';
-import { Edit } from './edit/edit/edit.ts';
-import { Join, JoinColumn, JoinRows } from './edit/join/join.ts';
-import { SetValue } from './edit/join/set-value/set-value.ts';
-import {
-  ColumnInfo,
-  ColumnSelection,
-} from './edit/selection/column-selection.ts';
+import { Join, JoinColumn, JoinRows } from './join/join.ts';
+import { ColumnInfo, ColumnSelection } from './join/selection/column-selection.ts';
 import { Notify } from './notify.ts';
+
 
 /**
  * Access Rljson data
@@ -64,6 +43,8 @@ export class Db {
    */
   readonly notify: Notify;
 
+  private _getCache: Map<string, Rljson> = new Map();
+
   // ...........................................................................
   /**
    * Get data from a route with optional filtering
@@ -79,11 +60,21 @@ export class Db {
     //Isolate Property Key
     const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
 
-    // Get Controllers
-    const controllers = await this._indexedControllers(isolatedRoute);
+    const cacheHash = `${isolatedRoute.flat}|${JSON.stringify(where)}`;
+    const isCached = this._getCache.has(cacheHash);
+    if (isCached) {
+      return this._getCache.get(cacheHash)!;
+    } else {
+      // Get Controllers
+      const controllers = await this._indexedControllers(isolatedRoute);
 
-    // Fetch Data
-    return await this._get(isolatedRoute, where, controllers);
+      // Fetch Data
+      const data = await this._get(isolatedRoute, where, controllers);
+
+      // Cache Data
+      this._getCache.set(cacheHash, data);
+      return data;
+    }
   }
 
   async _get(
@@ -215,40 +206,6 @@ export class Db {
 
   // ...........................................................................
   /**
-   * Runs an Edit by applying its actions to all rows matching its filter
-   *
-   * @param edit - The Edit to run
-   * @param cakeKey - The cake table key
-   * @param cakeRef - The cake reference
-   * @returns void
-   * @throws {Error} If the Edit is not valid or if any controller cannot be created
-   */
-  async saveEdit(
-    edit: Edit,
-    cakeKey: string,
-    cakeRef: Ref,
-  ): Promise<HistoryRow<any>> {
-    //Get ColumnSelection from Edit
-    const columnSelection = await this.getColumnSelectionFromEdit(edit);
-    const join = await this.join(columnSelection, cakeKey, cakeRef);
-
-    //Get Row Filter from Edit
-    const filter = edit.filter;
-
-    //Build SetValues from Edit Actions
-    const setValues = edit.actions.map(
-      (a) => ({ route: a.route, value: a.setValue } as SetValue),
-    );
-
-    //Apply Edit
-    const editedJoin = join.filter(filter).setValues(setValues);
-
-    //Insert changed data
-    return await editedJoin.insert();
-  }
-
-  // ...........................................................................
-  /**
    * Joins data from layers in an Rljson into a single dataset
    * @param rljson - The Rljson to join data for
    */
@@ -376,49 +333,7 @@ export class Db {
     const joinColumnSelection = new ColumnSelection(joinColumnInfos);
 
     // Return Join
-    return new Join(joinRows, joinColumnSelection, this).select(
-      columnSelection,
-    );
-  }
-
-  // ...........................................................................
-  /**
-   * Get the ColumnSelection for an Edit
-   * @param edit - The Edit to get the ColumnSelection for
-   * @returns
-   */
-  async getColumnSelectionFromEdit(edit: Edit) {
-    // Determine routes from filter
-    const routes = edit.filter.columnFilters;
-    const columnInfos: ColumnInfo[] = [];
-    for (const cf of routes) {
-      const route = Route.fromFlat(cf.column).toRouteWithProperty();
-      const tableKey = route.root.tableKey;
-
-      // Get ColumnCfg from Core out of tableCfg
-      const tableCfg = await this.core.tableCfg(tableKey);
-      const columnCfg = tableCfg.columns.find(
-        (c) => c.key === route.propertyKey,
-      );
-
-      //Guard: columnCfg must exist
-      if (!columnCfg) {
-        throw new Error(
-          `Db.getColumnSelection: Column "${route.propertyKey}" not found in table "${tableKey}".`,
-        );
-      }
-
-      // Add ColumnInfo
-      columnInfos.push({
-        ...columnCfg,
-        alias: `${columnCfg.key}`,
-        route: route.flat.slice(1),
-        titleShort: columnCfg.key,
-        titleLong: columnCfg.key,
-      });
-    }
-
-    return new ColumnSelection(columnInfos);
+    return new Join(joinRows, joinColumnSelection).select(columnSelection);
   }
 
   // ...........................................................................
