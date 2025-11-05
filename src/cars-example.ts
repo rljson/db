@@ -276,11 +276,11 @@ export const carsExample = (): CarsExample => {
       { key: 'gears', type: 'number' },
       {
         key: 'dimensions',
-        type: 'string',
+        type: 'jsonValue',
         ref: {
           tableKey: 'carDimensions',
         },
-      },
+      } as ColumnCfg,
       { key: 'repairedByWorkshop', type: 'string' },
     ],
     isHead: false,
@@ -311,7 +311,10 @@ export const carsExample = (): CarsExample => {
         engine: 'Electric',
         transmission: 'Single-Speed',
         gears: 1,
-        dimensions: carDimensions._data[1]._hash,
+        dimensions: [
+          carDimensions._data[1]._hash,
+          carDimensions._data[2]._hash,
+        ],
         _hash: '',
       },
     ],

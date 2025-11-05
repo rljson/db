@@ -59,6 +59,58 @@ describe('Core', () => {
     });
   });
 
+  describe('createInsertHistory(table)', () => {
+    it('creates an insertHistory table for a given table', async () => {
+      await core.createInsertHistory(tableCfg);
+      const tables = await core.tables();
+      expect(Object.keys(tables)).toEqual([
+        '_hash',
+        'tableCfgs',
+        'revisions',
+        'table',
+        'tableInsertHistory',
+      ]);
+    });
+  });
+
+  describe('createTableWithInsertHistory(table)', () => {
+    it('creates a table and an insertHistory for the table', async () => {
+      const newTableCfg: TableCfg = {
+        version: 0,
+        key: 'newTable',
+        type: 'components',
+        isHead: false,
+        isRoot: false,
+        isShared: true,
+        columns: [
+          {
+            titleLong: 'Hash',
+            titleShort: 'Hash',
+            key: '_hash',
+            type: 'string',
+          },
+          {
+            titleLong: 'C',
+            titleShort: 'C',
+            key: 'c',
+            type: 'boolean',
+          },
+        ],
+      };
+
+      await core.createTableWithInsertHistory(newTableCfg);
+      const tables = await core.tables();
+      expect(Object.keys(tables)).toEqual([
+        '_hash',
+        'tableCfgs',
+        'revisions',
+        'table',
+        'newTable',
+        'newTableInsertHistory',
+      ]);
+    });
+  });
+
   describe('dump()', () => {
     it('returns the complete db content as Rljson', async () => {
       const dump = await core.dump();

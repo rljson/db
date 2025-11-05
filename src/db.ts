@@ -4,7 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { Io, IoMem } from '@rljson/io';
+import { Io } from '@rljson/io';
 import { Json, merge } from '@rljson/json';
 import {
   CakesTable,
@@ -62,7 +62,7 @@ export class Db {
    */
   readonly notify: Notify;
 
-  private _getCache: Map<string, Rljson> = new Map();
+  private _cache: Map<string, Rljson> = new Map();
 
   // ...........................................................................
   /**
@@ -80,9 +80,9 @@ export class Db {
     const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
 
     const cacheHash = `${isolatedRoute.flat}|${JSON.stringify(where)}`;
-    const isCached = this._getCache.has(cacheHash);
+    const isCached = this._cache.has(cacheHash);
     if (isCached) {
-      return this._getCache.get(cacheHash)!;
+      return this._cache.get(cacheHash)!;
     } else {
       // Get Controllers
       const controllers = await this._indexedControllers(isolatedRoute);
@@ -91,7 +91,7 @@ export class Db {
       const data = await this._get(isolatedRoute, where, controllers);
 
       // Cache Data
-      this._getCache.set(cacheHash, data);
+      this._cache.set(cacheHash, data);
       return data;
     }
   }
@@ -318,7 +318,7 @@ export class Db {
         const componentsTable = data[componentKey] as ComponentsTable<Json>;
         const component = componentsTable._data.find(
           (r) => r._hash === componentRef,
-        );
+        )!;
         const colCfgs = columnCfgs.get(componentKey)!;
 
         // Build Join Columns by Column Configs (for loop)
@@ -329,7 +329,7 @@ export class Db {
             route: Route.fromFlat(
               `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}/${columnCfg.key}`,
             ).toRouteWithProperty(),
-            value: component ? component[columnCfg.key] ?? null : null,
+            value: component[columnCfg.key] ?? null,
             insert: null,
           } as JoinColumn<any>);
         }
@@ -448,7 +448,7 @@ export class Db {
       const childRoute = route.deeper(1);
 
       //Iterate over child values and create Inserts for each
-      const childKeys = this._childKeys(route, insert.value);
+      const childKeys = this._childKeys(insert.value);
       const childRefs: Record<string, string> = {};
 
       for (const k of childKeys) {
@@ -552,18 +552,14 @@ export class Db {
   // ...........................................................................
   /**
    * Returns the keys of child refs in a value based on a route
-   * @param route - The route to check
    * @param value - The value to check
    * @returns An array of keys of child refs in the value
    */
-  private _childKeys(route: Route, value: Json): string[] {
+  private _childKeys(value: Json): string[] {
     const keys = Object.keys(value);
     const childKeys: string[] = [];
     for (const k of keys) {
       if (typeof (value as any)[k] !== 'object') continue;
-      /* v8 ignore start */
-      if (k.endsWith('Ref') && route.next?.tableKey + 'Ref' !== k) continue;
-      /* v8 ignore end */
 
       childKeys.push(k);
     }
@@ -579,22 +575,14 @@ export class Db {
    * @throws {Error} If the table does not exist or if the table type is not supported
    */
   async getController(tableKey: string, refs?: ControllerRefs) {
-    //Guard: tableKey must be a non-empty string
-    if (typeof tableKey !== 'string' || tableKey.length === 0) {
-      throw new Error('TableKey must be a non-empty string.');
-    }
-
     // Validate Table
-    const tableExists = this.core.hasTable(tableKey);
-    if (!tableExists) {
-      throw new Error(`Table ${tableKey} does not exist.`);
+    const hasTable = await this.core.hasTable(tableKey);
+    if (!hasTable) {
+      throw new Error(`Db.getController: Table ${tableKey} does not exist.`);
     }
 
     // Get Content Type of Table
     const contentType = await this.core.contentType(tableKey);
-    if (!contentType) {
-      throw new Error(`Table ${tableKey} does not have a valid content type.`);
-    }
 
     // Create Controller
     return createController(contentType, this.core, tableKey, refs);
@@ -604,9 +592,6 @@ export class Db {
   private async _indexedControllers(
     route: Route,
   ): Promise<Record<string, Controller<any, any>>> {
-    // Validate Route
-    if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
-
     // Create Controllers
     const controllers: Record<string, Controller<any, any>> = {};
     const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
@@ -643,10 +628,6 @@ export class Db {
     insertHistoryRow: InsertHistoryRow<any>,
   ): Promise<void> {
     const insertHistoryTable = table + 'InsertHistory';
-    const hasTable = await this.core.hasTable(insertHistoryTable);
-    if (!hasTable) {
-      throw new Error(`Table ${table} does not exist`);
-    }
 
     //Write InsertHistory row to io
     await this.core.import({
@@ -670,7 +651,7 @@ export class Db {
     const insertHistoryTable = table + 'InsertHistory';
     const hasTable = await this.core.hasTable(insertHistoryTable);
     if (!hasTable) {
-      throw new Error(`Table ${table} does not exist`);
+      throw new Error(`Db.getInsertHistory: Table ${table} does not exist`);
     }
 
     if (options === undefined) {
@@ -712,12 +693,12 @@ export class Db {
   async getInsertHistoryRowsByRef(
     table: string,
     ref: string,
-  ): Promise<InsertHistoryRow<any>[] | null> {
+  ): Promise<InsertHistoryRow<any>[]> {
     const insertHistoryTable = table + 'InsertHistory';
     const {
       [insertHistoryTable]: { _data: insertHistory },
     } = await this.core.readRows(insertHistoryTable, { [table + 'Ref']: ref });
-    return (insertHistory as InsertHistoryRow<any>[]) || null;
+    return insertHistory as InsertHistoryRow<any>[];
   }
 
   // ...........................................................................
@@ -731,7 +712,7 @@ export class Db {
   async getInsertHistoryRowByTimeId(
     table: string,
     timeId: InsertHistoryTimeId,
-  ): Promise<InsertHistoryRow<any> | null> {
+  ): Promise<InsertHistoryRow<any>> {
     const insertHistoryTable = table + 'InsertHistory';
     const { [insertHistoryTable]: result } = await this.core.readRows(
       insertHistoryTable,
@@ -739,7 +720,7 @@ export class Db {
         timeId,
       },
     );
-    return result._data?.[0] || null;
+    return result._data?.[0];
   }
 
   // ...........................................................................
@@ -761,7 +742,7 @@ export class Db {
         [table + 'Ref']: ref,
       },
     );
-    return result._data?.map((r) => r.timeId) || [];
+    return result._data?.map((r) => r.timeId);
   }
 
   // ...........................................................................
@@ -783,7 +764,7 @@ export class Db {
         timeId,
       },
     );
-    return (result._data?.[0] as any)?.[table + 'Ref'] || null;
+    return (result._data?.[0] as any)?.[table + 'Ref'];
   }
 
   // ...........................................................................
@@ -835,12 +816,11 @@ export class Db {
     return result;
   }
 
+  // ...........................................................................
   /**
-   * Example
-   * @returns A new Db instance for test purposes
+   * Get the current cache of the Db instance
    */
-  static example = async () => {
-    const io = new IoMem();
-    return new Db(io);
-  };
+  get cache() {
+    return this._cache;
+  }
 }

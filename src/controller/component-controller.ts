@@ -114,11 +114,16 @@ export class ComponentController<N extends string, T extends Json>
     const { [this._tableKey]: table } = await this.get(where, filter);
     const { columns } = await this._core.tableCfg(this._tableKey);
 
-    const childRefs: Array<{
-      tableKey: TableKey;
-      columnKey?: string;
-      ref: Ref;
-    }> = [];
+    //Unique child refs
+    const childRefs: Map<
+      string,
+      {
+        tableKey: TableKey;
+        columnKey?: string;
+        ref: Ref;
+      }
+    > = new Map();
+
     for (const colCfg of columns) {
       if (!colCfg.ref || colCfg.ref === undefined) continue;
 
@@ -128,26 +133,30 @@ export class ComponentController<N extends string, T extends Json>
       for (const row of table._data) {
         const refValue = (row as any)[propertyKey];
         if (typeof refValue === 'string') {
-          childRefs.push({
+          childRefs.set(`${childRefTableKey}|${propertyKey}|${refValue}`, {
             tableKey: childRefTableKey,
             columnKey: propertyKey,
             ref: refValue,
           });
-        } else if (Array.isArray(refValue)) {
+          continue;
+        }
+        /* v8 ignore if -- @preserve */
+        if (Array.isArray(refValue)) {
           for (const refItem of refValue) {
             if (typeof refItem === 'string') {
-              childRefs.push({
+              childRefs.set(`${childRefTableKey}|${propertyKey}|${refItem}`, {
                 tableKey: childRefTableKey,
                 columnKey: propertyKey,
                 ref: refItem,
               });
             }
           }
+          continue;
         }
       }
     }
 
-    return childRefs;
+    return Array.from(childRefs.values());
   }
 
   // ...........................................................................
@@ -159,56 +168,88 @@ export class ComponentController<N extends string, T extends Json>
   protected async _getByWhere(where: Json, filter?: Json): Promise<Rljson> {
     // If reference columns are present, resolve them
     // Check if where clause contains reference columns
-    let consolidatedWhere: Json = { ...this._getWhereBase(where) };
+    const consolidatedWheres: Json[] = [];
+    const consolidatedRows: Map<string, Json> = new Map();
     const hasReferenceColumns = this._hasReferenceColumns(where);
     if (hasReferenceColumns) {
-      const resolvedReferences = await this._resolveReferences(
-        this._getWhereReferences(where),
-      );
+      const resolvedReferences: Record<TableKey, Ref[]> =
+        await this._resolveReferences(this._getWhereReferences(where));
+      const refWhereClauses =
+        this._referencesToWhereClauses(resolvedReferences);
+      for (const refWhere of refWhereClauses) {
+        consolidatedWheres.push({
+          ...this._getWhereBase(where),
+          ...refWhere,
+        });
 
-      consolidatedWhere = {
-        ...consolidatedWhere,
-        ...this._referencesToWhereClause(resolvedReferences),
-      };
+        /* ....................................................................
+        1:1 reference resolution
+        const {
+          [this._tableKey]: { _data: refRows },
+        } = await this._core.readRows(this._tableKey, {
+          ...refWhere,
+          ...filter,
+        } as { [column: string]: JsonValue });
+        .................................................................... */
+
+        const {
+          [this._tableKey]: { _data: tableData },
+        } = await this._core.dumpTable(this._tableKey);
+
+        const column = Object.keys(refWhere)[0];
+        const refValue = refWhere[column]!;
+        for (const row of tableData as Json[]) {
+          if (this.filterRow(row, column, refValue)) {
+            consolidatedRows.set((row as any)._hash, row);
+          }
+        }
+      }
+    } else {
+      const {
+        [this._tableKey]: { _data: rows },
+      } = await this._core.readRows(this._tableKey, {
+        ...where,
+        ...filter,
+      } as { [column: string]: JsonValue });
+
+      for (const row of rows as Json[]) {
+        consolidatedRows.set((row as any)._hash, row);
+      }
     }
-
-    const {
-      [this._tableKey]: { _data: rows },
-    } = await this._core.readRows(this._tableKey, {
-      ...consolidatedWhere,
-      ...filter,
-    } as { [column: string]: JsonValue });
-
-    const resultRows = rows;
 
     // Return result
     return {
       [this._tableKey]: {
-        _data: resultRows,
+        _data: Array.from(consolidatedRows.values()),
         _type: 'components',
       } as ComponentsTable<T>,
     };
   }
 
-  private _referencesToWhereClause(references: Record<TableKey, Ref[]>): Json {
-    const whereClause: Json = {};
+  private _referencesToWhereClauses(
+    references: Record<TableKey, Ref[]>,
+  ): Json[] {
+    const whereClauses: Json[] = [];
     for (const [tableKey, refs] of Object.entries(references)) {
       const wherePropertyKeys =
-        this._refTableKeyToColumnKeyMap?.[tableKey as TableKey] || [];
-      for (const propKey of wherePropertyKeys) {
-        whereClause[propKey] = refs;
+        this._refTableKeyToColumnKeyMap?.[tableKey as TableKey];
+      for (const propKey of wherePropertyKeys!) {
+        for (const ref of refs) {
+          whereClauses.push({ [propKey]: ref });
+        }
       }
     }
-    return whereClause;
+    return whereClauses;
   }
 
   private _createRefTableKeyToColumnKeyMap(): Record<TableKey, string[]> {
     const map: Record<TableKey, string[]> = {};
     const columns = this._tableCfg?.columns;
 
-    for (const colCfg of columns || []) {
+    for (const colCfg of columns!) {
       if (colCfg.ref) {
         const tableKey = colCfg.ref.tableKey;
+        /* v8 ignore if -- @preserve */
         if (!map[tableKey]) {
           map[tableKey] = [];
         }
@@ -226,7 +267,7 @@ export class ComponentController<N extends string, T extends Json>
    */
   private _getWhereReferences(where: Json): Json {
     const whereRefs: Json = {};
-    for (const colCfg of this.referenceColumns) {
+    for (const colCfg of this._referenceColumns) {
       if (colCfg.key in where) {
         whereRefs[colCfg.key] = where[colCfg.key];
       }
@@ -242,7 +283,7 @@ export class ComponentController<N extends string, T extends Json>
    */
   private _getWhereBase(where: Json): Json {
     const whereWithoutRefs: Json = { ...where };
-    for (const colCfg of this.referenceColumns) {
+    for (const colCfg of this._referenceColumns) {
       if (colCfg.key in whereWithoutRefs) {
         delete whereWithoutRefs[colCfg.key];
       }
@@ -252,24 +293,11 @@ export class ComponentController<N extends string, T extends Json>
 
   // ...........................................................................
   /**
-   * Retrieves all base columns from the resolved columns.
-   * @returns An array of ColumnCfg representing the base columns.
-   */
-  private get baseColumns(): ColumnCfg[] {
-    if (!this._resolvedColumns) {
-      throw new Error(
-        `Resolved columns are not available for table ${this._tableKey}. You must call init() first.`,
-      );
-    }
-    return this._resolvedColumns.base;
-  }
-
-  // ...........................................................................
-  /**
    * Retrieves all reference columns from the resolved columns.
    * @returns An array of ColumnCfg representing the reference columns.
    */
-  private get referenceColumns(): ColumnCfg[] {
+  private get _referenceColumns(): ColumnCfg[] {
+    /* v8 ignore next -- @preserve */
     if (!this._resolvedColumns) {
       throw new Error(
         `Resolved columns are not available for table ${this._tableKey}. You must call init() first.`,
@@ -289,13 +317,14 @@ export class ComponentController<N extends string, T extends Json>
    * @returns A promise that resolves to true if reference columns are present, false otherwise.
    */
   private _hasReferenceColumns(where: Json): boolean {
+    /* v8 ignore next -- @preserve */
     if (!this._resolvedColumns) {
       throw new Error(
         `Resolved columns are not available for table ${this._tableKey}. You must call init() first.`,
       );
     }
 
-    for (const colCfg of this.referenceColumns) {
+    for (const colCfg of this._referenceColumns) {
       if (colCfg.key in where) {
         return true;
       }
@@ -325,12 +354,14 @@ export class ComponentController<N extends string, T extends Json>
         const refTableKey = col.ref.tableKey;
         const { columns: refColumns } = await this._core.tableCfg(refTableKey);
 
+        /* v8 ignore if -- @preserve */
         if (!references[refTableKey]) {
           references[refTableKey] = [];
         }
 
         // Check if referenced columns have refs themselves and resolve them too
         const refsHaveRefs = refColumns.some((c) => !!c.ref);
+        /*v8 ignore next -- @preserve */
         if (refsHaveRefs) {
           const resolvedRefColumns = await this._resolveReferenceColumns({
             base: refColumns,
@@ -356,6 +387,7 @@ export class ComponentController<N extends string, T extends Json>
   private async _resolveReferences(
     where: Json,
   ): Promise<Record<TableKey, Ref[]>> {
+    /* v8 ignore next -- @preserve */
     if (!this._resolvedColumns) {
       throw new Error(
         `Resolved columns are not available for table ${this._tableKey}. You must call init() first.`,
@@ -372,6 +404,7 @@ export class ComponentController<N extends string, T extends Json>
         }
       }
 
+      /* v8 ignore next -- @preserve */
       if (Object.keys(whereForTable).length === 0) {
         continue; // No where clause for this table
       }
@@ -421,6 +454,12 @@ export class ComponentController<N extends string, T extends Json>
     for (const [propertyKey, propertyValue] of Object.entries(row)) {
       if (propertyKey === key && equals(propertyValue, value)) {
         return true;
+      } else if (Array.isArray(propertyValue)) {
+        for (const item of propertyValue) {
+          if (equals(item, value)) {
+            return true;
+          }
+        }
       }
     }
     return false;

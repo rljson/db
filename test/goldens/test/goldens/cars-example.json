@@ -144,7 +144,7 @@
     "_hash": "BoZcOWWYB7QPTcsSX1wxGH"
   },
   "carTechnical": {
-    "_tableCfg": "CWfYgMNJvP3sZqFn9X7ulV",
+    "_tableCfg": "OXvp3M8zt0dWygHTZfTp7I",
     "_type": "components",
     "_data": [
       {
@@ -166,11 +166,14 @@
         "engine": "Electric",
         "transmission": "Single-Speed",
         "gears": 1,
-        "dimensions": "MZ_V8LvPrPnR00SrC8zwqG",
-        "_hash": "sSl4vKyXbHK_CEHNUI1c4_"
+        "dimensions": [
+          "MZ_V8LvPrPnR00SrC8zwqG",
+          "x01mi9n_4Ew6phadYckL-D"
+        ],
+        "_hash": "pIO6oyjkD7NLXVQJ56nAOl"
       }
     ],
-    "_hash": "EVgoMNn-DEVJ1_Yn1eBG1h"
+    "_hash": "c3inrK0Ew_Bwgzrjk1e5nx"
   },
   "carColor": {
     "_tableCfg": "ly3011-E3YdeftOYLKqzXd",
@@ -231,17 +234,17 @@
         "add": {
           "VIN1": "ZcK-QPKEgFISkfvnBv4PDl",
           "VIN2": "8bCHqjbXoMBgM3S5oRAvHO",
-          "VIN3": "sSl4vKyXbHK_CEHNUI1c4_",
-          "VIN4": "sSl4vKyXbHK_CEHNUI1c4_",
-          "_hash": "0NkeRYZv90m5vFP_zmVcJK"
+          "VIN3": "pIO6oyjkD7NLXVQJ56nAOl",
+          "VIN4": "pIO6oyjkD7NLXVQJ56nAOl",
+          "_hash": "-7Kf97vFV8Zv00Ir3WJdym"
         },
         "sliceIdsTable": "carSliceId",
         "sliceIdsTableRow": "awcaW-4l-eJAl1q6F1Avdt",
         "componentsTable": "carTechnical",
-        "_hash": "oEw_7lQe3H_WAxb2HjbjPA"
+        "_hash": "aao3HID9MaJHwwzFnDYQFZ"
       }
     ],
-    "_hash": "4egbR-F5WXObR1ZWgzdq0j"
+    "_hash": "EEZ_ze6-xcToIPIjX7oznf"
   },
   "carColorLayer": {
     "_tableCfg": "AqNt4hM9EEUx-s1AaDtzOs",
@@ -272,14 +275,14 @@
         "sliceIdsRow": "awcaW-4l-eJAl1q6F1Avdt",
         "layers": {
           "carGeneralLayer": "rwmS-sgn_nqowxjx86HWCQ",
-          "carTechnicalLayer": "oEw_7lQe3H_WAxb2HjbjPA",
+          "carTechnicalLayer": "aao3HID9MaJHwwzFnDYQFZ",
           "carColorLayer": "dIR0Tv0T-LcP-l7_69xGOo",
-          "_hash": "vWHdSuPQkaRUVWrRqhZ4xl"
+          "_hash": "XV9-ipwrmmQW-TdtTg0eBd"
         },
-        "_hash": "6jmgTJSMM7_QmJVTgd3xHd"
+        "_hash": "UeYPUism1sVtF6tLiOwh_Y"
       }
     ],
-    "_hash": "SgGgFNYGZCpwSApiKHMmzw"
+    "_hash": "EgqApPi0VuBcpWFJKmH-Rj"
   },
   "wheelSliceId": {
     "_tableCfg": "e91MNbEo8gwnBHaEQxX6wt",
@@ -533,12 +536,12 @@
           },
           {
             "key": "dimensions",
-            "type": "string",
+            "type": "jsonValue",
             "ref": {
               "tableKey": "carDimensions",
               "_hash": "XCICxBKlpdfihvZILuFLbB"
             },
-            "_hash": "ys3O0b65ifRKqn4LfO-nnA"
+            "_hash": "apQS8aNzHcY3X9XcfXpzxS"
           },
           {
             "key": "repairedByWorkshop",
@@ -549,7 +552,7 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "CWfYgMNJvP3sZqFn9X7ulV"
+        "_hash": "OXvp3M8zt0dWygHTZfTp7I"
       },
       {
         "key": "carColor",

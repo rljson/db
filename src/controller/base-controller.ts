@@ -15,11 +15,8 @@ import {
 
 import { Core } from '../core.ts';
 
-import {
-  CakeControllerCommands,
-  CakeControllerRefs,
-} from './cake-controller.ts';
-import { Controller } from './controller.ts';
+import { CakeControllerCommands } from './cake-controller.ts';
+import { Controller, ControllerRefs } from './controller.ts';
 
 export abstract class BaseController<T extends TableType>
   implements Controller<any, any>
@@ -34,7 +31,7 @@ export abstract class BaseController<T extends TableType>
     command: CakeControllerCommands,
     value: Json,
     origin?: Ref,
-    refs?: CakeControllerRefs,
+    refs?: ControllerRefs,
   ): Promise<InsertHistoryRow<any>>;
 
   // ...........................................................................

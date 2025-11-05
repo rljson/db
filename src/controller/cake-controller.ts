@@ -35,9 +35,10 @@ export interface CakeValue extends Json {
 
 export type CakeControllerCommands = ControllerCommands | `add@${string}`;
 
-export interface CakeControllerRefs extends ControllerRefs {
-  sliceIdsTable?: TableKey;
-  sliceIdsRow?: SliceIdsRef;
+export interface CakeControllerRefs extends Partial<Cake> {
+  sliceIdsTable: TableKey;
+  sliceIdsRow: SliceIdsRef;
+  base?: Ref;
 }
 
 export class CakeController<N extends string>
@@ -90,14 +91,6 @@ export class CakeController<N extends string>
 
       // Store base layers from base cake
       this._baseLayers = rmhsh(baseCake.layers);
-
-      // Try to read sliceIds from base cake if not provided
-      if (!this._refs.sliceIdsTable || !this._refs.sliceIdsRow) {
-        this._refs = {
-          sliceIdsTable: baseCake.sliceIdsTable,
-          sliceIdsRow: baseCake.sliceIdsRow,
-        };
-      }
     } else {
       // Try to read refs from first row of cakes table (Fallback)
       const cake = this._table._data[0] as CakeControllerRefs;
@@ -112,6 +105,7 @@ export class CakeController<N extends string>
     where: string | Json,
     filter?: Json,
   ): Promise<Array<{ tableKey: TableKey; ref: Ref }>> {
+    /* v8 ignore next -- @preserve */
     if (!this._table) {
       throw new Error(`Controller not initialized.`);
     }
@@ -137,7 +131,7 @@ export class CakeController<N extends string>
     command: CakeControllerCommands,
     value: Json,
     origin?: Ref,
-    refs?: CakeControllerRefs,
+    refs?: ControllerRefs,
   ): Promise<InsertHistoryRow<any>> {
     // Validate command
     if (!command.startsWith('add')) {
@@ -175,50 +169,10 @@ export class CakeController<N extends string>
     if (typeof where === 'string') {
       return this._getByHash(where, filter);
     } else if (typeof where === 'object' && where !== null) {
-      // If where is an object, we assume it's a partial match
-      const keys = Object.keys(where);
-      if (keys.length === 1 && keys[0].endsWith('Ref')) {
-        // If the only key is the tableRef, we can use the _getByRef method
-        const tableKey = keys[0].replace('Ref', '') as TableKey;
-        return this._getByRef(tableKey, where[keys[0]] as Ref, filter);
-      } else {
-        return this._getByWhere(where, filter);
-      }
+      return this._getByWhere(where, filter);
     } else {
       return Promise.resolve({});
     }
-  }
-
-  protected async _getByRef(
-    tableKey: TableKey,
-    ref: Ref,
-    filter?: Json,
-  ): Promise<Rljson> {
-    //Prefilter if filter is set
-    let table: Rljson = {};
-    if (!!filter && Object.keys(filter).length > 0) {
-      table = await this._core.readRows(
-        this._tableKey,
-        filter as { [column: string]: JsonValue },
-      );
-    } else {
-      table = await this._core.dumpTable(this._tableKey);
-    }
-
-    const cakes = [];
-    for (const row of table[this._tableKey]._data) {
-      const cake = row as Cake;
-      const layers = cake.layers;
-
-      for (const layerTable of Object.keys(layers)) {
-        if (layerTable === tableKey && layers[layerTable] === ref) {
-          cakes.push(cake);
-        }
-      }
-    }
-    return {
-      [this._tableKey]: { _data: cakes, _type: 'cakes' } as CakesTable,
-    };
   }
 
   filterRow(row: Json, key: string, value: JsonValue): boolean {

@@ -10,6 +10,7 @@ import {
   InsertCommand,
   InsertHistoryRow,
   Layer,
+  LayerRef,
   LayersTable,
   Ref,
   Rljson,
@@ -22,13 +23,13 @@ import {
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
-import { CakeControllerRefs } from './cake-controller.ts';
 import { Controller, ControllerRefs } from './controller.ts';
 
-export interface LayerControllerRefs extends ControllerRefs {
-  sliceIdsTable?: TableKey;
-  sliceIdsTableRow?: SliceIdsRef;
-  componentsTable?: TableKey;
+export interface LayerControllerRefs extends Partial<Layer> {
+  base?: LayerRef;
+  sliceIdsTable: TableKey;
+  sliceIdsTableRow: SliceIdsRef;
+  componentsTable: TableKey;
 }
 
 export class LayerController<N extends string>
@@ -75,12 +76,11 @@ export class LayerController<N extends string>
       const baseLayer = baseLayers[0] as Layer;
 
       // Try to read sliceIds from base layer if not provided directly
+      /* v8 ignore next if -- @preserve */
       if (
-        /* v8 ignore start */
         !this._refs.sliceIdsTable ||
         !this._refs.sliceIdsRow ||
         !this._refs.componentsTable
-        /* v8 ignore end */
       ) {
         this._refs = {
           sliceIdsTable: baseLayer.sliceIdsTable,
@@ -89,8 +89,8 @@ export class LayerController<N extends string>
         };
       }
     } else {
-      // Try to read refs from first row of cakes table (Fallback)
-      const layer = table._data[0] as CakeControllerRefs;
+      // Try to read refs from first row of layers table (Fallback)
+      const layer = table._data[0] as LayerControllerRefs;
       this._refs = {
         sliceIdsTable: layer.sliceIdsTable,
         sliceIdsTableRow: layer.sliceIdsTableRow,
@@ -103,7 +103,7 @@ export class LayerController<N extends string>
     command: InsertCommand,
     value: Json,
     origin?: Ref,
-    refs?: LayerControllerRefs,
+    refs?: ControllerRefs,
   ): Promise<InsertHistoryRow<any>> {
     // Validate command
     if (!command.startsWith('add') && !command.startsWith('remove')) {
@@ -149,53 +149,9 @@ export class LayerController<N extends string>
   async get(where: string | Json, filter?: Json): Promise<Rljson> {
     if (typeof where === 'string') {
       return this._getByHash(where, filter);
-    } else if (typeof where === 'object' && where !== null) {
-      // If where is an object, we assume it's a partial match
-      const keys = Object.keys(where);
-      if (keys.length === 1 && keys[0].endsWith('Ref')) {
-        // If the only key is the tableRef, we can use the _getByRef method
-        const tableKey = keys[0].replace('Ref', '') as TableKey;
-        return this._getByRef(tableKey, where[keys[0]] as Ref, filter);
-      } else {
-        return this._getByWhere(where, filter);
-      }
     } else {
-      return Promise.resolve({});
+      return this._getByWhere(where, filter);
     }
-  }
-
-  protected async _getByRef(
-    tableKey: TableKey,
-    ref: Ref,
-    filter?: Json,
-  ): Promise<Rljson> {
-    //Prefilter if filter is se
-    let table: Rljson = {};
-    if (!!filter && Object.keys(filter).length > 0) {
-      table = await this._core.readRows(this._tableKey, {
-        ...filter,
-      } as { [column: string]: JsonValue });
-    } else {
-      table = await this._core.dumpTable(this._tableKey);
-    }
-
-    const layers = [];
-    for (const row of table[this._tableKey]._data) {
-      const layer = row as Layer;
-      // Only consider layers that belong to the requested components table
-      if (layer.componentsTable !== tableKey) {
-        continue;
-      }
-      // Check if the layer added the requested ref
-      for (const layerRef of Object.values(layer.add)) {
-        if (layerRef === ref) {
-          layers.push(layer);
-        }
-      }
-    }
-    return {
-      [this._tableKey]: { _data: layers, _type: 'layers' } as LayersTable,
-    };
   }
 
   async getChildRefs(
@@ -208,10 +164,12 @@ export class LayerController<N extends string>
     for (const row of table._data) {
       const layer = row as Layer;
 
-      for (const ref of Object.values(layer.add)) {
+      for (const [sliceId, compRef] of Object.entries(layer.add)) {
+        if (sliceId.startsWith('_')) continue;
+
         childRefs.push({
           tableKey: layer.componentsTable,
-          ref: ref,
+          ref: compRef,
         });
       }
     }

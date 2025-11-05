@@ -52,6 +52,262 @@ describe('Db', () => {
       expect(db.core).toBeDefined();
     });
   });
+
+  describe('getController', () => {
+    it('throws on invalid tableKey', async () => {
+      //Empty string
+      await expect(db.getController('non-existing')).rejects.toThrow(
+        'Db.getController: Table non-existing does not exist.',
+      );
+    });
+  });
+
+  describe('getInsertHistory', () => {
+    it('throws on invalid tableKey', async () => {
+      await expect(db.getInsertHistory('non-existing')).rejects.toThrow(
+        'Db.getInsertHistory: Table non-existing does not exist',
+      );
+    });
+
+    it('returns InsertHistory for valid tableKey', async () => {
+      const insertHistory = await db.getInsertHistory('carGeneral');
+      expect(insertHistory).toBeDefined();
+    });
+
+    it('returns InsertHistory with options', async () => {
+      const {
+        ['carGeneralInsertHistory']: { _data: inserts0 },
+      } = await db.getInsertHistory('carGeneral', {
+        sorted: true,
+        ascending: true,
+      });
+
+      expect(inserts0.length).toBe(0);
+
+      //Insert new carGeneral
+      const insert0: Insert<CarGeneral> = {
+        route: '/carGeneral',
+        command: 'add',
+        value: {
+          _hash: '',
+          brand: 'Porsche',
+          doors: 2,
+          type: 'Macan Electric',
+        } as CarGeneral,
+      };
+      await db.insert(insert0);
+
+      const {
+        ['carGeneralInsertHistory']: { _data: inserts1 },
+      } = await db.getInsertHistory('carGeneral', {
+        sorted: true,
+        ascending: true,
+      });
+
+      expect(inserts1.length).toBe(1);
+
+      //Insert another carGeneral
+      const insert1: Insert<CarGeneral> = {
+        route: '/carGeneral',
+        command: 'add',
+        value: {
+          _hash: '',
+          brand: 'Mercedes Benz',
+          doors: 4,
+          type: 'EQC 400 4MATIC',
+        } as CarGeneral,
+      };
+      await db.insert(insert1);
+
+      const {
+        ['carGeneralInsertHistory']: { _data: inserts2Asc },
+      } = await db.getInsertHistory('carGeneral', {
+        sorted: true,
+        ascending: true,
+      });
+
+      const timeIdsAsc = (inserts2Asc as InsertHistoryRow<'CarGeneral'>[]).map(
+        (i) => i.timeId.split(':')[1],
+      );
+      expect(timeIdsAsc[0] < timeIdsAsc[1]).toBe(true);
+
+      const {
+        ['carGeneralInsertHistory']: { _data: inserts2Desc },
+      } = await db.getInsertHistory('carGeneral', {
+        sorted: true,
+        ascending: false,
+      });
+
+      const timeIdsDesc = (
+        inserts2Desc as InsertHistoryRow<'CarGeneral'>[]
+      ).map((i) => i.timeId.split(':')[1]);
+      expect(timeIdsDesc[0] > timeIdsDesc[1]).toBe(true);
+    });
+  });
+
+  describe('getInsertHistoryRowsByRef(table,ref)', () => {
+    it('returns InsertHistory rows for given ref', async () => {
+      //Insert new carGeneral
+      const insert0: Insert<CarGeneral> = {
+        route: '/carGeneral',
+        command: 'add',
+        value: {
+          _hash: '',
+          brand: 'Porsche',
+          doors: 2,
+          type: 'Macan Electric',
+        } as CarGeneral,
+      };
+      const insertHistoryRow = (await db.insert(
+        insert0,
+      )) as InsertHistoryRow<'CarGeneral'>;
+
+      const insertHistoryRowsByRef = await db.getInsertHistoryRowsByRef(
+        'carGeneral',
+        insertHistoryRow.carGeneralRef as string,
+      );
+
+      expect(insertHistoryRowsByRef!.length).toBe(1);
+    });
+  });
+
+  describe('getInsertHistoryRowByTimeId(table,timeId)', () => {
+    it('returns InsertHistory row for given timeId', async () => {
+      //Insert new carGeneral
+      const insert0: Insert<CarGeneral> = {
+        route: '/carGeneral',
+        command: 'add',
+        value: {
+          _hash: '',
+          brand: 'Porsche',
+          doors: 2,
+          type: 'Macan Electric',
+        } as CarGeneral,
+      };
+
+      const insertHistoryRow = (await db.insert(
+        insert0,
+      )) as InsertHistoryRow<'CarGeneral'>;
+
+      const insertHistoryRowByTimeId = await db.getInsertHistoryRowByTimeId(
+        'carGeneral',
+        insertHistoryRow.timeId,
+      );
+
+      expect(insertHistoryRowByTimeId).toBeDefined();
+
+      expect(insertHistoryRowByTimeId.timeId).toBe(insertHistoryRow.timeId);
+    });
+  });
+
+  describe('getTimeIdsForRef(table, ref)', () => {
+    it('returns TimeIds for given ref', async () => {
+      //Insert new carGeneral
+      const insert0: Insert<CarGeneral> = {
+        route: '/carGeneral',
+        command: 'add',
+        value: {
+          _hash: '',
+          brand: 'Porsche',
+          doors: 2,
+          type: 'Macan Electric',
+        } as CarGeneral,
+      };
+
+      const insertHistoryRow = (await db.insert(
+        insert0,
+      )) as InsertHistoryRow<'CarGeneral'>;
+
+      const timeIds = await db.getTimeIdsForRef(
+        'carGeneral',
+        insertHistoryRow.carGeneralRef as string,
+      );
+      expect(timeIds.length).toBe(1);
+
+      const nonExistingTimeIds = await db.getTimeIdsForRef(
+        'carGeneral',
+        'NONEXISTINGREF',
+      );
+      expect(nonExistingTimeIds.length).toBe(0);
+    });
+  });
+
+  describe('isolatePropertyKeyFromRoute(route)', () => {
+    it('returns property key for given route', async () => {
+      const nonProcessedPropertyRoute = Route.fromFlat('/carGeneral/brand');
+      expect(nonProcessedPropertyRoute.hasPropertyKey).toBe(false);
+
+      const isolatedWithProperty = await db.isolatePropertyKeyFromRoute(
+        nonProcessedPropertyRoute,
+      );
+      expect(isolatedWithProperty.hasPropertyKey).toBe(true);
+
+      const nonProcessedComponentRoute = Route.fromFlat('/carGeneral');
+      expect(nonProcessedComponentRoute.hasPropertyKey).toBe(false);
+
+      const isolatedWithoutProperty = await db.isolatePropertyKeyFromRoute(
+        nonProcessedComponentRoute,
+      );
+      expect(isolatedWithoutProperty.hasPropertyKey).toBe(false);
+    });
+  });
+
+  describe('isolatePropertyFromComponents(rljson, propertyKey)', () => {
+    it('returns rljson with isolated property for given propertyKey', async () => {
+      const propertyKey = 'brand';
+      const rljson = await db.get(Route.fromFlat('/carGeneral'), {});
+
+      const isolated = await db.isolatePropertyFromComponents(
+        rljson,
+        propertyKey,
+      );
+      expect(isolated.carGeneral).toBeDefined();
+      expect(isolated.carGeneral._data.map((c) => c.brand)).toEqual([
+        'Volkswagen',
+        'Audi',
+        'Audi',
+        'Volkswagen',
+      ]);
+
+      const nonExistingPropertyKey = 'nonExistingProperty';
+      const isolatedNonExisting = await db.isolatePropertyFromComponents(
+        rljson,
+        nonExistingPropertyKey,
+      );
+
+      expect(isolatedNonExisting.carGeneral).toBeDefined();
+      expect(isolatedNonExisting.carGeneral._data).toEqual(
+        rljson.carGeneral._data,
+      );
+    });
+  });
+
+  describe('getRefOfTimeId(table, timeId)', () => {
+    it('returns ref for given timeId', async () => {
+      //Insert new carGeneral
+      const insert0: Insert<CarGeneral> = {
+        route: '/carGeneral',
+        command: 'add',
+        value: {
+          _hash: '',
+          brand: 'Porsche',
+          doors: 2,
+          type: 'Macan Electric',
+        } as CarGeneral,
+      };
+      const insertHistoryRow = (await db.insert(
+        insert0,
+      )) as InsertHistoryRow<'CarGeneral'>;
+
+      const ref = await db.getRefOfTimeId(
+        'carGeneral',
+        insertHistoryRow.timeId,
+      );
+
+      expect(ref).toBe(insertHistoryRow.carGeneralRef);
+    });
+  });
+
   describe('get', () => {
     it('throws on invalid route', async () => {
       await expect(db.get(new Route([]), {})).rejects.toThrow(
@@ -68,6 +324,25 @@ describe('Db', () => {
       expect(result.carGeneral._data.length).toBe(1);
       expect(result.carGeneral._data[0]._hash).toBe(ref);
     });
+    it('get component by where from Cache', async () => {
+      const route = '/carCake/carGeneralLayer/carGeneral';
+      const where = {
+        carGeneralLayer: {
+          carGeneral: { brand: 'Volkswagen' } as Partial<CarGeneral>,
+        },
+      };
+
+      const firstGet = await db.get(Route.fromFlat(route), where);
+
+      const cache = db.cache;
+      expect(cache.size).toBe(1);
+      expect(firstGet).toBe(Array.from(cache.values())[0]);
+
+      const secondGet = await db.get(Route.fromFlat(route), where);
+      expect(secondGet).toBe(firstGet);
+      expect(cache.size).toBe(1);
+    });
+
     it('get component property by ref', async () => {
       const componentKey = 'carGeneral';
       const propertyKey = 'brand';
@@ -374,7 +649,7 @@ describe('Db', () => {
       ).rejects.toThrow();
     });
 
-    it('run Insert on component route', async () => {
+    it('insert on component route', async () => {
       const Insert: Insert<CarGeneral> = {
         route: '/carGeneral',
         command: 'add',
@@ -396,7 +671,7 @@ describe('Db', () => {
       expect(result.origin).toBe('H45H');
     });
 
-    it('run Insert on component route, w/ previous by Hash', async () => {
+    it('insert on component route, w/ previous by Hash', async () => {
       //Add predecessor component to core db
       const previousTimeId = 'H45H:20240606T120000Z';
       await db.core.import({
@@ -438,7 +713,7 @@ describe('Db', () => {
       expect(result.previous).toEqual([previousTimeId]);
     });
 
-    it('run Insert on component route, w/ previous by TimeID', async () => {
+    it('insert on component route, w/ previous by TimeID', async () => {
       //Add predecessor component to core db
       const previousTimeId = 'H45H:20240606T120000Z';
       await db.core.import({
@@ -479,7 +754,7 @@ describe('Db', () => {
       expect(result.previous).toEqual([previousTimeId]);
     });
 
-    it('run Insert on layer route', async () => {
+    it('insert on layer route', async () => {
       const Insert: Insert<Json> = {
         route: '/carGeneralLayer',
         command: 'add',
@@ -500,7 +775,7 @@ describe('Db', () => {
       expect(result.origin).toBe('H45H');
     });
 
-    it('run Insert on cake route', async () => {
+    it('insert on cake route', async () => {
       const carCake = carsExample().carCake._data[0];
       const Insert: Insert<Record<string, LayerRef>> = {
         route: '/carCake',
@@ -522,7 +797,7 @@ describe('Db', () => {
       expect(result.origin).toBe('H45H');
     });
 
-    it('run Insert on nested: component/component', async () => {
+    it('insert on nested: component/component', async () => {
       const Insert: Insert<Json> = {
         route: '/carTechnical/carDimensions',
         command: 'add',
@@ -572,7 +847,7 @@ describe('Db', () => {
       expect(writtenDimension.length).toBe(4700);
     });
 
-    it('run Insert on nested: layer/component', async () => {
+    it('insert on nested: layer/component', async () => {
       const Insert: Insert<Json> = {
         route: '/carGeneralLayer/carGeneral',
         command: 'add',
@@ -621,7 +896,7 @@ describe('Db', () => {
       expect(newComponents.length).toBe(2);
     });
 
-    it('run Insert on nested: cake/layer/component', async () => {
+    it('insert on nested: cake/layer/component', async () => {
       const Insert: Insert<Json> = {
         route: '/carCake/carGeneralLayer/carGeneral',
         command: 'add',

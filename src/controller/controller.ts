@@ -6,11 +6,9 @@
 
 import { Json, JsonValue } from '@rljson/json';
 import {
-  Cake,
   ContentType,
   InsertCommand,
   InsertHistoryRow,
-  Layer,
   Ref,
   Rljson,
   TableKey,
@@ -23,14 +21,15 @@ import { CakeController, CakeControllerRefs } from './cake-controller.ts';
 import { ComponentController } from './component-controller.ts';
 import { LayerController, LayerControllerRefs } from './layer-controller.ts';
 
-export type ControllerRefs = Partial<Layer> & Partial<Cake> & { base?: Ref };
+export type ControllerRefs = CakeControllerRefs | LayerControllerRefs;
+
 export type ControllerCommands = InsertCommand;
 
 export type ControllerRunFn<N extends string> = (
   command: ControllerCommands,
   value: Json,
   origin?: Ref,
-  refs?: Partial<ControllerRefs>,
+  refs?: ControllerRefs,
 ) => Promise<InsertHistoryRow<N>>;
 
 // ...........................................................................
