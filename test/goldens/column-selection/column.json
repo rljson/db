@@ -1,0 +1,11 @@
+{
+  "key": "stringCol",
+  "alias": "stringCol",
+  "route": "basicTypes/stringsRef/value",
+  "type": "string",
+  "titleLong": "String values",
+  "titleShort": "Strings",
+  "routeHash": "2sZunZAWb9ZlcMFti8A4bq",
+  "index": 0,
+  "_hash": "Hvt8SfMXy8amKPUxRHIi7a"
+}

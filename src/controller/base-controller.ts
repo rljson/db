@@ -6,7 +6,7 @@
 
 import { equals, Json, JsonValue } from '@rljson/json';
 import {
-  EditProtocolRow,
+  InsertHistoryRow,
   Ref,
   Rljson,
   TableKey,
@@ -15,11 +15,8 @@ import {
 
 import { Core } from '../core.ts';
 
-import {
-  CakeControllerCommands,
-  CakeControllerRefs,
-} from './cake-controller.ts';
-import { Controller } from './controller.ts';
+import { CakeControllerCommands } from './cake-controller.ts';
+import { Controller, ControllerRefs } from './controller.ts';
 
 export abstract class BaseController<T extends TableType>
   implements Controller<any, any>
@@ -30,15 +27,24 @@ export abstract class BaseController<T extends TableType>
   ) {}
 
   // ...........................................................................
-  abstract run(
+  abstract insert(
     command: CakeControllerCommands,
     value: Json,
     origin?: Ref,
-    refs?: CakeControllerRefs,
-  ): Promise<EditProtocolRow<any>>;
+    refs?: ControllerRefs,
+  ): Promise<InsertHistoryRow<any>>;
 
   // ...........................................................................
   abstract init(): Promise<void>;
+
+  // ...........................................................................
+  abstract getChildRefs(
+    where: string | Json,
+    filter?: Json,
+  ): Promise<Array<{ tableKey: TableKey; columnKey?: string; ref: Ref }>>;
+
+  // ...........................................................................
+  abstract filterRow(row: Json, key: string, value: JsonValue): boolean;
 
   // ...........................................................................
   /**
@@ -60,6 +66,15 @@ export abstract class BaseController<T extends TableType>
     if (typeof where === 'string') {
       return this._getByHash(where, filter);
     } else if (typeof where === 'object' && where !== null) {
+      // If where is an object with only _hash property
+      if (
+        Object.keys(where).length === 1 &&
+        '_hash' in where &&
+        typeof where['_hash'] === 'string'
+      ) {
+        return this._getByHash(where['_hash'], filter);
+      }
+
       // If where is an object, we assume it's a partial match
       return this._getByWhere(where, filter);
     } else {

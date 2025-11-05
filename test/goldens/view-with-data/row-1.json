@@ -1,0 +1,22 @@
+[
+  "OneA",
+  1,
+  1.01,
+  false,
+  {
+    "a": {
+      "b": 1,
+      "_hash": "647TzLUCMJO1b0kKRlAeiN"
+    },
+    "_hash": "aGyCrR_fCrzMa6oP_6N50z"
+  },
+  [
+    1,
+    2,
+    [
+      3,
+      4
+    ]
+  ],
+  "OneA"
+]

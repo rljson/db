@@ -6,7 +6,7 @@ Get the tables
 _hash, tableCfgs, revisions, table
 Dump the database
 {
-  "_hash": "RLAZ-qyMfX5bdKlkTuXh9t",
+  "_hash": "-xZM-_Xsz2vetSYzDLVQKt",
   "tableCfgs": {
     "_type": "tableCfgs",
     "_data": [
@@ -20,94 +20,50 @@ Dump the database
           {
             "key": "_hash",
             "type": "string",
-            "_hash": "df4oYftB-71Njv9FprRCeg"
+            "titleShort": "Hash",
+            "titleLong": "Row Hash",
+            "_hash": "2QxgcOKzL6zsVCo9Yi_5Ke"
           },
           {
             "key": "table",
             "type": "string",
-            "_hash": "FmsYjsit04XJi02Sihdwl-"
+            "titleShort": "Table",
+            "titleLong": "Table Key",
+            "_hash": "dxePvdUNnwg2TdHEAPlzcL"
           },
           {
             "key": "predecessor",
             "type": "string",
-            "_hash": "RlAk7Lj-lZf2KDlUk5fekZ"
+            "titleShort": "Predecessor",
+            "titleLong": "Predecessor Revision Hash",
+            "_hash": "DX2BPCXbaK-WFn4Oy9hYjg"
           },
           {
             "key": "successor",
             "type": "string",
-            "_hash": "MJlFtQVty5oUJKVzzj5hyB"
+            "titleShort": "Successor",
+            "titleLong": "Successor Revision Hash",
+            "_hash": "w-IMk9JjuBkgt88ddVGV7B"
           },
           {
             "key": "timestamp",
             "type": "number",
-            "_hash": "XpKYGh23thW6vONgQuoMHf"
+            "titleShort": "Timestamp",
+            "titleLong": "Revision Timestamp",
+            "_hash": "G9EloAJ1OVidMrffwSVrLt"
           },
           {
             "key": "id",
             "type": "string",
-            "_hash": "eq2P3RIaSgy81i7PomNUvn"
+            "titleShort": "ID",
+            "titleLong": "Revision ID",
+            "_hash": "gwBBBa7SXFx2Zfz00JYdCR"
           }
         ],
-        "_hash": "2ztQLyMtsFFIs0z_rvT6UL"
+        "_hash": "KFWwSAaR3bnqCwesHeAN4k"
       },
       {
-        "version": 0,
-        "_hash": "9Ng57wo--dfSh3j4uwTvF5",
-        "key": "table",
-        "type": "components",
-        "isHead": false,
-        "isRoot": false,
-        "isShared": true,
-        "columns": [
-          {
-            "key": "_hash",
-            "type": "string",
-            "_hash": "df4oYftB-71Njv9FprRCeg"
-          },
-          {
-            "key": "int",
-            "type": "number",
-            "_hash": "J-rki_omMRDnv_GF0hqn39"
-          },
-          {
-            "key": "double",
-            "type": "number",
-            "_hash": "XD0G8ZLa0-tKYnVUuEwkdS"
-          },
-          {
-            "key": "string",
-            "type": "string",
-            "_hash": "eg0iPUTzUY2j_xTKwRIrUp"
-          },
-          {
-            "key": "boolean",
-            "type": "boolean",
-            "_hash": "16MfBHbWYzez1R4r8NoPYp"
-          },
-          {
-            "key": "null",
-            "type": "string",
-            "_hash": "hitpP-3Kxy0kcfrNU6YIo1"
-          },
-          {
-            "key": "jsonArray",
-            "type": "jsonArray",
-            "_hash": "PMwRJkviMj35S60qjN3UpG"
-          },
-          {
-            "key": "json",
-            "type": "json",
-            "_hash": "NuhgezXe-Mkdf-hg96MNLG"
-          },
-          {
-            "key": "jsonValue",
-            "type": "jsonValue",
-            "_hash": "1LtHkc_tVAXXqH2OFXQ8rG"
-          }
-        ]
-      },
-      {
-        "_hash": "er5aXXmEqihTA7Y1glILb4",
+        "_hash": "jERNpYntKnsV66yxoS2xOg",
         "key": "tableCfgs",
         "type": "tableCfgs",
         "isHead": false,
@@ -118,54 +74,144 @@ Dump the database
           {
             "key": "_hash",
             "type": "string",
-            "_hash": "df4oYftB-71Njv9FprRCeg"
+            "titleShort": "Hash",
+            "titleLong": "Row Hash",
+            "_hash": "2QxgcOKzL6zsVCo9Yi_5Ke"
           },
           {
             "key": "key",
             "type": "string",
-            "_hash": "tapEY-QdaJwWhz1PPZoG35"
+            "titleShort": "Key",
+            "titleLong": "Table Key",
+            "_hash": "vXW6G031fGusGpEgdnVWmt"
           },
           {
             "key": "type",
             "type": "string",
-            "_hash": "zE7ALsNzu5JPgDD4AxeRCh"
+            "titleShort": "Type",
+            "titleLong": "Content Type",
+            "_hash": "X2upWVtQ02TKW3mj6SqU0c"
           },
           {
             "key": "isHead",
             "type": "boolean",
-            "_hash": "ar8Hajt2UZDn-F21QLMyC_"
+            "titleShort": "Is Head",
+            "titleLong": "Is Head Table",
+            "_hash": "A-q9m5MVPMRVN6hk4pAMLH"
           },
           {
             "key": "isRoot",
             "type": "boolean",
-            "_hash": "hedsCm_HtiiTuzJyTeMqhm"
+            "titleShort": "Is Root",
+            "titleLong": "Is Root Table",
+            "_hash": "qYiiwGCxzUtxlqIvZeU1rh"
           },
           {
             "key": "isShared",
             "type": "boolean",
-            "_hash": "pxXOf3-3qCo9Z3FzC9JXSH"
+            "titleShort": "Is Shared",
+            "titleLong": "Is Shared Table",
+            "_hash": "jS9CqQBxXDhz1IB6PET4-P"
           },
           {
             "key": "previous",
             "type": "string",
-            "_hash": "e0TEeDmSvJcLEMtrVxc0oW"
+            "titleShort": "Previous",
+            "titleLong": "Previous Table Configuration Hash",
+            "_hash": "0EgSa6oJSjOqjUCqlJzb5E"
           },
           {
             "key": "columns",
             "type": "jsonArray",
-            "_hash": "aPmGTcNng9E1RvlEj1LtxB"
+            "titleShort": "Columns",
+            "titleLong": "Column Configurations",
+            "_hash": "GRV_4vc3xouarDpc1ZXE2_"
+          }
+        ]
+      },
+      {
+        "version": 0,
+        "_hash": "y2U07VJrDYuvRSBDP4CF_u",
+        "key": "table",
+        "type": "components",
+        "isHead": false,
+        "isRoot": false,
+        "isShared": true,
+        "columns": [
+          {
+            "key": "_hash",
+            "type": "string",
+            "titleLong": "Hash",
+            "titleShort": "Hash",
+            "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
+          },
+          {
+            "key": "int",
+            "type": "number",
+            "titleLong": "Integer",
+            "titleShort": "Int",
+            "_hash": "lvzb7LPn4xJDxHMFiKrOzZ"
+          },
+          {
+            "key": "double",
+            "type": "number",
+            "titleLong": "Double",
+            "titleShort": "Double",
+            "_hash": "OdzvDLlCNFZKNcrXvdUh8s"
+          },
+          {
+            "key": "string",
+            "type": "string",
+            "titleLong": "String",
+            "titleShort": "String",
+            "_hash": "SyDoENYowVUfhsniwG-jkq"
+          },
+          {
+            "key": "boolean",
+            "type": "boolean",
+            "titleLong": "Boolean",
+            "titleShort": "Boolean",
+            "_hash": "2Up7sknR_LuCKlxzEvUhB_"
+          },
+          {
+            "key": "null",
+            "type": "string",
+            "titleLong": "Null",
+            "titleShort": "Null",
+            "_hash": "Uzjc1JUXIR4NbMK_NJw3ac"
+          },
+          {
+            "key": "jsonArray",
+            "type": "jsonArray",
+            "titleLong": "JSON Array",
+            "titleShort": "JSONArray",
+            "_hash": "stsYCAV2DRenpeQheWyRlE"
+          },
+          {
+            "key": "json",
+            "type": "json",
+            "titleLong": "JSON Object",
+            "titleShort": "JSONObject",
+            "_hash": "4-p0zngjey_fU547vfmsqr"
+          },
+          {
+            "key": "jsonValue",
+            "type": "jsonValue",
+            "titleLong": "JSON Value",
+            "titleShort": "JSONValue",
+            "_hash": "MKNQ5yFpRrOwh8rxKvDCw_"
           }
         ]
       }
     ],
-    "_tableCfg": "er5aXXmEqihTA7Y1glILb4",
-    "_hash": "qNmaGUq9dz0t0deFRFafEo"
+    "_tableCfg": "jERNpYntKnsV66yxoS2xOg",
+    "_hash": "WdCjeuHN129TC9bCxRMwQn"
   },
   "revisions": {
     "_type": "revisions",
     "_data": [],
-    "_tableCfg": "2ztQLyMtsFFIs0z_rvT6UL",
-    "_hash": "QaE-R7nOANTF7AshcaAQFr"
+    "_tableCfg": "KFWwSAaR3bnqCwesHeAN4k",
+    "_hash": "n0CtU753RpXZnGRTftbONY"
   },
   "table": {
     "_type": "components",
@@ -200,11 +246,11 @@ Dump the database
           "_hash": "hGgAD2SBqPnVvwk8nYUICW"
         },
         "jsonValue": 3,
-        "_hash": "Cxg2P0ZWlEbBX6pYOlOw8l"
+        "_hash": "P_QrIhtZow4q86_mj2k5uY"
       }
     ],
-    "_tableCfg": "9Ng57wo--dfSh3j4uwTvF5",
-    "_hash": "ACB-8VVkgimOEHdrX6rHFF"
+    "_tableCfg": "y2U07VJrDYuvRSBDP4CF_u",
+    "_hash": "IKUnYyRw9J7YjCN6eEDF9E"
   }
 }
 Dump a single table
@@ -242,10 +288,10 @@ Dump a single table
           "_hash": "hGgAD2SBqPnVvwk8nYUICW"
         },
         "jsonValue": 3,
-        "_hash": "Cxg2P0ZWlEbBX6pYOlOw8l"
+        "_hash": "P_QrIhtZow4q86_mj2k5uY"
       }
     ],
-    "_tableCfg": "9Ng57wo--dfSh3j4uwTvF5",
-    "_hash": "ACB-8VVkgimOEHdrX6rHFF"
+    "_tableCfg": "y2U07VJrDYuvRSBDP4CF_u",
+    "_hash": "IKUnYyRw9J7YjCN6eEDF9E"
   }
 }

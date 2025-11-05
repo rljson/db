@@ -4,17 +4,25 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { Io, IoMem } from '@rljson/io';
-import { Json } from '@rljson/json';
+import { Io } from '@rljson/io';
+import { Json, merge } from '@rljson/json';
 import {
-  Edit,
-  EditProtocolRow,
-  EditProtocolTimeId,
+  CakesTable,
+  ColumnCfg,
+  ComponentsTable,
+  Insert,
+  InsertHistoryRow,
+  InsertHistoryTimeId,
   isTimeId,
+  Layer,
+  LayersTable,
   Ref,
   Rljson,
   Route,
-  validateEdit,
+  RouteSegment,
+  SliceId,
+  SliceIds,
+  validateInsert,
 } from '@rljson/rljson';
 
 import {
@@ -24,6 +32,11 @@ import {
   createController,
 } from './controller/controller.ts';
 import { Core } from './core.ts';
+import { Join, JoinColumn, JoinRows } from './join/join.ts';
+import {
+  ColumnInfo,
+  ColumnSelection,
+} from './join/selection/column-selection.ts';
 import { Notify } from './notify.ts';
 
 /**
@@ -49,6 +62,8 @@ export class Db {
    */
   readonly notify: Notify;
 
+  private _cache: Map<string, Rljson> = new Map();
+
   // ...........................................................................
   /**
    * Get data from a route with optional filtering
@@ -57,130 +72,364 @@ export class Db {
    * @returns An array of Rljson objects matching the route and filter
    * @throws {Error} If the route is not valid or if any controller cannot be created
    */
-  async get(route: Route, where: string | Json): Promise<Rljson[]> {
+  async get(route: Route, where: string | Json): Promise<Rljson> {
     // Validate Route
     if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
 
-    // Get Controllers
-    const controllers = await this._indexedControllers(route);
+    //Isolate Property Key
+    const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
 
-    // Fetch Data
-    return this._get(route, where, controllers);
+    const cacheHash = `${isolatedRoute.flat}|${JSON.stringify(where)}`;
+    const isCached = this._cache.has(cacheHash);
+    if (isCached) {
+      return this._cache.get(cacheHash)!;
+    } else {
+      // Get Controllers
+      const controllers = await this._indexedControllers(isolatedRoute);
+
+      // Fetch Data
+      const data = await this._get(isolatedRoute, where, controllers);
+
+      // Cache Data
+      this._cache.set(cacheHash, data);
+      return data;
+    }
   }
 
-  // ...........................................................................
-  /**
-   * Recursively fetches data from the given route using the provided controllers
-   * @param route - The route to fetch data from
-   * @param where - The filter to apply to the root table
-   * @param controllers - A record of controllers keyed by table name
-   * @returns An array of Rljson objects matching the route and filter
-   */
-  private async _get(
+  async _get(
     route: Route,
     where: string | Json,
     controllers: Record<string, Controller<any, any>>,
-  ): Promise<Rljson[]> {
-    //Extract given Revision
-    let filter = {};
-    if (Route.segmentHasRef(route.root)) {
-      let revision: Ref = '';
-      if (Route.segmentHasDefaultRef(route.root)) {
+    segmentLevel?: number,
+  ): Promise<Rljson> {
+    //Start at top segment
+    if (segmentLevel === undefined) segmentLevel = 0;
+
+    const segment = route.segments[segmentLevel];
+    const segmentIsDeepest = segmentLevel === route.segments.length - 1;
+    const segmentController = controllers[segment.tableKey];
+    const segmentRef = await this._getReferenceOfRouteSegment(segment);
+
+    //Build where for segment
+    //If string given -> build _hash object
+    let segmentWhere =
+      typeof where === 'object' ? where : ({ _hash: where } as Json);
+
+    //If encapsulated, drill into object
+    segmentWhere =
+      segment.tableKey in segmentWhere
+        ? (segmentWhere[segment.tableKey] as Json)
+        : segmentWhere;
+
+    //If ref through route given, add to where object
+    segmentWhere = segmentRef
+      ? ({ ...segmentWhere, ...{ _hash: segmentRef } } as Json)
+      : segmentWhere;
+
+    const childSegmentLevel = segmentLevel + 1;
+    const childSegment = route.segments[childSegmentLevel];
+
+    const segmentWhereWithoutChildWhere = { ...segmentWhere };
+    //Delete child segment key from where
+    if (!segmentIsDeepest && childSegment.tableKey in segmentWhere)
+      delete segmentWhereWithoutChildWhere[childSegment.tableKey];
+
+    let parent = await segmentController.get(segmentWhereWithoutChildWhere, {});
+
+    //Isolate Property if deepest segment has property key
+    if (segmentIsDeepest && route.hasPropertyKey) {
+      parent = this.isolatePropertyFromComponents(parent, route.propertyKey!);
+    }
+
+    const children: Rljson[] = [];
+    const filteredParentRows: Map<string, Json> = new Map();
+
+    if (!segmentIsDeepest) {
+      const childRefs = await segmentController.getChildRefs(
+        segmentWhereWithoutChildWhere,
+        {},
+      );
+      for (const { tableKey, columnKey, ref } of childRefs) {
+        if (tableKey !== childSegment.tableKey) continue;
+
+        const child = await this._get(
+          route,
+          { ...segmentWhere, ...{ _hash: ref } },
+          controllers,
+          childSegmentLevel,
+        );
+        children.push(child);
+
+        //Filter parent to only include rows that have the child ref
+
+        for (const childObjs of child[tableKey]._data) {
+          const childRef = (childObjs as Json)['_hash'] as string;
+          for (const row of parent[segment.tableKey]._data) {
+            if (filteredParentRows.has((row as Json)['_hash'] as string))
+              continue;
+
+            const includesChild = segmentController.filterRow(
+              row,
+              columnKey ?? tableKey,
+              childRef,
+            );
+            if (includesChild) {
+              filteredParentRows.set(
+                (row as Json)['_hash'] as string,
+                row as Json,
+              );
+            }
+          }
+        }
+      }
+
+      //Build final parent with filtered rows
+      const parentWithFilteredRows = {
+        [segment.tableKey]: {
+          ...parent[segment.tableKey],
+          ...{
+            _data: Array.from(filteredParentRows.values()),
+          },
+        },
+      };
+
+      return merge(parentWithFilteredRows, ...children) as Rljson;
+    }
+
+    return parent;
+  }
+
+  // ...........................................................................
+  /**
+   * Get the reference (hash) of a route segment, considering default refs and insertHistory refs
+   * @param segment - The route segment to get the reference for
+   * @returns
+   */
+  private async _getReferenceOfRouteSegment(
+    segment: RouteSegment<any>,
+  ): Promise<string | null> {
+    if (Route.segmentHasRef(segment)) {
+      if (Route.segmentHasDefaultRef(segment)) {
         // Use given ref
-        revision = Route.segmentRef(route.root)!;
+        return Route.segmentRef(segment)!;
       } else {
-        // Get ref from protocol
-        revision = (await this.getRefOfTimeId(
-          route.root.tableKey,
-          Route.segmentRef(route.root)!,
+        // Get ref from insertHistory
+        return (await this.getRefOfTimeId(
+          segment.tableKey,
+          Route.segmentRef(segment)!,
         ))!;
       }
-      // Build where clause
-      filter = { _hash: revision };
     }
-
-    //Fetch Root Data
-    const rootRljson: Rljson = await controllers[route.root.tableKey].get(
-      where,
-      filter,
-    );
-    //Extract Root Refs
-    const rootRefs: Ref[] = rootRljson[route.root.tableKey]._data.map(
-      (r) => r._hash,
-    );
-
-    //Base Case: If route has only one segment, return root data
-    if (route.segments.length === 1) {
-      return [rootRljson];
-    }
-
-    //Recursive Case: Fetch Child Data for each Root Ref
-    const results: Rljson[] = [];
-    for (const ref of rootRefs) {
-      //Build superior route
-      const superiorRoute = new Route(route.segments.slice(0, -1));
-
-      //Fetch Superior Data
-      const res = await this._get(
-        superiorRoute,
-        {
-          [route.root.tableKey + 'Ref']: ref,
-        },
-        controllers,
-      );
-      //Merge Results
-      results.push(...res);
-    }
-    return results.map((r) => ({ ...r, ...rootRljson }));
+    return null;
   }
 
   // ...........................................................................
   /**
-   * Runs an edit by executing the appropriate controller(s) based on the edit's route
-   * @param edit - The edit to run
-   * @returns The result of the edit as an EditProtocolRow
-   * @throws {Error} If the edit is not valid or if any controller cannot be created
+   * Joins data from layers in an Rljson into a single dataset
+   * @param rljson - The Rljson to join data for
    */
-  async run(
-    edit: Edit<any>,
-    options?: { skipNotification?: boolean },
-  ): Promise<EditProtocolRow<any>> {
-    const initialRoute = Route.fromFlat(edit.route);
-    const runs = await this._resolveRuns(edit);
-    const errors = validateEdit(edit);
-    if (!!errors.hasErrors) {
-      throw new Error(`Edit is not valid:\n${JSON.stringify(errors, null, 2)}`);
+  async join(
+    columnSelection: ColumnSelection,
+    cakeKey: string,
+    cakeRef: Ref,
+  ): Promise<Join> {
+    //Fetch Data for ColumnSelection
+    const data = await this._getBaseDataForColumnSelection(columnSelection);
+
+    //Get Cake
+    const cakesTable = data[cakeKey] as CakesTable;
+    const cake = cakesTable._data.find((c) => c._hash === cakeRef);
+    if (!cake) {
+      throw new Error(
+        `Db.join: Cake with ref "${cakeRef}" not found in cake table "${cakeKey}".`,
+      );
     }
 
-    return this._run(edit, initialRoute, runs, options);
+    //Get Layers
+    const layers: Map<string, Layer> = new Map();
+    for (const layerKey of Object.keys(cake.layers)) {
+      if (!data[layerKey]) continue;
+
+      const layersTable = data[layerKey] as LayersTable;
+      const layer = layersTable._data.find(
+        (l) => l._hash === cake.layers[layerKey],
+      );
+
+      // We can expect that the layer exists because it
+      // passed get validation from _getDataForColumnSelection
+      layers.set(layerKey, layer!);
+    }
+
+    //Merge Layers Slice Ids,
+    const mergedSliceIds: Set<SliceId> = new Set();
+    for (const layer of layers.values()) {
+      const sliceIdsTable = layer.sliceIdsTable;
+      const sliceIdsTableRow = layer.sliceIdsTableRow;
+      const {
+        [sliceIdsTable]: { _data: sliceIds },
+      } = await this.core.readRows(sliceIdsTable, { _hash: sliceIdsTableRow });
+
+      //Merge Slice Ids
+      for (const sid of sliceIds as SliceIds[]) {
+        for (const s of sid.add) {
+          mergedSliceIds.add(s as SliceId);
+        }
+      }
+    }
+
+    // Build ColumnCfgs
+    const columnCfgs: Map<string, ColumnCfg[]> = new Map();
+    const columnInfos: Map<string, ColumnInfo[]> = new Map();
+    for (const [layerKey, layer] of layers.entries()) {
+      const componentKey = layer.componentsTable;
+      const { columns: colCfgs } = await this.core.tableCfg(componentKey);
+
+      const columnCfg: ColumnCfg[] = [];
+      const columnInfo: ColumnInfo[] = [];
+      for (let i = 0; i < colCfgs.length; i++) {
+        if (colCfgs[i].key === '_hash') continue;
+
+        const colCfg = colCfgs[i];
+        columnCfg.push(colCfg);
+        columnInfo.push({
+          ...colCfg,
+          alias: `${colCfg.key}`,
+          route: Route.fromFlat(
+            `/${cakeKey}/${layerKey}/${componentKey}/${colCfg.key}`,
+          ).flat.slice(1),
+          titleShort: colCfg.key,
+          titleLong: colCfg.key,
+        });
+      }
+
+      columnInfos.set(componentKey, columnInfo);
+      columnCfgs.set(componentKey, columnCfg);
+    }
+
+    //Join Rows to SliceIds
+    const rowMap: Map<SliceId, JoinColumn<any>[]> = new Map();
+    for (const sliceId of mergedSliceIds) {
+      let sliceIdRow: JoinColumn<any>[] = [];
+      for (const [layerKey, layer] of layers.entries()) {
+        const layerRef = layer._hash;
+        const componentKey = layer.componentsTable;
+        const componentRef = layer.add[sliceId];
+
+        const componentsTable = data[componentKey] as ComponentsTable<Json>;
+        const component = componentsTable._data.find(
+          (r) => r._hash === componentRef,
+        )!;
+        const colCfgs = columnCfgs.get(componentKey)!;
+
+        // Build Join Columns by Column Configs (for loop)
+        const joinColumns: JoinColumn<any>[] = [];
+        for (let i = 0; i < colCfgs.length; i++) {
+          const columnCfg = colCfgs[i];
+          joinColumns.push({
+            route: Route.fromFlat(
+              `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}/${columnCfg.key}`,
+            ).toRouteWithProperty(),
+            value: component[columnCfg.key] ?? null,
+            insert: null,
+          } as JoinColumn<any>);
+        }
+
+        sliceIdRow = [...sliceIdRow, ...joinColumns];
+      }
+      rowMap.set(sliceId, sliceIdRow);
+    }
+
+    //Build Result
+    const joinRows: JoinRows = {};
+    for (const [sliceId, joinColumns] of rowMap.entries()) {
+      Object.assign(joinRows, {
+        [sliceId]: joinColumns as JoinColumn<any>[],
+      });
+    }
+
+    // Build ColumnSelection
+    const joinColumnInfos = Array.from(columnInfos.values()).flat();
+    const joinColumnSelection = new ColumnSelection(joinColumnInfos);
+
+    // Return Join
+    return new Join(joinRows, joinColumnSelection).select(columnSelection);
   }
 
   // ...........................................................................
   /**
-   * Recursively runs controllers based on the route of the edit
-   * @param edit - The edit to run
-   * @param route - The route of the edit
+   * Fetches data for the given ColumnSelection
+   * @param columnSelection - The ColumnSelection to fetch data for
+   */
+  private async _getBaseDataForColumnSelection(
+    columnSelection: ColumnSelection,
+  ) {
+    //Make Component Routes unique
+    const uniqueComponentRoutes: Set<string> = new Set();
+    for (const colInfo of columnSelection.columns) {
+      const route = Route.fromFlat(colInfo.route).toRouteWithProperty();
+      uniqueComponentRoutes.add(route.toRouteWithoutProperty().flat);
+    }
+
+    // Fetch Data from all controller routes
+    const data: Rljson = {};
+    for (const compRouteFlat of uniqueComponentRoutes) {
+      const uniqueComponentRoute = Route.fromFlat(compRouteFlat);
+      const componentData = await this.get(uniqueComponentRoute, {});
+
+      Object.assign(data, componentData);
+    }
+    return data;
+  }
+
+  // ...........................................................................
+  /**
+   * Runs an Insert by executing the appropriate controller(s) based on the Insert's route
+   * @param Insert - The Insert to run
+   * @returns The result of the Insert as an InsertHistoryRow
+   * @throws {Error} If the Insert is not valid or if any controller cannot be created
+   */
+  async insert(
+    insert: Insert<any>,
+    options?: { skipNotification?: boolean },
+  ): Promise<InsertHistoryRow<any>> {
+    const initialRoute = Route.fromFlat(insert.route);
+    const runs = await this._resolveInsert(insert);
+    const errors = validateInsert(insert);
+    if (!!errors.hasErrors) {
+      throw new Error(
+        `Db.insert: Insert is not valid:\n${JSON.stringify(errors, null, 2)}`,
+      );
+    }
+
+    return this._insert(insert, initialRoute, runs, options);
+  }
+
+  // ...........................................................................
+  /**
+   * Recursively runs controllers based on the route of the Insert
+   * @param insert - The Insert to run
+   * @param route - The route of the Insert
    * @param runFns - A record of controller run functions, keyed by table name
-   * @returns The result of the edit
+   * @returns The result of the Insert
    * @throws {Error} If the route is not valid or if any controller cannot be created
    */
-  private async _run(
-    edit: Edit<any>,
+  private async _insert(
+    insert: Insert<any>,
     route: Route,
     runFns: Record<string, ControllerRunFn<any>>,
     options?: { skipNotification?: boolean },
-  ): Promise<EditProtocolRow<any>> {
-    let result: EditProtocolRow<any>;
+  ): Promise<InsertHistoryRow<any>> {
+    let result: InsertHistoryRow<any>;
     let tableKey: string;
 
     //Run parent controller with child refs as value
     const segment = route.segment(0);
     tableKey = segment.tableKey;
 
-    let previous: EditProtocolTimeId[] = [];
+    let previous: InsertHistoryTimeId[] = [];
     if (Route.segmentHasRef(segment)) {
-      const routeRef: EditProtocolTimeId = Route.segmentRef(segment)!;
-      if (Route.segmentHasProtocolRef(segment)) {
+      const routeRef: InsertHistoryTimeId = Route.segmentRef(segment)!;
+      if (Route.segmentHasInsertHistoryRef(segment)) {
         //Collect previous refs from child results
         previous = [...previous, routeRef];
       }
@@ -198,14 +447,14 @@ export class Db {
       //Run nested controller first
       const childRoute = route.deeper(1);
 
-      //Iterate over child values and create edits for each
-      const childKeys = this._childKeys(route, edit.value);
+      //Iterate over child values and create Inserts for each
+      const childKeys = this._childKeys(insert.value);
       const childRefs: Record<string, string> = {};
 
       for (const k of childKeys) {
-        const childValue = (edit.value as any)[k];
-        const childEdit: Edit<any> = { ...edit, value: childValue };
-        const childResult = await this._run(childEdit, childRoute, runFns);
+        const childValue = (insert.value as any)[k];
+        const childInsert: Insert<any> = { ...insert, value: childValue };
+        const childResult = await this._insert(childInsert, childRoute, runFns);
         const childRefKey = childRoute.top.tableKey + 'Ref';
         const childRef = (childResult as any)[childRefKey] as string;
 
@@ -216,12 +465,12 @@ export class Db {
       const runFn = runFns[tableKey];
       result = {
         ...(await runFn(
-          edit.command,
+          insert.command,
           {
-            ...edit.value,
+            ...insert.value,
             ...childRefs,
           },
-          edit.origin,
+          insert.origin,
         )),
         previous,
       };
@@ -230,35 +479,35 @@ export class Db {
       tableKey = route.root.tableKey;
       const runFn = runFns[tableKey];
 
-      //Run on controller, get EditProtocolRow from return, pass previous revisions
+      //Run on controller, get InsertHistoryRow from return, pass previous revisions
       result = {
-        ...(await runFn(edit.command, edit.value, edit.origin)),
+        ...(await runFn(insert.command, insert.value, insert.origin)),
         previous,
       };
     }
 
     //Write route to result
-    result.route = edit.route;
+    result.route = insert.route;
 
-    //Write protocol
-    await this._writeProtocol(tableKey, result);
+    //Write insertHistory
+    await this._writeInsertHistory(tableKey, result);
 
     //Notify listeners
     if (!options?.skipNotification)
-      this.notify.notify(Route.fromFlat(edit.route), result);
+      this.notify.notify(Route.fromFlat(insert.route), result);
 
     return result;
   }
 
   // ...........................................................................
   /**
-   * Registers a callback to be called when an edit is made on the given route
+   * Registers a callback to be called when an Insert is made on the given route
    * @param route - The route to register the callback on
-   * @param callback - The callback to be called when an edit is made
+   * @param callback - The callback to be called when an Insert is made
    */
   registerObserver(
     route: Route,
-    callback: (EditProtocolRow: EditProtocolRow<any>) => void,
+    callback: (InsertHistoryRow: InsertHistoryRow<any>) => void,
   ) {
     this.notify.register(route, callback);
   }
@@ -271,28 +520,30 @@ export class Db {
    */
   unregisterObserver(
     route: Route,
-    callback: (EditProtocolRow: EditProtocolRow<any>) => void,
+    callback: (InsertHistoryRow: InsertHistoryRow<any>) => void,
   ) {
     this.notify.unregister(route, callback);
   }
 
   // ...........................................................................
   /**
-   * Resolves an edit by returning the run functions of all controllers involved in the edit's route
-   * @param edit - The edit to resolve
+   * Resolves an Insert by returning the run functions of all controllers involved in the Insert's route
+   * @param Insert - The Insert to resolve
    * @returns A record of controller run functions, keyed by table name
    * @throws {Error} If the route is not valid or if any controller cannot be created
    */
-  private async _resolveRuns(
-    edit: Edit<any>,
+  private async _resolveInsert(
+    Insert: Insert<any>,
   ): Promise<Record<string, ControllerRunFn<any>>> {
     // Get Controllers and their Run Functions
     const controllers = await this._indexedControllers(
-      Route.fromFlat(edit.route),
+      Route.fromFlat(Insert.route),
     );
     const runFns: Record<string, ControllerRunFn<any>> = {};
     for (const tableKey of Object.keys(controllers)) {
-      runFns[tableKey] = controllers[tableKey].run.bind(controllers[tableKey]);
+      runFns[tableKey] = controllers[tableKey].insert.bind(
+        controllers[tableKey],
+      );
     }
 
     return runFns;
@@ -301,18 +552,14 @@ export class Db {
   // ...........................................................................
   /**
    * Returns the keys of child refs in a value based on a route
-   * @param route - The route to check
    * @param value - The value to check
    * @returns An array of keys of child refs in the value
    */
-  private _childKeys(route: Route, value: Json): string[] {
+  private _childKeys(value: Json): string[] {
     const keys = Object.keys(value);
     const childKeys: string[] = [];
     for (const k of keys) {
       if (typeof (value as any)[k] !== 'object') continue;
-      /* v8 ignore start */
-      if (k.endsWith('Ref') && route.next?.tableKey + 'Ref' !== k) continue;
-      /* v8 ignore end */
 
       childKeys.push(k);
     }
@@ -328,22 +575,14 @@ export class Db {
    * @throws {Error} If the table does not exist or if the table type is not supported
    */
   async getController(tableKey: string, refs?: ControllerRefs) {
-    //Guard: tableKey must be a non-empty string
-    if (typeof tableKey !== 'string' || tableKey.length === 0) {
-      throw new Error('TableKey must be a non-empty string.');
-    }
-
     // Validate Table
-    const tableExists = this.core.hasTable(tableKey);
-    if (!tableExists) {
-      throw new Error(`Table ${tableKey} does not exist.`);
+    const hasTable = await this.core.hasTable(tableKey);
+    if (!hasTable) {
+      throw new Error(`Db.getController: Table ${tableKey} does not exist.`);
     }
 
     // Get Content Type of Table
     const contentType = await this.core.contentType(tableKey);
-    if (!contentType) {
-      throw new Error(`Table ${tableKey} does not have a valid content type.`);
-    }
 
     // Create Controller
     return createController(contentType, this.core, tableKey, refs);
@@ -353,13 +592,11 @@ export class Db {
   private async _indexedControllers(
     route: Route,
   ): Promise<Record<string, Controller<any, any>>> {
-    // Validate Route
-    if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
-
     // Create Controllers
     const controllers: Record<string, Controller<any, any>> = {};
-    for (let i = 0; i < route.segments.length; i++) {
-      const segment = route.segments[i];
+    const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
+    for (let i = 0; i < isolatedRoute.segments.length; i++) {
+      const segment = isolatedRoute.segments[i];
       const tableKey = segment.tableKey;
       //Base is helpful for cake and layer controllers. It contains the ref of
       // the base cake for taking over default layers definitions
@@ -369,9 +606,10 @@ export class Db {
           ? await this.getRefOfTimeId(tableKey, segmentRef)
           : segmentRef
         : null;
+
       controllers[tableKey] ??= await this.getController(
         tableKey,
-        base ? { base } : undefined,
+        base ? ({ base } as ControllerRefs) : undefined,
       );
     }
 
@@ -380,44 +618,40 @@ export class Db {
 
   // ...........................................................................
   /**
-   * Adds an edit protocol row to the edits table of a table
-   * @param table - The table the edit was made on
-   * @param editProtocolRow - The edit protocol row to add
-   * @throws {Error} If the edits table does not exist
+   * Adds an InsertHistory row to the InsertHistory table of a table
+   * @param table - The table the Insert was made on
+   * @param InsertHistoryRow - The InsertHistory row to add
+   * @throws {Error} If the InsertHistory table does not exist
    */
-  private async _writeProtocol(
+  private async _writeInsertHistory(
     table: string,
-    editProtocolRow: EditProtocolRow<any>,
+    insertHistoryRow: InsertHistoryRow<any>,
   ): Promise<void> {
-    const protocolTable = table + 'Edits';
-    const hasTable = await this.core.hasTable(protocolTable);
-    if (!hasTable) {
-      throw new Error(`Table ${table} does not exist`);
-    }
+    const insertHistoryTable = table + 'InsertHistory';
 
-    //Write edit protocol row to io
+    //Write InsertHistory row to io
     await this.core.import({
-      [protocolTable]: {
-        _data: [editProtocolRow],
-        _type: 'edits',
+      [insertHistoryTable]: {
+        _data: [insertHistoryRow],
+        _type: 'insertHistory',
       },
     });
   }
 
   // ...........................................................................
   /**
-   * Get the edit protocol of a table
-   * @param table - The table to get the edit protocol for
-   * @throws {Error} If the edits table does not exist
+   * Get the InsertHistory of a table
+   * @param table - The table to get the InsertHistory for
+   * @throws {Error} If the InsertHistory table does not exist
    */
-  async getProtocol(
+  async getInsertHistory(
     table: string,
     options?: { sorted?: boolean; ascending?: boolean },
   ): Promise<Rljson> {
-    const protocolTable = table + 'Edits';
-    const hasTable = await this.core.hasTable(protocolTable);
+    const insertHistoryTable = table + 'InsertHistory';
+    const hasTable = await this.core.hasTable(insertHistoryTable);
     if (!hasTable) {
-      throw new Error(`Table ${table} does not exist`);
+      throw new Error(`Db.getInsertHistory: Table ${table} does not exist`);
     }
 
     if (options === undefined) {
@@ -425,9 +659,9 @@ export class Db {
     }
 
     if (options.sorted) {
-      const dumpedTable = await this.core.dumpTable(protocolTable);
-      const tableData = dumpedTable[protocolTable]
-        ._data as EditProtocolRow<any>[];
+      const dumpedTable = await this.core.dumpTable(insertHistoryTable);
+      const tableData = dumpedTable[insertHistoryTable]
+        ._data as InsertHistoryRow<any>[];
 
       //Sort table
       tableData.sort((a, b) => {
@@ -440,49 +674,53 @@ export class Db {
         }
       });
 
-      return { [protocolTable]: { _data: tableData, _type: 'edits' } };
+      return {
+        [insertHistoryTable]: { _data: tableData, _type: 'insertHistory' },
+      };
     }
 
-    return this.core.dumpTable(protocolTable);
+    return this.core.dumpTable(insertHistoryTable);
   }
 
   // ...........................................................................
   /**
-   * Get a specific edit protocol row from a table
-   * @param table - The table to get the edit protocol row from
-   * @param ref - The reference of the edit protocol row to get
-   * @returns The edit protocol row or null if it does not exist
-   * @throws {Error} If the edits table does not exist
+   * Get a specific InsertHistory row from a table
+   * @param table - The table to get the InsertHistory row from
+   * @param ref - The reference of the InsertHistory row to get
+   * @returns The InsertHistory row or null if it does not exist
+   * @throws {Error} If the Inserts table does not exist
    */
-  async getProtocolRowsByRef(
+  async getInsertHistoryRowsByRef(
     table: string,
     ref: string,
-  ): Promise<EditProtocolRow<any>[] | null> {
-    const protocolTable = table + 'Edits';
+  ): Promise<InsertHistoryRow<any>[]> {
+    const insertHistoryTable = table + 'InsertHistory';
     const {
-      [protocolTable]: { _data: protocol },
-    } = await this.core.readRows(protocolTable, { [table + 'Ref']: ref });
-    return (protocol as EditProtocolRow<any>[]) || null;
+      [insertHistoryTable]: { _data: insertHistory },
+    } = await this.core.readRows(insertHistoryTable, { [table + 'Ref']: ref });
+    return insertHistory as InsertHistoryRow<any>[];
   }
 
   // ...........................................................................
   /**
-   * Get a specific edit protocol row from a table by its timeId
-   * @param table - The table to get the edit protocol row from
-   * @param timeId - The timeId of the edit protocol row to get
-   * @returns The edit protocol row or null if it does not exist
-   * @throws {Error} If the edits table does not exist
+   * Get a specific InsertHistory row from a table by its timeId
+   * @param table - The table to get the InsertHistory row from
+   * @param timeId - The timeId of the InsertHistory row to get
+   * @returns The InsertHistory row or null if it does not exist
+   * @throws {Error} If the Inserts table does not exist
    */
-  async getProtocolRowByTimeId(
+  async getInsertHistoryRowByTimeId(
     table: string,
-    timeId: EditProtocolTimeId,
-  ): Promise<EditProtocolRow<any> | null> {
-    const protocolTable = table + 'Edits';
-    const { [protocolTable]: result } = await this.core.readRows(
-      protocolTable,
-      { timeId },
+    timeId: InsertHistoryTimeId,
+  ): Promise<InsertHistoryRow<any>> {
+    const insertHistoryTable = table + 'InsertHistory';
+    const { [insertHistoryTable]: result } = await this.core.readRows(
+      insertHistoryTable,
+      {
+        timeId,
+      },
     );
-    return result._data?.[0] || null;
+    return result._data?.[0];
   }
 
   // ...........................................................................
@@ -491,18 +729,20 @@ export class Db {
    * @param table - The table to get the timeIds from
    * @param ref - The reference to get the timeIds for
    * @returns An array of timeIds
-   * @throws {Error} If the edits table does not exist
+   * @throws {Error} If the Inserts table does not exist
    */
   async getTimeIdsForRef(
     table: string,
     ref: Ref,
-  ): Promise<EditProtocolTimeId[]> {
-    const protocolTable = table + 'Edits';
-    const { [protocolTable]: result } = await this.core.readRows(
-      protocolTable,
-      { [table + 'Ref']: ref },
+  ): Promise<InsertHistoryTimeId[]> {
+    const insertHistoryTable = table + 'InsertHistory';
+    const { [insertHistoryTable]: result } = await this.core.readRows(
+      insertHistoryTable,
+      {
+        [table + 'Ref']: ref,
+      },
     );
-    return result._data?.map((r) => r.timeId) || [];
+    return result._data?.map((r) => r.timeId);
   }
 
   // ...........................................................................
@@ -511,26 +751,76 @@ export class Db {
    * @param table - The table to get the ref from
    * @param timeId - The timeId to get the ref for
    * @returns The ref or null if it does not exist
-   * @throws {Error} If the edits table does not exist
+   * @throws {Error} If the Inserts table does not exist
    */
   async getRefOfTimeId(
     table: string,
-    timeId: EditProtocolTimeId,
+    timeId: InsertHistoryTimeId,
   ): Promise<Ref | null> {
-    const protocolTable = table + 'Edits';
-    const { [protocolTable]: result } = await this.core.readRows(
-      protocolTable,
-      { timeId },
+    const insertHistoryTable = table + 'InsertHistory';
+    const { [insertHistoryTable]: result } = await this.core.readRows(
+      insertHistoryTable,
+      {
+        timeId,
+      },
     );
-    return (result._data?.[0] as any)?.[table + 'Ref'] || null;
+    return (result._data?.[0] as any)?.[table + 'Ref'];
   }
 
+  // ...........................................................................
   /**
-   * Example
-   * @returns A new Db instance for test purposes
+   * Isolates the property key from the last segment of a route if it is a property of a component
+   * @param route - The route to extract property key from
+   * @returns A route with extracted property key
    */
-  static example = async () => {
-    const io = new IoMem();
-    return new Db(io);
-  };
+  async isolatePropertyKeyFromRoute(route: Route): Promise<Route> {
+    //Check if last segment is property of component
+    const lastSegment = route.segments[route.segments.length - 1];
+    const tableKey = lastSegment.tableKey;
+    const tableExists = await this._io.tableExists(tableKey);
+    if (!Route.segmentHasRef(lastSegment) && !tableExists) {
+      //Last Segment is probably property of component
+      const result = route.upper();
+      result.propertyKey = lastSegment.tableKey;
+      return result;
+    }
+    return route;
+  }
+
+  // ...........................................................................
+  /**
+   * Isolates a property from all components in an Rljson
+   * @param rljson - The Rljson to isolate the property from
+   * @param propertyKey - The property key to isolate
+   * @returns A new Rljson with only the isolated property
+   */
+  isolatePropertyFromComponents(rljson: Rljson, propertyKey: string): Rljson {
+    const result: Rljson = {};
+    for (const tableKey of Object.keys(rljson)) {
+      const table = rljson[tableKey];
+      const newData = table._data.map((row: any) => {
+        if (row.hasOwnProperty(propertyKey)) {
+          return {
+            [propertyKey]: row[propertyKey],
+            _hash: row._hash,
+          };
+        } else {
+          return row;
+        }
+      });
+      result[tableKey] = {
+        _type: table._type,
+        _data: newData,
+      };
+    }
+    return result;
+  }
+
+  // ...........................................................................
+  /**
+   * Get the current cache of the Db instance
+   */
+  get cache() {
+    return this._cache;
+  }
 }

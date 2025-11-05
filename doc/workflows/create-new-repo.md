@@ -71,7 +71,7 @@ Select `Include default branch`
 Check the following settings:
 
 - [x] `Restrict deletions`
-- [x] `Require linear history`
+- [x] `Require linear insertHistory`
 - [x] `Require a pull request before merging`
   - Click on the dropdown below `Required approvals`
     - Select `1`

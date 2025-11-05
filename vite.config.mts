@@ -24,6 +24,8 @@ export default defineConfig({
         '@rljson/io-mem',
         '@rljson/json',
         'object-traversal',
+        'filtrex',
+        'rxjs',
       ],
       output: {
         globals: {},
