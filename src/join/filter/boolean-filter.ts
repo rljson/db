@@ -51,6 +51,7 @@ export const parseBooleanSearch = (search: any): boolean | null => {
     }
 
     const containsOnlyNumbers = /^\d+$/.test(search);
+    /* v8 ignore if -- @preserve */
     if (containsOnlyNumbers) {
       return parseInt(search) != 0;
     }

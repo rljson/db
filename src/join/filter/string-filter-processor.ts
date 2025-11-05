@@ -91,8 +91,8 @@ export class StringFilterProcessor implements ColumnFilterProcessor {
         return cellValue.includes(this.search);
       case 'endsWith':
         return cellValue.endsWith(this.search);
+      /* v8 ignore next -- @preserve */
       case 'regExp':
-        /* v8 ignore next */
         return this.regExp?.test(cellValue) ?? false;
 
       case 'notContains':

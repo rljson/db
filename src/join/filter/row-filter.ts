@@ -41,14 +41,6 @@ export const exampleRowFilter = (): RowFilter =>
     _hash: '',
   });
 
-// ..............................................................................
-export const exampleEmptyRowFilter = (): RowFilter =>
-  hip({
-    columnFilters: [],
-    operator: 'and',
-    _hash: '',
-  });
-
 /** En empty row filter doing nothing */
 export const emptyRowFilter: RowFilter = hip({
   columnFilters: [],

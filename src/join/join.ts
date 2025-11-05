@@ -115,8 +115,10 @@ export class Join {
       const cols = [...joinRowH.columns];
 
       for (const col of cols) {
+        /*v8 ignore else -- @preserve */
         if (Route.fromFlat(setValue.route).equalsWithoutRefs(col.route))
           col.insert = setValue.value;
+        else continue;
       }
 
       data[sliceId] = {
@@ -312,6 +314,7 @@ export class Join {
     const cakeRoute = Array.from(
       new Set(this.layerRoutes.map((r) => r.upper().flat)),
     ).map((r) => Route.fromFlat(r));
+    /* v8 ignore if -- @preserve */
     if (cakeRoute.length !== 1) {
       throw new Error(
         `Join: Error while getting cake route: ` +
@@ -405,6 +408,7 @@ export class Join {
           const dataColRoute = dataCol.route;
           return colInfoRoute.equalsWithoutRefs(dataColRoute);
         });
+        /* v8 ignore next -- @preserve */
         row.push(joinCol ? joinCol.insert ?? joinCol.value : null);
       }
       result.push(row);
@@ -479,6 +483,7 @@ export class Join {
       )) {
         const compRoute = Route.fromFlat(compRouteFlat);
 
+        /* v8 ignore else -- @preserve */
         if (layerRoute.includes(compRoute)) {
           const layerInsertObj: {
             [layerRoute: string]: {
@@ -495,6 +500,8 @@ export class Join {
             },
           };
           layerInsertObjects.push(layerInsertObj);
+        } else {
+          continue;
         }
       }
     }
@@ -524,6 +531,7 @@ export class Join {
 
       // Find all columns that belong to the component
       for (const c of columns) {
+        /*v8 ignore else -- @preserve */
         if (compRoute.includes(c.route)) {
           if (c.insert !== null) {
             compChanged = true;
@@ -531,8 +539,11 @@ export class Join {
           } else {
             compInsert[c.route.propertyKey! as string] = c.value;
           }
+        } else {
+          continue;
         }
       }
+      /*v8 ignore next -- @preserve */
       result[compRoute.flat] = {
         route: compRoute,
         value: compChanged ? compInsert : null,

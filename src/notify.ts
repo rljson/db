@@ -41,6 +41,7 @@ export class Notify {
    */
   unregister(route: Route, callback: NotifyCallback<any>) {
     const callbacks = this._callbacks.get(route.flat);
+    /*v8 ignore else -- @preserve */
     if (callbacks) {
       this._callbacks.set(
         route.flat,

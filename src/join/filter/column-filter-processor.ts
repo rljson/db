@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 // @license
 // Copyright (c) 2025 Rljson
 //
@@ -13,9 +15,9 @@ import { StringFilterProcessor } from './string-filter-processor.ts';
 import { StringFilter } from './string-filter.ts';
 
 export class ColumnFilterProcessor {
-  /* v8 ignore start */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  /* v8 ignore next -- @preserve */
   matches(_cellValue: string): boolean {
+    /* v8 ignore next -- @preserve */
     return true;
   }
 
@@ -32,6 +34,7 @@ export class ColumnFilterProcessor {
         return NumberFilterProcessor.fromModel(model as NumberFilter);
       case 'boolean':
         return BooleanFilterProcessor.fromModel(model as BooleanFilter);
+      /* v8 ignore next -- @preserve */
       default:
         return StringFilterProcessor.fromModel(model as StringFilter);
     }

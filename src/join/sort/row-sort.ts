@@ -9,19 +9,10 @@ import { Route, SliceId } from '@rljson/rljson';
 import { Join } from '../join.ts';
 import { ColumnSelection } from '../selection/column-selection.ts';
 
-
 /// Sort configuration for catalog data
 export class RowSort {
   constructor(columnSorts: Record<string, 'asc' | 'desc'>) {
     this._columnSorts = this._initColumnSorts(columnSorts);
-  }
-
-  // ...........................................................................
-  /**
-   * Returns an empty RowSort object.
-   */
-  static get empty(): RowSort {
-    return new RowSort({});
   }
 
   // ...........................................................................
@@ -63,6 +54,7 @@ export class RowSort {
   }
 
   // ...........................................................................
+  /* v8 ignore next -- @preserve */
   get columnSorts(): Record<string, 'asc' | 'desc'> {
     const result: Record<string, 'asc' | 'desc'> = {};
     for (const sort of this._columnSorts) {

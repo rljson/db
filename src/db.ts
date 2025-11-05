@@ -609,7 +609,7 @@ export class Db {
 
       controllers[tableKey] ??= await this.getController(
         tableKey,
-        base ? { base } : undefined,
+        base ? ({ base } as ControllerRefs) : undefined,
       );
     }
 
