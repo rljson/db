@@ -1,0 +1,9 @@
+[
+  "basicTypes/stringsRef/value",
+  "basicTypes/numbersRef/intsRef/value",
+  "basicTypes/numbersRef/floatsRef/value",
+  "basicTypes/booleansRef/value",
+  "complexTypes/jsonObjectsRef/value",
+  "complexTypes/jsonArraysRef/value",
+  "complexTypes/jsonValuesRef/value"
+]

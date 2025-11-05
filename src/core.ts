@@ -9,7 +9,7 @@ import { JsonValue } from '@rljson/json';
 import {
   BaseValidator,
   ContentType,
-  createEditProtocolTableCfg,
+  createInsertHistoryTableCfg,
   Rljson,
   TableCfg,
   Validate,
@@ -26,12 +26,12 @@ export class Core {
 
   // ...........................................................................
   /**
-   * Creates a table and an edit protocol for the table
+   * Creates a table and an insertHistory for the table
    * @param tableCfg TableCfg of table to create
    */
-  async createEditable(tableCfg: TableCfg): Promise<void> {
+  async createTableWithInsertHistory(tableCfg: TableCfg): Promise<void> {
     await this.createTable(tableCfg);
-    await this.createEditProtocol(tableCfg);
+    await this.createInsertHistory(tableCfg);
   }
 
   /**
@@ -42,11 +42,11 @@ export class Core {
     return this._io.createOrExtendTable({ tableCfg });
   }
   /**
-   * Creates an edit protocol table for a given table
+   * Creates an insertHistory table for a given table
    * @param tableCfg TableCfg of table
    */
-  async createEditProtocol(tableCfg: TableCfg): Promise<void> {
-    const cfg = createEditProtocolTableCfg(tableCfg);
+  async createInsertHistory(tableCfg: TableCfg): Promise<void> {
+    const cfg = createInsertHistoryTableCfg(tableCfg);
     await this.createTable(cfg);
   }
 
@@ -105,11 +105,32 @@ export class Core {
   async hasTable(table: string): Promise<boolean> {
     return await this._io.tableExists(table);
   }
+
   // ...........................................................................
-  async contentType(table: string): Promise<ContentType | null> {
+  async contentType(table: string): Promise<ContentType> {
     const t = await this._io.dumpTable({ table });
-    const contentType = t[table]?._type;
+    const contentType = t[table]?._type as ContentType;
     return contentType;
+  }
+
+  // ...........................................................................
+  async tableCfg(table: string): Promise<TableCfg> {
+    //TODO: Avoid dumping the whole table just to get the tableCfg ref
+    const { [table]: dump } = await this._io.dumpTable({ table });
+    const tableCfgRef = dump._tableCfg;
+    const tableCfgs = await this._io.rawTableCfgs();
+
+    let tableCfg: TableCfg;
+    /* v8 ignore if -- @preserve */
+    if (!tableCfgRef) {
+      tableCfg = tableCfgs.find((tc) => tc.key === table) as TableCfg;
+    } else {
+      tableCfg = tableCfgs.find(
+        (tc) => tc.key === table && tc._hash === tableCfgRef,
+      ) as TableCfg;
+    }
+
+    return tableCfg;
   }
 
   // ...........................................................................

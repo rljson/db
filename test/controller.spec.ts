@@ -11,7 +11,7 @@ import { Layer, SliceId, TableCfg } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { CarGeneral, carsExample } from '../src/cars-example';
+import { CarDimension, CarGeneral, carsExample } from '../src/cars-example';
 import {
   CakeController,
   CakeControllerRefs,
@@ -42,7 +42,7 @@ describe('Controller', () => {
 
     //Create Tables for TableCfgs in carsExample
     for (const tableCfg of carsExample().tableCfgs._data) {
-      await db.core.createEditable(tableCfg);
+      await db.core.createTableWithInsertHistory(tableCfg);
     }
 
     //Import Data
@@ -113,12 +113,6 @@ describe('Controller', () => {
           'Table carSliceId is not of type components.',
         );
 
-        //Base in Refs provided --> ignored
-        componentCtrl = new ComponentController(core, 'carGeneral', {
-          base: 'H45H',
-        });
-        await expect(componentCtrl.init()).toBeDefined();
-
         //Refs provided --> throw
         componentCtrl = new ComponentController(core, 'carGeneral', {
           sliceIdsTable: 'carSliceId',
@@ -128,6 +122,36 @@ describe('Controller', () => {
           'Refs are not required on ComponentController.',
         );
       });
+
+      it('getChildRefs', async () => {
+        //Create ComponentController
+        const carTechnicalComponentController = await createController(
+          'components',
+          core,
+          'carTechnical',
+        );
+
+        //Get Child Refs
+        const dimensionsRefs = Array.from(
+          new Set(
+            carsExample()
+              .carTechnical._data.map((c) =>
+                Array.isArray(c.dimensions) ? c.dimensions : [c.dimensions],
+              )
+              .flatMap((d) => d as string[]),
+          ),
+        ).sort((a, b) => b.localeCompare(a));
+
+        const childRefs = (
+          await carTechnicalComponentController.getChildRefs({})
+        )
+          .map((ch) => ch.ref)
+          .sort((a, b) => b.localeCompare(a));
+
+        expect(childRefs).toBeDefined();
+        expect(childRefs).toEqual(dimensionsRefs);
+      });
+
       it('Table', async () => {
         //Create ComponentController
         const carGeneralComponentController = await createController(
@@ -233,7 +257,51 @@ describe('Controller', () => {
         expect(nonMatchingRows.length).toBe(0);
       });
 
-      it('Run', async () => {
+      it('Get by where w/ referenced columns (encapsulated refs)', async () => {
+        //Create ComponentController
+        const carTechnicalComponentController = await createController(
+          'components',
+          core,
+          'carTechnical',
+        );
+
+        //Build where
+        const where = {
+          ...carsExample().carDimensions._data[1],
+        } as Partial<CarDimension>;
+
+        const {
+          carTechnical: { _data: resultData },
+        } = await carTechnicalComponentController.get(rmhsh(where));
+
+        expect(resultData.length).toBe(2);
+        expect(resultData.map((r) => r._hash)).toEqual([
+          carsExample().carTechnical._data[1]._hash,
+          carsExample().carTechnical._data[2]._hash,
+        ]);
+      });
+
+      it('Get by where w/ ref column values (encapsulated refs)', async () => {
+        //Create ComponentController
+        const carTechnicalComponentController = await createController(
+          'components',
+          core,
+          'carTechnical',
+        );
+
+        //Build where
+        const where = {
+          height: carsExample().carDimensions._data.map((d) => d.height),
+        };
+
+        const {
+          carTechnical: { _data: resultData },
+        } = await carTechnicalComponentController.get(rmhsh(where));
+
+        expect(resultData.length).toBe(carsExample().carTechnical._data.length);
+      });
+
+      it('Insert', async () => {
         //Create ComponentController
         const carGeneralComponentController = await createController(
           'components',
@@ -243,7 +311,7 @@ describe('Controller', () => {
 
         //Add Component
         const origin = 'H45H';
-        const carGeneralValue: CarGeneral = {
+        const carGeneralValue: Partial<CarGeneral> = {
           brand: 'Toyota',
           type: 'Corolla',
           doors: 4,
@@ -252,56 +320,67 @@ describe('Controller', () => {
 
         //Invalid Command
         await expect(
-          carGeneralComponentController.run('update' as any, carGeneralValue),
+          carGeneralComponentController.insert(
+            'update' as any,
+            carGeneralValue,
+          ),
         ).rejects.toThrow(
           'Command update is not supported by ComponentController.',
         );
 
         //Invalid Refs
         await expect(
-          carGeneralComponentController.run('add', carGeneralValue, origin, {
-            base: 'H45H',
+          carGeneralComponentController.insert('add', carGeneralValue, origin, {
+            sliceIdsTable: 'carSliceId',
+            sliceIdsRow: 'H45H',
+            componentsTable: 'carGeneral',
           }),
         ).rejects.toThrow('Refs are not supported on ComponentController.');
 
         //Valid Run
-        const editProtocolFirstRow = await carGeneralComponentController.run(
-          'add',
-          carGeneralValue,
-          origin,
-        );
-        expect(editProtocolFirstRow).toBeDefined();
-        expect(editProtocolFirstRow.timeId).toBeDefined();
-        expect(editProtocolFirstRow.carGeneralRef).toBeDefined();
+        const insertHistoryFirstRow =
+          await carGeneralComponentController.insert(
+            'add',
+            carGeneralValue,
+            origin,
+          );
+        expect(insertHistoryFirstRow).toBeDefined();
+        expect(insertHistoryFirstRow.timeId).toBeDefined();
+        expect(insertHistoryFirstRow.carGeneralRef).toBeDefined();
 
-        //Check if EditProtocol was written correctly
+        //Check if InsertHistory was written correctly
         const { carGeneral: carGeneralTable } = await db.core.dumpTable(
           'carGeneral',
         );
-        expect(carGeneralTable?._data.length).toBe(3); //3 because two rows already existed from carsExample
+        expect(carGeneralTable?._data.length).toBe(
+          carsExample().carGeneral._data.length + 1,
+        );
 
         //Add another Component, with previous
-        const carGeneralValueSecond: CarGeneral = {
+        const carGeneralValueSecond: Partial<CarGeneral> = {
           brand: 'Ford',
           type: 'Mustang',
           doors: 2,
           _hash: '', // hash will be generated automatically
         };
 
-        const editProtocolSecondRow = await carGeneralComponentController.run(
-          'add',
-          carGeneralValueSecond,
-          origin,
-        );
-        expect(editProtocolSecondRow).toBeDefined();
-        expect(editProtocolSecondRow.timeId).toBeDefined();
-        expect(editProtocolSecondRow.carGeneralRef).toBeDefined();
+        const insertHistorySecondRow =
+          await carGeneralComponentController.insert(
+            'add',
+            carGeneralValueSecond,
+            origin,
+          );
+        expect(insertHistorySecondRow).toBeDefined();
+        expect(insertHistorySecondRow.timeId).toBeDefined();
+        expect(insertHistorySecondRow.carGeneralRef).toBeDefined();
 
-        //Check if EditProtocol was written correctly
+        //Check if InsertHistory was written correctly
         const { carGeneral: carGeneralTable2 } = await db.core.dumpTable(
           'carGeneral',
         );
-        expect(carGeneralTable2?._data.length).toBe(4); // 4 because two rows already existed from carsExample and one from first add
+        expect(carGeneralTable2?._data.length).toBe(
+          carsExample().carGeneral._data.length + 2,
+        );
       });
     });
   });
@@ -388,6 +467,74 @@ describe('Controller', () => {
           'Base layer NonExisting does not exist.',
         );
       });
+      it('getChildRefs', async () => {
+        //LayerController Refs
+        const carGeneralLayerRefs = {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+            '') as string,
+          componentsTable: 'carGeneral',
+        } as LayerControllerRefs;
+
+        //Create LayerController
+        const carGeneralLayerController = await createController(
+          'layers',
+          core,
+          'carGeneralLayer',
+          carGeneralLayerRefs,
+        );
+
+        //Get Child Refs by Hash
+        const firstRowHash = carsExample().carGeneralLayer._data[0]
+          ._hash as string;
+        const childRefsByHash = await carGeneralLayerController.getChildRefs(
+          firstRowHash,
+        );
+
+        expect(childRefsByHash).toBeDefined();
+        expect(childRefsByHash.length).toBe(
+          carsExample().carSliceId._data[0].add.length,
+        );
+      });
+
+      it('filterRow', async () => {
+        //LayerController Refs
+        const carGeneralLayerRefs = {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+            '') as string,
+          componentsTable: 'carGeneral',
+        } as LayerControllerRefs;
+
+        //Create LayerController
+        const carGeneralLayerController = await createController(
+          'layers',
+          core,
+          'carGeneralLayer',
+          carGeneralLayerRefs,
+        );
+
+        const filterKey = '';
+        const filterValue = Object.values(
+          carsExample().carGeneralLayer._data[0].add,
+        )[0];
+
+        const positivefilterResult = await carGeneralLayerController.filterRow(
+          carsExample().carGeneralLayer._data[0],
+          filterKey,
+          filterValue,
+        );
+
+        expect(positivefilterResult).toBe(true);
+
+        const negativefilterResult = await carGeneralLayerController.filterRow(
+          carsExample().carGeneralLayer._data[0],
+          filterKey,
+          'NonExistingHash',
+        );
+        expect(negativefilterResult).toBe(false);
+      });
+
       it('Table', async () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
@@ -427,7 +574,7 @@ describe('Controller', () => {
           carGeneralLayerRefs,
         );
 
-        //Read existing Row
+        //Read existing Row by Hash
         const firstRowHash = carsExample().carGeneralLayer._data[0]
           ._hash as string;
         const {
@@ -438,12 +585,55 @@ describe('Controller', () => {
         expect(firstRow._hash!).toBeDefined();
         expect(firstRow._hash!).toStrictEqual(firstRowHash);
 
+        //Read existing Row by where object
+        const {
+          ['carGeneralLayer']: { _data: firstRowsByWhere },
+        } = await carGeneralLayerController.get(
+          rmhsh(carsExample().carGeneralLayer._data[0]),
+        );
+        const firstRowByWhere = firstRowsByWhere[0];
+        expect(firstRowByWhere).toBeDefined();
+        expect(firstRowByWhere._hash!).toBeDefined();
+        expect(firstRowByWhere).toStrictEqual(firstRow);
+
         //Read non-existing Row
         const nonExistingRow = await carGeneralLayerController.get('#');
         expect(nonExistingRow['carGeneralLayer']._data.length).toBe(0);
+
+        //Read by empty
       });
 
-      it('Run', async () => {
+      it('Insert -> Invalid Command', async () => {
+        //LayerController Refs
+        const carGeneralLayerRefs = {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+            '') as string,
+          componentsTable: 'carGeneral',
+        } as LayerControllerRefs;
+        //Create LayerController
+        const carGeneralLayerController = await createController(
+          'layers',
+          core,
+          'carGeneralLayer',
+          carGeneralLayerRefs,
+        );
+
+        //Invalid Command
+        const origin = 'H45H';
+        const layerValue: Partial<Layer> = {
+          VIN1: (carsExample().carGeneral._data[1]._hash as string) || '',
+          VIN2: (carsExample().carGeneral._data[0]._hash as string) || '',
+        } as Record<SliceId, string>;
+
+        await expect(
+          carGeneralLayerController.insert('update' as any, layerValue, origin),
+        ).rejects.toThrow(
+          'Command update is not supported by LayerController.',
+        );
+      });
+
+      it('Insert -> Add Layer', async () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
           sliceIdsTable: 'carSliceId',
@@ -469,16 +659,16 @@ describe('Controller', () => {
           } as Record<SliceId, string>,
         };
 
-        const editProtocolFirstRow = await carGeneralLayerController.run(
+        const insertHistoryFirstRow = await carGeneralLayerController.insert(
           'add',
           carGeneralLayerValue,
           origin,
         );
-        expect(editProtocolFirstRow).toBeDefined();
-        expect(editProtocolFirstRow.timeId).toBeDefined();
-        expect(editProtocolFirstRow.carGeneralLayerRef).toBeDefined();
+        expect(insertHistoryFirstRow).toBeDefined();
+        expect(insertHistoryFirstRow.timeId).toBeDefined();
+        expect(insertHistoryFirstRow.carGeneralLayerRef).toBeDefined();
 
-        //Check if EditProtocol was written correctly
+        //Check if InsertHistory was written correctly
         const { carGeneralLayer: carGeneralLayerTable } =
           await db.core.dumpTable('carGeneralLayer');
         expect(carGeneralLayerTable?._data.length).toBe(2); //2 because one row already existed from carsExample
@@ -490,19 +680,61 @@ describe('Controller', () => {
           } as Record<SliceId, string>,
         };
 
-        const editProtocolSecondRow = await carGeneralLayerController.run(
+        const insertHistorySecondRow = await carGeneralLayerController.insert(
           'add',
           carGeneralLayerValueSecond,
           origin,
         );
-        expect(editProtocolSecondRow).toBeDefined();
-        expect(editProtocolSecondRow.timeId).toBeDefined();
-        expect(editProtocolSecondRow.carGeneralLayerRef).toBeDefined();
+        expect(insertHistorySecondRow).toBeDefined();
+        expect(insertHistorySecondRow.timeId).toBeDefined();
+        expect(insertHistorySecondRow.carGeneralLayerRef).toBeDefined();
 
-        //Check if EditProtocol was written correctly
+        //Check if InsertHistory was written correctly
         const { carGeneralLayer: carGeneralLayerTable2 } =
           await db.core.dumpTable('carGeneralLayer');
         expect(carGeneralLayerTable2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first add
+      });
+
+      it('Insert -> Remove Layer', async () => {
+        //LayerController Refs
+        const carGeneralLayerRefs = {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+            '') as string,
+          componentsTable: 'carGeneral',
+        } as LayerControllerRefs;
+        //Create LayerController
+        const carGeneralLayerController = await createController(
+          'layers',
+          core,
+          'carGeneralLayer',
+          carGeneralLayerRefs,
+        );
+        //Remove Layer
+        const origin = 'H45H';
+        const removeValue: Partial<Layer> = {
+          VIN1: (carsExample().carGeneral._data[1]._hash as string) || '',
+        } as Record<SliceId, string>;
+
+        const insertHistoryFirstRow = await carGeneralLayerController.insert(
+          'remove',
+          removeValue,
+          origin,
+        );
+
+        expect(insertHistoryFirstRow).toBeDefined();
+        expect(insertHistoryFirstRow.timeId).toBeDefined();
+        expect(insertHistoryFirstRow.carGeneralLayerRef).toBeDefined();
+
+        const resultingLayer = await carGeneralLayerController.get(
+          insertHistoryFirstRow.carGeneralLayerRef,
+        );
+
+        expect(resultingLayer).toBeDefined();
+        expect(resultingLayer.carGeneralLayer._data.length).toBe(1);
+        expect(rmhsh(resultingLayer.carGeneralLayer._data[0].remove)).toEqual(
+          removeValue,
+        );
       });
     });
   });
@@ -574,6 +806,72 @@ describe('Controller', () => {
         await cakeCtrl.init();
         expect(cakeCtrl).toBeDefined();
       });
+
+      it('getChildRefs', async () => {
+        //CakeController Refs
+        const carCakeRefs = {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+            '') as string,
+        } as CakeControllerRefs;
+
+        //Create CakeController
+        const carCakeController = await createController(
+          'cakes',
+          core,
+          'carCake',
+          carCakeRefs,
+        );
+
+        //Get Child Refs
+        const childRefs = await carCakeController.getChildRefs(
+          carsExample().carCake._data[0]._hash as string,
+        );
+
+        expect(childRefs).toBeDefined();
+        expect(childRefs.map((ch) => ch.tableKey)).toEqual([
+          'carGeneralLayer',
+          'carTechnicalLayer',
+          'carColorLayer',
+        ]);
+      });
+
+      it('filterRow', async () => {
+        //CakeController Refs
+        const carCakeRefs = {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+            '') as string,
+        } as CakeControllerRefs;
+
+        //Create CakeController
+        const carCakeController = await createController(
+          'cakes',
+          core,
+          'carCake',
+          carCakeRefs,
+        );
+
+        const filterKey = 'carGeneralLayer';
+        const filterValue = carsExample().carCake._data[0].layers[filterKey];
+
+        const positivefilterResult = await carCakeController.filterRow(
+          carsExample().carCake._data[0],
+          filterKey,
+          filterValue,
+        );
+
+        expect(positivefilterResult).toBe(true);
+
+        const negativefilterResult = await carCakeController.filterRow(
+          carsExample().carCake._data[0],
+          filterKey,
+          'NonExistingHash',
+        );
+
+        expect(negativefilterResult).toBe(false);
+      });
+
       it('Table', async () => {
         //CakeController Refs
         const carCakeRefs = {
@@ -595,6 +893,7 @@ describe('Controller', () => {
         expect(table).toBeDefined();
         expect(table).toEqual(carsExample().carCake);
       });
+
       it('Get', async () => {
         //CakeController Refs
         const carCakeRefs = {
@@ -637,9 +936,13 @@ describe('Controller', () => {
         //Read by invalid where
         const invalidWhere = await carCakeController.get(5 as any);
         expect(invalidWhere).toEqual({});
+
+        //Read by empty
+        const emptyWhere = await carCakeController.get(undefined as any);
+        expect(emptyWhere).toEqual({});
       });
 
-      it('Run', async () => {
+      it('Insert', async () => {
         //CakeController Refs
         const carCakeRefs = {
           sliceIdsTable: 'carSliceId',
@@ -669,16 +972,16 @@ describe('Controller', () => {
           id: 'MyFirstCake',
         };
 
-        const editProtocolFirstRow = await carCakeController.run(
+        const insertHistoryFirstRow = await carCakeController.insert(
           'add',
           carCakeValue,
           origin,
         );
-        expect(editProtocolFirstRow).toBeDefined();
-        expect(editProtocolFirstRow.timeId).toBeDefined();
-        expect(editProtocolFirstRow.carCakeRef).toBeDefined();
+        expect(insertHistoryFirstRow).toBeDefined();
+        expect(insertHistoryFirstRow.timeId).toBeDefined();
+        expect(insertHistoryFirstRow.carCakeRef).toBeDefined();
 
-        //Check if EditProtocol was written correctly
+        //Check if InsertHistory was written correctly
         const { carCake: carCakeTable } = await db.core.dumpTable('carCake');
         expect(carCakeTable?._data.length).toBe(2); //2 because one row already existed from carsExample
 
@@ -695,21 +998,21 @@ describe('Controller', () => {
           id: 'MySecondCake',
         };
 
-        const editProtocolSecondRow = await carCakeController.run(
+        const insertHistorySecondRow = await carCakeController.insert(
           'add',
           carCakeValueSecond,
           origin,
         );
-        expect(editProtocolSecondRow).toBeDefined();
-        expect(editProtocolSecondRow.timeId).toBeDefined();
-        expect(editProtocolSecondRow.carCakeRef).toBeDefined();
+        expect(insertHistorySecondRow).toBeDefined();
+        expect(insertHistorySecondRow.timeId).toBeDefined();
+        expect(insertHistorySecondRow.carCakeRef).toBeDefined();
 
-        //Check if EditProtocol was written correctly
+        //Check if InsertHistory was written correctly
         const { carCake: carCakeTable2 } = await db.core.dumpTable('carCake');
         expect(carCakeTable2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first add
       });
 
-      it('Invalid Run command', async () => {
+      it('Invalid Insert command', async () => {
         //CakeController Refs
         const carCakeRefs = {
           sliceIdsTable: 'carSliceId',
@@ -740,7 +1043,7 @@ describe('Controller', () => {
         };
 
         await expect(
-          carCakeController.run('update' as any, carCakeValue, origin),
+          carCakeController.insert('update' as any, carCakeValue, origin),
         ).rejects.toThrow('Command update is not supported by CakeController.');
       });
     });

@@ -5,9 +5,10 @@
 // found in the LICENSE file in the root of this package.
 
 import { hip } from '@rljson/hash';
-import { Json, JsonH } from '@rljson/json';
+import { Json, JsonH, JsonValueH } from '@rljson/json';
 import {
   CakesTable,
+  ColumnCfg,
   ComponentsTable,
   createCakeTableCfg,
   createLayerTableCfg,
@@ -41,6 +42,10 @@ export interface CarGeneral extends JsonH {
   brand: string;
   type: string;
   doors: number;
+  energyConsumption: number;
+  units: JsonValueH;
+  serviceIntervals: number[];
+  isElectric: boolean;
 }
 
 export interface CarDimension extends JsonH {
@@ -63,8 +68,8 @@ export const carsExample = (): CarsExample => {
     key: 'carSliceId',
     type: 'sliceIds',
     columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'add', type: 'jsonArray' },
+      { key: '_hash', type: 'string', titleLong: 'Hash', titleShort: 'Hash' },
+      { key: 'add', type: 'jsonArray', titleLong: 'Add', titleShort: 'Add' },
     ],
     isHead: false,
     isRoot: false,
@@ -76,7 +81,7 @@ export const carsExample = (): CarsExample => {
     _type: 'sliceIds',
     _data: [
       {
-        add: ['VIN1', 'VIN2'],
+        add: ['VIN1', 'VIN2', 'VIN3', 'VIN4'],
         _hash: '',
       },
     ],
@@ -85,34 +90,132 @@ export const carsExample = (): CarsExample => {
 
   //CarGeneral
   //................................................................
-  const carGeneralTableCfg = hip<any>({
+  const carGeneralTableCfg = hip<TableCfg>({
     key: 'carGeneral',
     type: 'components',
     columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'brand', type: 'string' },
-      { key: 'type', type: 'string' },
-      { key: 'doors', type: 'number' },
-    ],
+      { key: '_hash', type: 'string', titleLong: 'Hash', titleShort: 'Hash' },
+      { key: 'brand', type: 'string', titleLong: 'Brand', titleShort: 'Brand' },
+      { key: 'type', type: 'string', titleLong: 'Type', titleShort: 'Type' },
+      { key: 'doors', type: 'number', titleLong: 'Doors', titleShort: 'Doors' },
+      {
+        key: 'energyConsumption',
+        type: 'number',
+        titleLong: 'Energy Consumption',
+        titleShort: 'Energy',
+      },
+      {
+        key: 'units',
+        type: 'json',
+        titleLong: 'Energy Unit',
+        titleShort: 'Unit',
+      },
+      {
+        key: 'serviceIntervals',
+        type: 'jsonArray',
+        titleLong: 'Service Intervals',
+        titleShort: 'Intervals',
+      },
+      {
+        key: 'isElectric',
+        type: 'boolean',
+        titleLong: 'Is Electric',
+        titleShort: 'Electric',
+      },
+      {
+        key: 'meta',
+        type: 'jsonValue',
+        titleLong: 'Meta Information',
+        titleShort: 'Meta',
+      },
+    ] as ColumnCfg[],
     isHead: false,
     isRoot: false,
     isShared: true,
-  }) as TableCfg;
+  } as TableCfg);
 
-  const carGeneral = hip<any>({
-    _tableCfg: carGeneralTableCfg._hash,
+  const carGeneral = hip<ComponentsTable<CarGeneral>>({
+    _tableCfg: carGeneralTableCfg._hash as string,
     _type: 'components',
     _data: [
       {
         brand: 'Volkswagen',
         type: 'Polo',
         doors: 5,
+        energyConsumption: 7.4,
+        units: {
+          energy: 'l/100km',
+          _hash: '',
+        },
+        serviceIntervals: [15000, 30000, 45000],
+        isElectric: false,
+        meta: {
+          pressText: 'A popular compact car.',
+          _hash: '',
+        },
         _hash: '',
       },
       {
         brand: 'Volkswagen',
         type: 'Golf',
         doors: 3,
+        energyConsumption: 6.2,
+        units: {
+          energy: 'l/100km',
+          _hash: '',
+        },
+        serviceIntervals: [15000, 30000, 45000],
+        isElectric: false,
+        meta: {
+          pressText: 'A well-known hatchback.',
+          _hash: '',
+        },
+        _hash: '',
+      },
+      {
+        brand: 'Audi',
+        type: 'Q4 E-tron',
+        doors: 5,
+        energyConsumption: 18.0,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: true,
+        meta: [
+          {
+            pressText: 'A stylish electric SUV.',
+            _hash: '',
+          },
+          {
+            pressText: 'Combines performance with sustainability.',
+            _hash: '',
+          },
+        ],
+        _hash: '',
+      },
+      {
+        brand: 'Audi',
+        type: 'Q6 E-tron',
+        doors: 5,
+        energyConsumption: 16.0,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: true,
+        meta: [
+          {
+            pressText: 'A premium electric SUV with advanced features.',
+            _hash: '',
+          },
+          {
+            pressText: 'Offers a blend of luxury and eco-friendliness.',
+            _hash: '',
+          },
+        ],
         _hash: '',
       },
     ],
@@ -151,6 +254,12 @@ export const carsExample = (): CarsExample => {
         length: 4100,
         _hash: '',
       },
+      {
+        height: 1600,
+        width: 1900,
+        length: 4500,
+        _hash: '',
+      },
     ],
     _hash: '',
   } as ComponentsTable<CarDimension>) as ComponentsTable<CarDimension>;
@@ -165,7 +274,14 @@ export const carsExample = (): CarsExample => {
       { key: 'engine', type: 'string' },
       { key: 'transmission', type: 'string' },
       { key: 'gears', type: 'number' },
-      { key: 'carDimensionsRef', type: 'string' },
+      {
+        key: 'dimensions',
+        type: 'jsonValue',
+        ref: {
+          tableKey: 'carDimensions',
+        },
+      } as ColumnCfg,
+      { key: 'repairedByWorkshop', type: 'string' },
     ],
     isHead: false,
     isRoot: false,
@@ -180,14 +296,25 @@ export const carsExample = (): CarsExample => {
         engine: 'Diesel',
         transmission: 'Manual',
         gears: 6,
-        carDimensionsRef: carDimensions._data[0]._hash,
+        dimensions: carDimensions._data[0]._hash,
         _hash: '',
       },
       {
         engine: 'Petrol',
         transmission: 'Automatic',
         gears: 7,
-        carDimensionsRef: carDimensions._data[1]._hash,
+        dimensions: carDimensions._data[1]._hash,
+        repairedByWorkshop: 'Workshop A',
+        _hash: '',
+      },
+      {
+        engine: 'Electric',
+        transmission: 'Single-Speed',
+        gears: 1,
+        dimensions: [
+          carDimensions._data[1]._hash,
+          carDimensions._data[2]._hash,
+        ],
         _hash: '',
       },
     ],
@@ -226,6 +353,18 @@ export const carsExample = (): CarsExample => {
         highlights: 'chrome',
         _hash: '',
       },
+      {
+        sides: 'red',
+        roof: 'red',
+        highlights: 'black',
+        _hash: '',
+      },
+      {
+        sides: 'silver',
+        roof: 'silver',
+        highlights: 'chrome',
+        _hash: '',
+      },
     ],
     _hash: '',
   }) as ComponentsTable<Json>;
@@ -244,6 +383,8 @@ export const carsExample = (): CarsExample => {
         add: {
           VIN1: carGeneral._data[0]._hash,
           VIN2: carGeneral._data[1]._hash,
+          VIN3: carGeneral._data[2]._hash,
+          VIN4: carGeneral._data[3]._hash,
           _hash: '',
         },
         sliceIdsTable: 'carSliceId',
@@ -267,6 +408,8 @@ export const carsExample = (): CarsExample => {
         add: {
           VIN1: carTechnical._data[0]._hash,
           VIN2: carTechnical._data[1]._hash,
+          VIN3: carTechnical._data[2]._hash,
+          VIN4: carTechnical._data[2]._hash,
           _hash: '',
         },
         sliceIdsTable: 'carSliceId',
@@ -290,6 +433,8 @@ export const carsExample = (): CarsExample => {
         add: {
           VIN1: carColor._data[0]._hash,
           VIN2: carColor._data[1]._hash,
+          VIN3: carColor._data[2]._hash,
+          VIN4: carColor._data[3]._hash,
           _hash: '',
         },
         sliceIdsTable: 'carSliceId',
@@ -328,8 +473,8 @@ export const carsExample = (): CarsExample => {
     key: 'wheelSliceId',
     type: 'sliceIds',
     columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'add', type: 'jsonArray' },
+      { key: '_hash', type: 'string', titleLong: 'Hash', titleShort: 'Hash' },
+      { key: 'add', type: 'jsonArray', titleLong: 'Add', titleShort: 'Add' },
     ],
     isHead: false,
     isRoot: false,

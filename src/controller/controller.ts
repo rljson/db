@@ -4,13 +4,11 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { Json } from '@rljson/json';
+import { Json, JsonValue } from '@rljson/json';
 import {
-  Cake,
   ContentType,
-  EditCommand,
-  EditProtocolRow,
-  Layer,
+  InsertCommand,
+  InsertHistoryRow,
   Ref,
   Rljson,
   TableKey,
@@ -23,34 +21,41 @@ import { CakeController, CakeControllerRefs } from './cake-controller.ts';
 import { ComponentController } from './component-controller.ts';
 import { LayerController, LayerControllerRefs } from './layer-controller.ts';
 
-export type ControllerRefs = Partial<Layer> & Partial<Cake> & { base?: Ref };
-export type ControllerCommands = EditCommand;
+export type ControllerRefs = CakeControllerRefs | LayerControllerRefs;
+
+export type ControllerCommands = InsertCommand;
 
 export type ControllerRunFn<N extends string> = (
   command: ControllerCommands,
   value: Json,
   origin?: Ref,
-  refs?: Partial<ControllerRefs>,
-) => Promise<EditProtocolRow<N>>;
+  refs?: ControllerRefs,
+) => Promise<InsertHistoryRow<N>>;
 
 // ...........................................................................
 /**
  * Generic interface for a controller that manages a specific table in the database.
  * @template T The type of the table being managed.
  * @template N The name of the table being managed.
- * @property {ControllerRunFn<N>} run - Function to execute a command on the table.
+ * @property {ControllerRunFn<N>} insert - Function to execute a command on the table.
  * @property {() => Promise<void>} init - Initializes the controller.
  * @property {() => Promise<T>} table - Retrieves the current state of the table.
  * @property {(where: string | { [column: string]: JsonValue }) => Promise<Rljson>} get - Fetches data from the table based on a condition.
+ * @property {(where: string | Json, filter?: Json) => Promise<Array<{ tableKey: TableKey; ref: Ref }>>} getChildRefs - Retrieves references to child entries in related tables based on a condition.
  * @param {string | Json }} where - The condition to filter the data.
  * @returns {Promise<Json[] | null>} A promise that resolves to an array of JSON objects or null if no data is found.
  * @throws {Error} If the data is invalid.
  */
 export interface Controller<T extends TableType, N extends string> {
-  run: ControllerRunFn<N>;
+  insert: ControllerRunFn<N>;
   init(): Promise<void>;
   table(): Promise<T>;
   get(where: string | Json, filter?: Json): Promise<Rljson>;
+  getChildRefs(
+    where: string | Json,
+    filter?: Json,
+  ): Promise<Array<{ tableKey: TableKey; columnKey?: string; ref: Ref }>>;
+  filterRow(row: Json, key: string, value: JsonValue): boolean;
 }
 
 // ...........................................................................
