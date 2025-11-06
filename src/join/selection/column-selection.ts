@@ -375,7 +375,7 @@ export class ColumnSelection {
         _hash: '',
       } as ColumnInfo,
       {
-        key: 'height',
+        key: 'carDimensions/height',
         route: 'carCake/carTechnicalLayer/carTechnical/carDimensions/height',
         alias: 'height',
         titleLong: 'Car Height',
@@ -384,7 +384,7 @@ export class ColumnSelection {
         _hash: '',
       } as ColumnInfo,
       {
-        key: 'width',
+        key: 'carDimensions/width',
         route: 'carCake/carTechnicalLayer/carTechnical/carDimensions/width',
         alias: 'width',
         titleLong: 'Car Width',
@@ -393,7 +393,7 @@ export class ColumnSelection {
         _hash: '',
       } as ColumnInfo,
       {
-        key: 'length',
+        key: 'carDimensions/length',
         route: 'carCake/carTechnicalLayer/carTechnical/carDimensions/length',
         alias: 'length',
         titleLong: 'Car Length',

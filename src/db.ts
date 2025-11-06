@@ -260,6 +260,13 @@ export class Db {
       layers.set(layerKey, layer!);
     }
 
+    //Get Components
+    const components: Map<string, ComponentsTable<Json>> = new Map();
+    for (const [tableKey, table] of Object.entries(data)) {
+      if (table._type !== 'components') continue;
+      components.set(tableKey, table as ComponentsTable<Json>);
+    }
+
     //Merge Layers Slice Ids,
     const mergedSliceIds: Set<SliceId> = new Set();
     for (const layer of layers.values()) {
@@ -277,33 +284,39 @@ export class Db {
       }
     }
 
-    // Build ColumnCfgs
+    // Build ColumnCfgs and Infos for Layer referenced Components
     const columnCfgs: Map<string, ColumnCfg[]> = new Map();
     const columnInfos: Map<string, ColumnInfo[]> = new Map();
     for (const [layerKey, layer] of layers.entries()) {
       const componentKey = layer.componentsTable;
-      const { columns: colCfgs } = await this.core.tableCfg(componentKey);
+      const componentColumCfgsAndInfos =
+        await this._getColumnCfgsAndInfosForComponent(
+          `${cakeKey}/${layerKey}/`,
+          componentKey,
+        );
 
-      const columnCfg: ColumnCfg[] = [];
-      const columnInfo: ColumnInfo[] = [];
-      for (let i = 0; i < colCfgs.length; i++) {
-        if (colCfgs[i].key === '_hash') continue;
+      columnInfos.set(componentKey, componentColumCfgsAndInfos.columnInfos);
+      columnCfgs.set(componentKey, componentColumCfgsAndInfos.columnCfgs);
+    }
 
-        const colCfg = colCfgs[i];
-        columnCfg.push(colCfg);
-        columnInfo.push({
-          ...colCfg,
-          alias: `${colCfg.key}`,
-          route: Route.fromFlat(
-            `/${cakeKey}/${layerKey}/${componentKey}/${colCfg.key}`,
-          ).flat.slice(1),
-          titleShort: colCfg.key,
-          titleLong: colCfg.key,
-        });
-      }
+    // Build ColumnCfgs and Infos for referenced Components in ColumnSelection
+    const mergedColumnCfgs: Map<string, ColumnCfg[]> = new Map(
+      Array.from(columnCfgs),
+    );
+    const mergedColumnInfos: Map<string, ColumnInfo[]> = new Map(
+      Array.from(columnInfos),
+    );
+    for (const componentKey of components.keys()) {
+      if (columnCfgs.has(componentKey)) continue;
 
-      columnInfos.set(componentKey, columnInfo);
-      columnCfgs.set(componentKey, columnCfg);
+      const componentColumCfgsAndInfos =
+        await this._getColumnCfgsAndInfosForComponent('', componentKey);
+
+      mergedColumnInfos.set(
+        componentKey,
+        componentColumCfgsAndInfos.columnInfos,
+      );
+      mergedColumnCfgs.set(componentKey, componentColumCfgsAndInfos.columnCfgs);
     }
 
     //Join Rows to SliceIds
@@ -315,11 +328,45 @@ export class Db {
         const componentKey = layer.componentsTable;
         const componentRef = layer.add[sliceId];
 
+        const colCfgs = mergedColumnCfgs.get(componentKey)!;
+
         const componentsTable = data[componentKey] as ComponentsTable<Json>;
-        const component = componentsTable._data.find(
+        const baseComponentProperties = componentsTable._data.find(
           (r) => r._hash === componentRef,
         )!;
-        const colCfgs = columnCfgs.get(componentKey)!;
+        let resolvedComponentProperties: Json = {};
+
+        for (const colCfg of colCfgs) {
+          const compValue = baseComponentProperties[colCfg.key];
+          if (colCfg.ref) {
+            const refCompRef = (
+              Array.isArray(compValue) ? compValue : [compValue]
+            ) as string[];
+            const refCompKey = colCfg.ref.tableKey;
+            const refCompTable = data[refCompKey] as ComponentsTable<Json>;
+            if (!refCompTable) continue; //Referenced Component Table not found -> Was not requested in ColumnSelection
+
+            const refCompValue = refCompTable._data.find((r) =>
+              refCompRef.includes((r as Json)['_hash'] as string),
+            );
+
+            const refCompColumnCfgs = mergedColumnCfgs.get(refCompKey)!;
+            for (const refColCfg of refCompColumnCfgs) {
+              if (refColCfg.key === '_hash') continue;
+              resolvedComponentProperties = {
+                ...resolvedComponentProperties,
+                ...{
+                  [refCompKey + '/' + refColCfg.key]:
+                    refCompValue![refColCfg.key],
+                },
+              };
+            }
+          }
+          resolvedComponentProperties = {
+            ...resolvedComponentProperties,
+            ...{ [colCfg.key]: compValue },
+          };
+        }
 
         // Build Join Columns by Column Configs (for loop)
         const joinColumns: JoinColumn<any>[] = [];
@@ -329,7 +376,7 @@ export class Db {
             route: Route.fromFlat(
               `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}/${columnCfg.key}`,
             ).toRouteWithProperty(),
-            value: component[columnCfg.key] ?? null,
+            value: resolvedComponentProperties[columnCfg.key] ?? null,
             insert: null,
           } as JoinColumn<any>);
         }
@@ -355,6 +402,60 @@ export class Db {
     return new Join(joinRows, joinColumnSelection).select(columnSelection);
   }
 
+  private async _getColumnCfgsAndInfosForComponent(
+    baseRoute: string,
+    componentKey: string,
+  ): Promise<{ columnCfgs: ColumnCfg[]; columnInfos: ColumnInfo[] }> {
+    const { columns: colCfgs } = await this.core.tableCfg(componentKey);
+
+    const columnCfg: ColumnCfg[] = [];
+    const columnInfo: ColumnInfo[] = [];
+    for (let i = 0; i < colCfgs.length; i++) {
+      if (colCfgs[i].key === '_hash') continue;
+
+      const colCfg = colCfgs[i];
+
+      if (colCfg.ref) {
+        const columnCfgsAndInfosForRef =
+          await this._getColumnCfgsAndInfosForComponent(
+            baseRoute + `/${componentKey}`,
+            colCfg.ref.tableKey,
+          );
+
+        const columnCfgsForRef = columnCfgsAndInfosForRef.columnCfgs.map(
+          (cc) => ({
+            ...cc,
+            key: colCfg.ref!.tableKey + '/' + cc.key,
+          }),
+        );
+        const columnInfosForRef = columnCfgsAndInfosForRef.columnInfos.map(
+          (cc) => ({
+            ...cc,
+            key: colCfg.ref!.tableKey + '/' + cc.key,
+          }),
+        );
+
+        columnCfg.push(...columnCfgsForRef);
+        columnInfo.push(...columnInfosForRef);
+      }
+
+      columnCfg.push(colCfg);
+      columnInfo.push({
+        ...colCfg,
+        alias: `${colCfg.key}`,
+        route: Route.fromFlat(
+          baseRoute.length > 0
+            ? `${baseRoute}/${componentKey}/${colCfg.key}`
+            : `/${componentKey}/${colCfg.key}`,
+        ).flat.slice(1),
+        titleShort: colCfg.key,
+        titleLong: colCfg.key,
+      });
+    }
+
+    return { columnCfgs: columnCfg, columnInfos: columnInfo };
+  }
+
   // ...........................................................................
   /**
    * Fetches data for the given ColumnSelection
@@ -366,8 +467,13 @@ export class Db {
     //Make Component Routes unique
     const uniqueComponentRoutes: Set<string> = new Set();
     for (const colInfo of columnSelection.columns) {
-      const route = Route.fromFlat(colInfo.route).toRouteWithProperty();
-      uniqueComponentRoutes.add(route.toRouteWithoutProperty().flat);
+      const componentRoute = Route.fromFlat(colInfo.route);
+      const isolatedComponentRoute = await this.isolatePropertyKeyFromRoute(
+        componentRoute,
+      );
+      uniqueComponentRoutes.add(
+        isolatedComponentRoute.toRouteWithoutProperty().flat,
+      );
     }
 
     // Fetch Data from all controller routes
@@ -664,15 +770,11 @@ export class Db {
         ._data as InsertHistoryRow<any>[];
 
       //Sort table
-      tableData.sort((a, b) => {
-        const aTime = a.timeId.split(':')[1];
-        const bTime = b.timeId.split(':')[1];
-        if (options.ascending) {
-          return aTime.localeCompare(bTime);
-        } else {
-          return bTime.localeCompare(aTime);
-        }
-      });
+      tableData.sort((a, b) =>
+        options!.ascending
+          ? a.timeId.localeCompare(b.timeId)
+          : b.timeId.localeCompare(a.timeId),
+      );
 
       return {
         [insertHistoryTable]: { _data: tableData, _type: 'insertHistory' },
@@ -774,17 +876,24 @@ export class Db {
    * @returns A route with extracted property key
    */
   async isolatePropertyKeyFromRoute(route: Route): Promise<Route> {
-    //Check if last segment is property of component
-    const lastSegment = route.segments[route.segments.length - 1];
-    const tableKey = lastSegment.tableKey;
-    const tableExists = await this._io.tableExists(tableKey);
-    if (!Route.segmentHasRef(lastSegment) && !tableExists) {
-      //Last Segment is probably property of component
-      const result = route.upper();
-      result.propertyKey = lastSegment.tableKey;
-      return result;
+    const segmentLength = route.segments.length;
+    let propertyKey = '';
+    let result: Route = route;
+    for (let i = segmentLength; i > 0; i--) {
+      const segment = route.segments[i - 1];
+      const tableKey = segment.tableKey;
+      const tableExists = await this._io.tableExists(tableKey);
+
+      if (!tableExists) {
+        propertyKey =
+          propertyKey.length > 0
+            ? segment.tableKey + '/' + propertyKey
+            : segment.tableKey;
+        result = result.upper();
+        result.propertyKey = propertyKey;
+      }
     }
-    return route;
+    return result;
   }
 
   // ...........................................................................
