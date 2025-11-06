@@ -127,7 +127,7 @@ describe('Db', () => {
       });
 
       const timeIdsAsc = (inserts2Asc as InsertHistoryRow<'CarGeneral'>[]).map(
-        (i) => i.timeId.split(':')[1],
+        (i) => i.timeId.split(':')[0],
       );
       expect(timeIdsAsc[0] < timeIdsAsc[1]).toBe(true);
 
@@ -140,7 +140,7 @@ describe('Db', () => {
 
       const timeIdsDesc = (
         inserts2Desc as InsertHistoryRow<'CarGeneral'>[]
-      ).map((i) => i.timeId.split(':')[1]);
+      ).map((i) => i.timeId.split(':')[0]);
       expect(timeIdsDesc[0] > timeIdsDesc[1]).toBe(true);
     });
   });

@@ -4,10 +4,13 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { Route, SliceId } from '@rljson/rljson';
+import { Route, RouteRef, SliceId } from '@rljson/rljson';
 
 import { Join } from '../join.ts';
 import { ColumnSelection } from '../selection/column-selection.ts';
+
+export type RowSortOrder = 'asc' | 'desc';
+export type RowSortType = Record<RouteRef, RowSortOrder>;
 
 /// Sort configuration for catalog data
 export class RowSort {

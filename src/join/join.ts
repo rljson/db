@@ -302,7 +302,14 @@ export class Join {
    */
   get layerRoutes(): Route[] {
     return Array.from(
-      new Set(this.componentRoutes.map((r) => r.upper().flat)),
+      new Set(
+        Object.values(this.columnSelection.columns)
+          .map((c) => [
+            Route.fromFlat(c.route).top,
+            Route.fromFlat(c.route).deeper(1).top,
+          ])
+          .map((segments) => new Route(segments).flat),
+      ),
     ).map((r) => Route.fromFlat(r));
   }
 
@@ -312,8 +319,13 @@ export class Join {
    */
   get cakeRoute(): Route {
     const cakeRoute = Array.from(
-      new Set(this.layerRoutes.map((r) => r.upper().flat)),
+      new Set(
+        Object.values(this.columnSelection.columns).map(
+          (c) => Route.fromFlat(c.route).top.tableKey,
+        ),
+      ),
     ).map((r) => Route.fromFlat(r));
+
     /* v8 ignore if -- @preserve */
     if (cakeRoute.length !== 1) {
       throw new Error(

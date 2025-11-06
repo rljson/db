@@ -62,7 +62,7 @@ describe('Join', () => {
       const join = await db.join(columnSelection, cakeKey, cakeRef);
 
       const layerRoutes = join.layerRoutes;
-      expect(layerRoutes.length).toBe(3);
+      expect(layerRoutes.length).toBe(2);
     });
   });
   describe('cakeRoute', () => {

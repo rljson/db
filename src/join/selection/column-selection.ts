@@ -7,7 +7,6 @@
 import { Hash, hip } from '@rljson/hash';
 import { ColumnCfgWithRoute, Ref, Route } from '@rljson/rljson';
 
-
 export type ColumnRoute = string | string[] | number;
 
 export interface ColumnInfo extends ColumnCfgWithRoute {
@@ -340,45 +339,86 @@ export class ColumnSelection {
   static exampleCarsColumnSelection(): ColumnSelection {
     return new ColumnSelection([
       {
-        route: 'carCake/carGeneralLayer/carGeneral/brand',
         key: 'brand',
+        route: 'carCake/carGeneralLayer/carGeneral/brand',
         alias: 'brand',
-        titleShort: 'Brand',
         titleLong: 'Car Brand',
+        titleShort: 'Brand',
         type: 'string',
-      },
+        _hash: '',
+      } as ColumnInfo,
       {
-        route: 'carCake/carGeneralLayer/carGeneral/type',
         key: 'type',
+        route: 'carCake/carGeneralLayer/carGeneral/type',
         alias: 'type',
-        titleShort: 'Type',
         titleLong: 'Car Type',
+        titleShort: 'Type',
         type: 'string',
-      },
+        _hash: '',
+      } as ColumnInfo,
       {
-        route: 'carCake/carGeneralLayer/carGeneral/isElectric',
+        key: 'serviceIntervals',
+        route: 'carCake/carGeneralLayer/carGeneral/serviceIntervals',
+        alias: 'serviceIntervals',
+        titleLong: 'Car Service Intervals',
+        titleShort: 'Service Intervals',
+        type: 'jsonValue',
+        _hash: '',
+      } as ColumnInfo,
+      {
         key: 'isElectric',
+        route: 'carCake/carGeneralLayer/carGeneral/isElectric',
         alias: 'isElectric',
-        titleShort: 'Is Electric',
-        titleLong: 'This Car is Electric',
+        titleLong: 'Is Electric Car',
+        titleShort: 'Electric',
         type: 'boolean',
-      },
+        _hash: '',
+      } as ColumnInfo,
       {
-        route: 'carCake/carTechnicalLayer/carTechnical/transmission',
-        key: 'transmission',
-        alias: 'transmission',
-        titleShort: 'Transmission',
-        titleLong: 'Type of Transmission',
-        type: 'string',
-      },
+        key: 'height',
+        route: 'carCake/carTechnicalLayer/carTechnical/carDimensions/height',
+        alias: 'height',
+        titleLong: 'Car Height',
+        titleShort: 'Height',
+        type: 'number',
+        _hash: '',
+      } as ColumnInfo,
       {
-        route: 'carCake/carColorLayer/carColor/sides',
-        key: 'sides',
-        alias: 'sides',
-        titleShort: 'Sides',
-        titleLong: 'Car Sides Color',
+        key: 'width',
+        route: 'carCake/carTechnicalLayer/carTechnical/carDimensions/width',
+        alias: 'width',
+        titleLong: 'Car Width',
+        titleShort: 'Width',
+        type: 'number',
+        _hash: '',
+      } as ColumnInfo,
+      {
+        key: 'length',
+        route: 'carCake/carTechnicalLayer/carTechnical/carDimensions/length',
+        alias: 'length',
+        titleLong: 'Car Length',
+        titleShort: 'Length',
+        type: 'number',
+        _hash: '',
+      } as ColumnInfo,
+      {
+        key: 'engine',
+        route: 'carCake/carTechnicalLayer/carTechnical/engine',
+        alias: 'engine',
+        titleLong: 'Car Engine',
+        titleShort: 'Engine',
         type: 'string',
-      },
+        _hash: '',
+      } as ColumnInfo,
+      {
+        key: 'repairedByWorkshop',
+        route: 'carCake/carTechnicalLayer/carTechnical/repairedByWorkshop',
+        alias: 'repairedByWorkshop',
+        titleLong: 'Was Repaired By Workshop',
+        titleShort: 'Repaired By Workshop',
+        type: 'boolean',
+        _hash: '',
+      } as ColumnInfo,
     ]);
   }
 
