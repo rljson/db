@@ -264,9 +264,13 @@ describe('Db', () => {
       expect(isolated.carGeneral).toBeDefined();
       expect(isolated.carGeneral._data.map((c) => c.brand)).toEqual([
         'Volkswagen',
+        'Tesla',
         'Audi',
         'Audi',
         'Volkswagen',
+        'BMW',
+        'BMW',
+        'Tesla',
       ]);
 
       const nonExistingPropertyKey = 'nonExistingProperty';

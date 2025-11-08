@@ -238,8 +238,8 @@ describe('Join', () => {
         new Set(selected.rows.flatMap((r) => r)),
       );
 
-      expect(selectedResult.length).toBe(2);
-      expect(selectedResult).toEqual(['Volkswagen', 'Audi']);
+      expect(selectedResult.length).toBe(4);
+      expect(selectedResult).toEqual(['Volkswagen', 'Audi', 'BMW', 'Tesla']);
     });
   });
 
@@ -254,7 +254,16 @@ describe('Join', () => {
       const sorted = join.sort(rowSort);
       const sortedResult = sorted.rows.map((r) => r[0]);
 
-      const expected = ['Volkswagen', 'Volkswagen', 'Audi', 'Audi'];
+      const expected = [
+        'Volkswagen',
+        'Volkswagen',
+        'Tesla',
+        'Tesla',
+        'BMW',
+        'BMW',
+        'Audi',
+        'Audi',
+      ];
       expect(sortedResult).toEqual(expected);
     });
   });
@@ -283,7 +292,7 @@ describe('Join', () => {
         {},
       );
 
-      expect(writtenData['carGeneral']._data.length).toBe(4);
+      expect(writtenData['carGeneral']._data.length).toBe(8);
       const writtenDataSet = new Set(
         writtenData['carGeneral']._data.map((d: any) => d['brand']),
       );

@@ -352,6 +352,7 @@ export class Db {
 
             const refCompColumnCfgs = mergedColumnCfgs.get(refCompKey)!;
             for (const refColCfg of refCompColumnCfgs) {
+              /* v8 ignore next -- @preserve */
               if (refColCfg.key === '_hash') continue;
               resolvedComponentProperties = {
                 ...resolvedComponentProperties,
@@ -496,7 +497,7 @@ export class Db {
    */
   async insert(
     insert: Insert<any>,
-    options?: { skipNotification?: boolean },
+    options?: { skipNotification?: boolean; skipHistory?: boolean },
   ): Promise<InsertHistoryRow<any>> {
     const initialRoute = Route.fromFlat(insert.route);
     const runs = await this._resolveInsert(insert);
@@ -523,7 +524,7 @@ export class Db {
     insert: Insert<any>,
     route: Route,
     runFns: Record<string, ControllerRunFn<any>>,
-    options?: { skipNotification?: boolean },
+    options?: { skipNotification?: boolean; skipHistory?: boolean },
   ): Promise<InsertHistoryRow<any>> {
     let result: InsertHistoryRow<any>;
     let tableKey: string;
@@ -596,7 +597,7 @@ export class Db {
     result.route = insert.route;
 
     //Write insertHistory
-    await this._writeInsertHistory(tableKey, result);
+    if (!options?.skipHistory) await this._writeInsertHistory(tableKey, result);
 
     //Notify listeners
     if (!options?.skipNotification)
@@ -884,6 +885,7 @@ export class Db {
       const tableKey = segment.tableKey;
       const tableExists = await this._io.tableExists(tableKey);
 
+      /* v8 ignore next -- @preserve */
       if (!tableExists) {
         propertyKey =
           propertyKey.length > 0

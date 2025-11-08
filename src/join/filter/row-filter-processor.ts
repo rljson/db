@@ -12,7 +12,6 @@ import { ColumnSelection } from '../selection/column-selection.ts';
 import { ColumnFilterProcessor } from './column-filter-processor.ts';
 import { RowFilter } from './row-filter.ts';
 
-
 // #############################################################################
 export class RowFilterProcessor {
   // ...........................................................................
@@ -277,8 +276,8 @@ export class RowFilterProcessor {
       const route = item.route;
       if (availableRoutes.includes(route) === false) {
         throw new Error(
-          `RowFilterProcessor: Error while applying filter to view: ` +
-            `There is a column filter for route "${route}", but the view ` +
+          `RowFilterProcessor: Error while applying filter to join: ` +
+            `There is a column filter for route "${route}", but the join ` +
             `does not have a column with this route.\n\nAvailable routes:\n` +
             `${availableRoutes.map((a) => `- ${a}`).join('\n')}`,
         );

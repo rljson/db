@@ -422,6 +422,56 @@ export class ColumnSelection {
     ]);
   }
 
+  static exampleCarsColumnSelectionOnlySomeColumns(): ColumnSelection {
+    return new ColumnSelection([
+      {
+        key: 'brand',
+        route: 'carCake/carGeneralLayer/carGeneral/brand',
+        alias: 'brand',
+        titleLong: 'Car Brand',
+        titleShort: 'Brand',
+        type: 'string',
+        _hash: '',
+      } as ColumnInfo,
+      {
+        key: 'type',
+        route: 'carCake/carGeneralLayer/carGeneral/type',
+        alias: 'type',
+        titleLong: 'Car Type',
+        titleShort: 'Type',
+        type: 'string',
+        _hash: '',
+      } as ColumnInfo,
+      {
+        key: 'serviceIntervals',
+        route: 'carCake/carGeneralLayer/carGeneral/serviceIntervals',
+        alias: 'serviceIntervals',
+        titleLong: 'Car Service Intervals',
+        titleShort: 'Service Intervals',
+        type: 'jsonValue',
+        _hash: '',
+      } as ColumnInfo,
+      {
+        key: 'isElectric',
+        route: 'carCake/carGeneralLayer/carGeneral/isElectric',
+        alias: 'isElectric',
+        titleLong: 'Is Electric Car',
+        titleShort: 'Electric',
+        type: 'boolean',
+        _hash: '',
+      } as ColumnInfo,
+      {
+        key: 'carDimensions/length',
+        route: 'carCake/carTechnicalLayer/carTechnical/carDimensions/length',
+        alias: 'length',
+        titleLong: 'Car Length',
+        titleShort: 'Length',
+        type: 'number',
+        _hash: '',
+      } as ColumnInfo,
+    ]);
+  }
+
   // ...........................................................................
   static empty(): ColumnSelection {
     return new ColumnSelection([]);

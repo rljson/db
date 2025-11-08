@@ -8,7 +8,6 @@ import { Io, IoMem } from '@rljson/io';
 import { JsonValue } from '@rljson/json';
 import {
   BaseValidator,
-  ColumnCfg,
   ContentType,
   createInsertHistoryTableCfg,
   Rljson,
@@ -132,18 +131,6 @@ export class Core {
     }
 
     return tableCfg;
-  }
-
-  // ...........................................................................
-  async columnCfg(table: string, column: string): Promise<ColumnCfg> {
-    const tableCfg = await this.tableCfg(table);
-    const columnCfg = tableCfg.columns.find((col) => col.key === column);
-    if (!columnCfg) {
-      throw new Error(
-        `Core: columnCfg: Column "${column}" not found in table "${table}".`,
-      );
-    }
-    return columnCfg;
   }
 
   // ...........................................................................
