@@ -100,11 +100,22 @@ export const exampleEditActionRowFilter = (): EditAction => ({
  */
 
 export const exampleEditActionSetValue = (): EditAction => ({
-  name: 'Set Service Interval Edit',
+  name: 'Set: Service Intervals to [15000, 30000, 45000, 60000]',
   type: 'setValue',
   data: {
     route: 'carCake/carGeneralLayer/carGeneral/serviceIntervals',
     value: [15000, 30000, 45000, 60000],
+    _hash: '',
+  } as EditActionSetValue,
+  _hash: '',
+});
+
+export const exampleEditSetValueReferenced = (): EditAction => ({
+  name: 'Set: Length to 4200',
+  type: 'setValue',
+  data: {
+    route: 'carCake/carTechnicalLayer/carTechnical/carDimensions/length',
+    value: 4200,
     _hash: '',
   } as EditActionSetValue,
   _hash: '',

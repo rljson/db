@@ -58,13 +58,6 @@ type LayerInsertObject = {
   };
 };
 
-type ComponentInsertObject = {
-  [componentRoute: string]: {
-    route: Route;
-    value: Json | null;
-  };
-};
-
 export class Join {
   private _base: JoinRowsHashed = {};
   private _processes: JoinProcess[] = [];
@@ -72,6 +65,7 @@ export class Join {
   constructor(
     baseRows: JoinRows,
     private _baseColumnSelection: ColumnSelection,
+    private _objectMap?: Json,
   ) {
     // Hash the rows
     this._base = this._hashedRows(baseRows);
@@ -418,6 +412,7 @@ export class Join {
         const joinCol = dataColumns.find((dataCol) => {
           const colInfoRoute = Route.fromFlat(colInfo.route);
           const dataColRoute = dataCol.route;
+
           return colInfoRoute.equalsWithoutRefs(dataColRoute);
         });
         /* v8 ignore next -- @preserve */
@@ -506,9 +501,9 @@ export class Join {
             };
           } = {};
           layerInsertObj[layerRoute.root.tableKey] = {
-            route: compInsertObj.route,
+            route: Route.fromFlat(compRouteFlat),
             value: {
-              [sliceId]: compInsertObj.value,
+              [sliceId]: compInsertObj as Json | null,
             },
           };
           layerInsertObjects.push(layerInsertObj);
@@ -528,38 +523,68 @@ export class Join {
   private _insertComponentObjects(
     sliceId: SliceId,
     insertColumns: JoinColumn<any>[],
-  ): ComponentInsertObject {
-    // Find all component routes
-    const componentRoutes = this.componentRoutes;
-
+  ): Json {
     // Get merged columns (with insert values)
     const columns = this._mergeInsertRow(sliceId, insertColumns);
 
-    // Create insert objects for all component routes
-    const result = {} as ComponentInsertObject;
-    for (const compRoute of componentRoutes) {
-      let compChanged: boolean = false;
-      const compInsert = {} as Json;
+    return this._denormalizeComponentInserts(columns, this._objectMap || {});
+  }
 
-      // Find all columns that belong to the component
-      for (const c of columns) {
-        /*v8 ignore else -- @preserve */
-        if (compRoute.includes(c.route)) {
-          if (c.insert !== null) {
-            compChanged = true;
-            compInsert[c.route.propertyKey! as string] = c.insert;
-          } else {
-            compInsert[c.route.propertyKey! as string] = c.value;
-          }
-        } else {
-          continue;
+  private _denormalizeComponentInserts(
+    columns: JoinColumn<any>[],
+    objectMap: Json,
+    refTableKey?: string,
+  ): Json {
+    const result: Json = {};
+
+    for (const [propertyKey, propertyValue] of Object.entries(objectMap)) {
+      if (typeof propertyValue === 'object') {
+        const refObjectMap: Json = {};
+        const refTableKey = (propertyValue as Json)._tableKey as string;
+        for (const [refKey, refValue] of Object.entries(
+          propertyValue as Json,
+        )) {
+          if (refKey === '_tableKey') continue;
+          refObjectMap[refTableKey + '/' + refKey] = refValue;
         }
+
+        const refInsert = this._denormalizeComponentInserts(
+          columns,
+          refObjectMap,
+          refTableKey,
+        );
+
+        for (const [refRoute, refObject] of Object.entries(refInsert)) {
+          const insertObj = { [propertyKey]: refObject };
+
+          if (!result[refRoute]) result[refRoute] = {};
+
+          result[refRoute] = {
+            ...(result[refRoute] as Json),
+            ...insertObj,
+          };
+        }
+      } else {
+        let compKey = Route.fromFlat(propertyValue as string).upper().flat;
+
+        compKey = refTableKey
+          ? compKey.replace(`/${refTableKey}`, '')
+          : compKey;
+
+        const refPropertyKey = refTableKey
+          ? propertyKey.replace(`${refTableKey}/`, '')
+          : propertyKey;
+
+        if (!result[compKey]) result[compKey] = {};
+
+        result[compKey] = {
+          ...(result[compKey] as Json),
+          [refPropertyKey]:
+            columns.find((col) => {
+              return col.route.propertyKey === propertyKey;
+            })?.insert ?? null,
+        };
       }
-      /*v8 ignore next -- @preserve */
-      result[compRoute.flat] = {
-        route: compRoute,
-        value: compChanged ? compInsert : null,
-      };
     }
 
     return result;

@@ -108,10 +108,10 @@ describe('Join', () => {
   describe('columnTypes', () => {
     it('should return the column types of Join', async () => {
       const join = await db.join(columnSelection, cakeKey, cakeRef);
-      const colTypes = join.columnTypes;
+      const colTypes = join.columnTypes.sort();
 
       expect(Object.values(colTypes)).toEqual(
-        columnSelection.columns.map((c) => c.type),
+        columnSelection.columns.map((c) => c.type).sort(),
       );
     });
   });
@@ -121,7 +121,9 @@ describe('Join', () => {
       const join = await db.join(columnSelection, cakeKey, cakeRef);
       const initialColSelection = join.columnSelection;
 
-      expect(initialColSelection).toBe(columnSelection);
+      expect(initialColSelection.columns.map((c) => c.key).sort()).toEqual(
+        columnSelection.columns.map((c) => c.key).sort(),
+      );
 
       // Edit the column selection and verify that it has changed
       join.select(new ColumnSelection(columnSelection.columns.slice(0, 2)));

@@ -203,8 +203,25 @@ export class RowFilterProcessor {
     for (const i of remainingIndices) {
       const cellValue = join.value(i, columnIndex);
 
-      if (filter.matches(cellValue)) {
-        result.push(i);
+      if (Array.isArray(cellValue)) {
+        for (const v of cellValue) {
+          if (typeof v === 'object' && v !== null) {
+            const matchValue = v.value;
+            if (filter.matches(matchValue)) {
+              result.push(i);
+              break;
+            }
+          } else {
+            if (filter.matches(v)) {
+              result.push(i);
+              break;
+            }
+          }
+        }
+      } else {
+        if (filter.matches(cellValue)) {
+          result.push(i);
+        }
       }
     }
 

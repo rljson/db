@@ -287,103 +287,83 @@ export class Db {
     // Build ColumnCfgs and Infos for Layer referenced Components
     const columnCfgs: Map<string, ColumnCfg[]> = new Map();
     const columnInfos: Map<string, ColumnInfo[]> = new Map();
+    let objectMap: Json = {};
     for (const [layerKey, layer] of layers.entries()) {
       const componentKey = layer.componentsTable;
-      const componentColumCfgsAndInfos =
-        await this._getColumnCfgsAndInfosForComponent(
-          `${cakeKey}/${layerKey}/`,
-          componentKey,
-        );
-
-      columnInfos.set(componentKey, componentColumCfgsAndInfos.columnInfos);
-      columnCfgs.set(componentKey, componentColumCfgsAndInfos.columnCfgs);
-    }
-
-    // Build ColumnCfgs and Infos for referenced Components in ColumnSelection
-    const mergedColumnCfgs: Map<string, ColumnCfg[]> = new Map(
-      Array.from(columnCfgs),
-    );
-    const mergedColumnInfos: Map<string, ColumnInfo[]> = new Map(
-      Array.from(columnInfos),
-    );
-    for (const componentKey of components.keys()) {
-      if (columnCfgs.has(componentKey)) continue;
-
-      const componentColumCfgsAndInfos =
-        await this._getColumnCfgsAndInfosForComponent('', componentKey);
-
-      mergedColumnInfos.set(
+      const componentResolved = await this._resolveComponent(
+        `${cakeKey}/${layerKey}/`,
         componentKey,
-        componentColumCfgsAndInfos.columnInfos,
       );
-      mergedColumnCfgs.set(componentKey, componentColumCfgsAndInfos.columnCfgs);
+
+      objectMap = { ...objectMap, ...componentResolved.objectMap };
+
+      columnInfos.set(componentKey, componentResolved.columnInfos);
+
+      columnCfgs.set(componentKey, componentResolved.columnCfgs);
     }
 
     //Join Rows to SliceIds
     const rowMap: Map<SliceId, JoinColumn<any>[]> = new Map();
+    const joinColumnInfos: Map<string, ColumnInfo> = new Map();
+
     for (const sliceId of mergedSliceIds) {
-      let sliceIdRow: JoinColumn<any>[] = [];
+      const sliceIdRow: JoinColumn<any>[] = [];
+
       for (const [layerKey, layer] of layers.entries()) {
         const layerRef = layer._hash;
         const componentKey = layer.componentsTable;
         const componentRef = layer.add[sliceId];
-
-        const colCfgs = mergedColumnCfgs.get(componentKey)!;
-
         const componentsTable = data[componentKey] as ComponentsTable<Json>;
-        const baseComponentProperties = componentsTable._data.find(
+        const rowComponentProperties = componentsTable._data.find(
           (r) => r._hash === componentRef,
         )!;
-        let resolvedComponentProperties: Json = {};
 
-        for (const colCfg of colCfgs) {
-          const compValue = baseComponentProperties[colCfg.key];
-          if (colCfg.ref) {
-            const refCompRef = (
-              Array.isArray(compValue) ? compValue : [compValue]
-            ) as string[];
-            const refCompKey = colCfg.ref.tableKey;
-            const refCompTable = data[refCompKey] as ComponentsTable<Json>;
-            if (!refCompTable) continue; //Referenced Component Table not found -> Was not requested in ColumnSelection
+        const resolvedProperties = this._resolveComponentProperties(
+          rowComponentProperties,
+          objectMap,
+          data,
+        );
 
-            const refCompValue = refCompTable._data.find((r) =>
-              refCompRef.includes((r as Json)['_hash'] as string),
-            );
-
-            const refCompColumnCfgs = mergedColumnCfgs.get(refCompKey)!;
-            for (const refColCfg of refCompColumnCfgs) {
-              /* v8 ignore next -- @preserve */
-              if (refColCfg.key === '_hash') continue;
-              resolvedComponentProperties = {
-                ...resolvedComponentProperties,
-                ...{
-                  [refCompKey + '/' + refColCfg.key]:
-                    refCompValue![refColCfg.key],
-                },
-              };
-            }
-          }
-          resolvedComponentProperties = {
-            ...resolvedComponentProperties,
-            ...{ [colCfg.key]: compValue },
-          };
-        }
-
-        // Build Join Columns by Column Configs (for loop)
         const joinColumns: JoinColumn<any>[] = [];
-        for (let i = 0; i < colCfgs.length; i++) {
-          const columnCfg = colCfgs[i];
-          joinColumns.push({
-            route: Route.fromFlat(
-              `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}/${columnCfg.key}`,
-            ).toRouteWithProperty(),
-            value: resolvedComponentProperties[columnCfg.key] ?? null,
-            insert: null,
-          } as JoinColumn<any>);
+        for (const [
+          resolvedPropertyKey,
+          resolvedPropertyValue,
+        ] of Object.entries(resolvedProperties)) {
+          const propertyRoute =
+            cakeKey +
+            '/' +
+            layerKey +
+            '/' +
+            componentKey +
+            '/' +
+            resolvedPropertyKey;
+
+          const propertyColumnInfo = columnSelection.columns.find(
+            (c) => c.route === propertyRoute,
+          );
+          if (!!propertyColumnInfo) {
+            const joinColumnRoute = Route.fromFlat(
+              `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}`,
+            );
+            joinColumnRoute.propertyKey = resolvedPropertyKey;
+
+            joinColumnInfos.set(resolvedPropertyKey, {
+              ...propertyColumnInfo,
+              key: resolvedPropertyKey,
+              route: joinColumnRoute.flatWithoutRefs.slice(1),
+            });
+
+            joinColumns.push({
+              route: joinColumnRoute,
+              value: resolvedPropertyValue ?? null,
+              insert: null,
+            } as JoinColumn<any>);
+          }
         }
 
-        sliceIdRow = [...sliceIdRow, ...joinColumns];
+        sliceIdRow.push(...joinColumns);
       }
+
       rowMap.set(sliceId, sliceIdRow);
     }
 
@@ -395,33 +375,105 @@ export class Db {
       });
     }
 
-    // Build ColumnSelection
-    const joinColumnInfos = Array.from(columnInfos.values()).flat();
-    const joinColumnSelection = new ColumnSelection(joinColumnInfos);
-
     // Return Join
-    return new Join(joinRows, joinColumnSelection).select(columnSelection);
+    return new Join(
+      joinRows,
+      new ColumnSelection(Array.from(joinColumnInfos.values())),
+      objectMap,
+    );
   }
 
-  private async _getColumnCfgsAndInfosForComponent(
+  private _resolveComponentProperties(
+    componentData: Json,
+    objectMapOrRoute: Json | string,
+    baseData: Rljson,
+  ): Json {
+    let result = {};
+
+    for (const [propertyKey, propertyObjectMap] of Object.entries(
+      objectMapOrRoute,
+    )) {
+      if (propertyKey === '_tableKey') continue;
+      if (typeof propertyObjectMap === 'object') {
+        const refs = Array.isArray(componentData[propertyKey])
+          ? (componentData[propertyKey] as Ref[])
+          : [componentData[propertyKey] as Ref];
+
+        const refTableKey = (propertyObjectMap as Json)['_tableKey'] as string;
+        const refCompTable = baseData[refTableKey] as ComponentsTable<Json>;
+
+        if (!refCompTable) continue;
+
+        const prefixedResolvedRefCompData: Record<string, Json[]> = {};
+        for (const ref of refs) {
+          const refCompData = refCompTable._data.find((r) => r._hash === ref);
+
+          if (refCompData) {
+            const resolvedRefCompData = this._resolveComponentProperties(
+              refCompData,
+              propertyObjectMap as Json,
+              baseData,
+            );
+
+            for (const [refPropKey, value] of Object.entries(
+              resolvedRefCompData,
+            )) {
+              if (
+                !prefixedResolvedRefCompData[`${refTableKey}/${refPropKey}`]
+              ) {
+                prefixedResolvedRefCompData[`${refTableKey}/${refPropKey}`] =
+                  [];
+              }
+
+              prefixedResolvedRefCompData[`${refTableKey}/${refPropKey}`].push({
+                ref,
+                value,
+              });
+            }
+          }
+          result = {
+            ...result,
+            ...prefixedResolvedRefCompData,
+          };
+        }
+      }
+      result = {
+        ...result,
+        ...{ [propertyKey]: componentData[propertyKey] },
+      };
+    }
+    return result;
+  }
+
+  private async _resolveComponent(
     baseRoute: string,
     componentKey: string,
-  ): Promise<{ columnCfgs: ColumnCfg[]; columnInfos: ColumnInfo[] }> {
+  ): Promise<{
+    columnCfgs: ColumnCfg[];
+    columnInfos: ColumnInfo[];
+    objectMap: Json;
+  }> {
     const { columns: colCfgs } = await this.core.tableCfg(componentKey);
 
-    const columnCfg: ColumnCfg[] = [];
-    const columnInfo: ColumnInfo[] = [];
+    const objectMap: Json = {};
+    const columnCfgs: ColumnCfg[] = [];
+    const columnInfos: ColumnInfo[] = [];
+
     for (let i = 0; i < colCfgs.length; i++) {
       if (colCfgs[i].key === '_hash') continue;
 
       const colCfg = colCfgs[i];
 
       if (colCfg.ref) {
-        const columnCfgsAndInfosForRef =
-          await this._getColumnCfgsAndInfosForComponent(
-            baseRoute + `/${componentKey}`,
-            colCfg.ref.tableKey,
-          );
+        const columnCfgsAndInfosForRef = await this._resolveComponent(
+          baseRoute + `/${componentKey}`,
+          colCfg.ref.tableKey,
+        );
+
+        objectMap[colCfg.key] = {
+          _tableKey: colCfg.ref.tableKey,
+          ...columnCfgsAndInfosForRef.objectMap,
+        };
 
         const columnCfgsForRef = columnCfgsAndInfosForRef.columnCfgs.map(
           (cc) => ({
@@ -436,25 +488,29 @@ export class Db {
           }),
         );
 
-        columnCfg.push(...columnCfgsForRef);
-        columnInfo.push(...columnInfosForRef);
+        columnCfgs.push(...columnCfgsForRef);
+        columnInfos.push(...columnInfosForRef);
       }
 
-      columnCfg.push(colCfg);
-      columnInfo.push({
+      const columnRoute = Route.fromFlat(
+        baseRoute.length > 0
+          ? `${baseRoute}/${componentKey}/${colCfg.key}`
+          : `/${componentKey}/${colCfg.key}`,
+      ).flat.slice(1);
+
+      if (!objectMap[colCfg.key]) objectMap[colCfg.key] = columnRoute;
+
+      columnCfgs.push(colCfg);
+      columnInfos.push({
         ...colCfg,
         alias: `${colCfg.key}`,
-        route: Route.fromFlat(
-          baseRoute.length > 0
-            ? `${baseRoute}/${componentKey}/${colCfg.key}`
-            : `/${componentKey}/${colCfg.key}`,
-        ).flat.slice(1),
+        route: columnRoute,
         titleShort: colCfg.key,
         titleLong: colCfg.key,
       });
     }
 
-    return { columnCfgs: columnCfg, columnInfos: columnInfo };
+    return { columnCfgs, columnInfos, objectMap };
   }
 
   // ...........................................................................

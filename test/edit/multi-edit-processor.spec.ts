@@ -23,6 +23,7 @@ import {
   exampleEditActionRowFilter,
   exampleEditActionRowSort,
   exampleEditActionSetValue,
+  exampleEditSetValueReferenced,
 } from '../../src/edit/edit-action';
 import { createMultiEditHistoryTableCfg } from '../../src/edit/edit-history';
 import { createMultiEditTableCfg, MultiEdit } from '../../src/edit/multi-edit';
@@ -246,6 +247,46 @@ describe('MultiEditProcessor', () => {
 
         expect(proc.join.rows.length).toBeGreaterThan(0);
       });
+
+      it('SetValue Referenced & Insert', async () => {
+        const editSetValueReferenced: Edit = {
+          name: 'Set: length = 4200',
+          action: exampleEditSetValueReferenced(),
+          _hash: '',
+        } as Edit;
+
+        const editInsert: Insert<Edit> = {
+          route: `${cakeKey}Edits`,
+          value: editSetValueReferenced,
+          command: 'add',
+        };
+
+        const { [`${cakeKey}EditsRef`]: editRef } = await db.insert(
+          editInsert,
+          {
+            skipHistory: true,
+          },
+        );
+
+        const multiEdit = {
+          previous: null,
+          edit: editRef!,
+          _hash: '',
+        } as MultiEdit;
+
+        const proc = await MultiEditProcessor.fromModel(
+          db,
+          cakeKey,
+          cakeRef,
+          multiEdit,
+        );
+
+        expect(proc.join.rows.every((c) => equals(c, [4200]))).toBe(true);
+
+        const insert = proc.join.insert();
+
+        const result = await db.insert(insert);
+      });
     });
     describe('Multiple Edits', async () => {
       let multiEditProc: MultiEditProcessor;
@@ -369,9 +410,13 @@ describe('MultiEditProcessor', () => {
         ).toBe(true);
 
         // length > 4000
-        expect(result.map((r) => r[4]).every((length) => length > 4000)).toBe(
-          true,
-        );
+        const lengths = result
+          .map((r) => r[4])
+          .flatMap((l: { ref: string; value: number }[]) =>
+            l.map((li) => li.value),
+          );
+
+        expect(lengths.every((length) => length > 4000)).toBe(true);
 
         //Check set values
         expect(
@@ -381,6 +426,14 @@ describe('MultiEditProcessor', () => {
               equals([15000, 30000, 45000, 60000], serviceIntervals),
             ),
         ).toBe(true);
+      });
+
+      it.skip('should insert resulting Join into Db', async () => {
+        const join = multiEditProc.join;
+        const insert = join.insert();
+
+        const result = await db.insert(insert);
+        debugger;
       });
     });
   });
