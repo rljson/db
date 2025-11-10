@@ -104,7 +104,7 @@ export class LayerController<N extends string>
     value: Json,
     origin?: Ref,
     refs?: ControllerRefs,
-  ): Promise<InsertHistoryRow<any>> {
+  ): Promise<InsertHistoryRow<any>[]> {
     // Validate command
     if (!command.startsWith('add') && !command.startsWith('remove')) {
       throw new Error(
@@ -112,16 +112,25 @@ export class LayerController<N extends string>
       );
     }
 
+    const normalizedValue: Record<SliceId, ComponentRef> = {};
+    for (const [sliceId, compRef] of Object.entries(
+      value as Record<string, any>,
+    )) {
+      normalizedValue[sliceId] = Array.isArray(compRef)
+        ? compRef[0]
+        : (compRef as ComponentRef);
+    }
+
     // layer to add/remove
     const layer =
       command.startsWith('add') === true
         ? {
-            add: value as Record<SliceId, ComponentRef>,
+            add: normalizedValue as Record<SliceId, ComponentRef>,
             ...(refs || this._refs),
           }
         : ({
             add: {},
-            remove: value as Record<SliceId, ComponentRef>,
+            remove: normalizedValue as Record<SliceId, ComponentRef>,
             ...(refs || this._refs),
           } as Layer & { _hash?: string });
 
@@ -143,7 +152,7 @@ export class LayerController<N extends string>
       timeId: timeId(),
     } as InsertHistoryRow<any>;
 
-    return result;
+    return [result];
   }
 
   async get(where: string | Json, filter?: Json): Promise<Rljson> {

@@ -271,7 +271,7 @@ describe('Join', () => {
   });
 
   describe('insert', () => {
-    it('should insert a new row into the Join', async () => {
+    it('should insert a new row into rljson data model', async () => {
       const brandColumnSelection = new ColumnSelection([
         columnSelection.columns[0],
       ]);
@@ -283,7 +283,8 @@ describe('Join', () => {
         value: 'Opel',
       };
 
-      const insert = await join.setValue(setValue).insert();
+      const inserts = await join.setValue(setValue).insert();
+      const insert = inserts[0];
       const inserted = await db.insert(insert);
 
       const writtenCakeRef = inserted['carCakeRef'] as string;

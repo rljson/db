@@ -6,7 +6,7 @@
 
 import { IoMem } from '@rljson/io';
 import { equals } from '@rljson/json';
-import { Insert } from '@rljson/rljson';
+import { Insert, InsertHistoryRow } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -261,7 +261,7 @@ describe('MultiEditProcessor', () => {
           command: 'add',
         };
 
-        const { [`${cakeKey}EditsRef`]: editRef } = await db.insert(
+        const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
           editInsert,
           {
             skipHistory: true,
@@ -283,9 +283,14 @@ describe('MultiEditProcessor', () => {
 
         expect(proc.join.rows.every((c) => equals(c, [4200]))).toBe(true);
 
-        const insert = proc.join.insert();
+        const inserts = proc.join.insert();
 
-        const result = await db.insert(insert);
+        const insertResults: InsertHistoryRow<any>[] = [];
+        for (const insert of inserts) {
+          insertResults.push(...(await db.insert(insert)));
+        }
+
+        expect(insertResults).toBeDefined();
       });
     });
     describe('Multiple Edits', async () => {
@@ -428,12 +433,16 @@ describe('MultiEditProcessor', () => {
         ).toBe(true);
       });
 
-      it.skip('should insert resulting Join into Db', async () => {
+      it('should insert resulting Join into Db', async () => {
         const join = multiEditProc.join;
-        const insert = join.insert();
+        const inserts = join.insert();
 
-        const result = await db.insert(insert);
-        debugger;
+        const insertResults: InsertHistoryRow<any>[] = [];
+        for (const insert of inserts) {
+          insertResults.push(await db.insert(insert));
+        }
+
+        expect(insertResults).toBeDefined();
       });
     });
   });

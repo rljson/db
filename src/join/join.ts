@@ -66,6 +66,7 @@ export class Join {
     baseRows: JoinRows,
     private _baseColumnSelection: ColumnSelection,
     private _objectMap?: Json,
+    private _cakeRoute?: Route,
   ) {
     // Hash the rows
     this._base = this._hashedRows(baseRows);
@@ -235,20 +236,35 @@ export class Join {
   /**
    * Returns insert Object of the join
    */
-  insert(): Insert<any> {
-    const cakeInserts = this._insertCakeObject(this.data);
-    const mergedCakeInsertObj = merge(...cakeInserts) as CakeInsertObject;
+  insert(): Insert<any>[] {
+    const cakeInserts = this._insertCakeObjects(this.data);
 
-    const route = mergedCakeInsertObj[this.cakeRoute.root.tableKey].route.flat;
-    const value = mergedCakeInsertObj[this.cakeRoute.root.tableKey].value;
+    const cakeInsertsMergedOfLayerRoutes: Map<string, Json> = new Map();
 
-    const insert: Insert<any> = {
-      command: 'add',
-      route,
-      value,
-    };
+    for (const { [this.cakeRoute.root.tableKey]: cakeInsert } of cakeInserts) {
+      const cakeInsertRoute = cakeInsert.route.flat;
+      if (!cakeInsertsMergedOfLayerRoutes.has(cakeInsertRoute)) {
+        cakeInsertsMergedOfLayerRoutes.set(cakeInsertRoute, cakeInsert.value);
+      } else {
+        const existingValue = cakeInsertsMergedOfLayerRoutes.get(
+          cakeInsertRoute,
+        ) as Json;
+        const mergedValue = merge(existingValue, cakeInsert.value);
+        cakeInsertsMergedOfLayerRoutes.set(cakeInsertRoute, mergedValue);
+      }
+    }
 
-    return insert;
+    const results: Insert<any>[] = [];
+    for (const [route, value] of cakeInsertsMergedOfLayerRoutes) {
+      const insert: Insert<any> = {
+        command: 'add',
+        route,
+        value,
+      };
+      results.push(insert);
+    }
+
+    return results;
   }
 
   // ...........................................................................
@@ -437,7 +453,7 @@ export class Join {
    * @param rows - The join rows
    * @returns The cake insert objects
    */
-  private _insertCakeObject(rows: JoinRowsHashed): CakeInsertObject[] {
+  private _insertCakeObjects(rows: JoinRowsHashed): CakeInsertObject[] {
     const cakeInsertObjects: CakeInsertObject[] = [];
     const cakeRoute = this.cakeRoute;
 
@@ -557,8 +573,6 @@ export class Join {
         for (const [refRoute, refObject] of Object.entries(refInsert)) {
           const insertObj = { [propertyKey]: refObject };
 
-          if (!result[refRoute]) result[refRoute] = {};
-
           result[refRoute] = {
             ...(result[refRoute] as Json),
             ...insertObj,
@@ -577,12 +591,18 @@ export class Join {
 
         if (!result[compKey]) result[compKey] = {};
 
+        if (refTableKey && !(result[compKey] as any)._tableKey)
+          (result[compKey] as any)._tableKey = refTableKey;
+
+        const propValue = columns.find((col) => {
+          return col.route.propertyKey === propertyKey;
+        });
+
         result[compKey] = {
           ...(result[compKey] as Json),
-          [refPropertyKey]:
-            columns.find((col) => {
-              return col.route.propertyKey === propertyKey;
-            })?.insert ?? null,
+          [refPropertyKey]: propValue
+            ? propValue.insert ?? propValue.value
+            : null,
         };
       }
     }

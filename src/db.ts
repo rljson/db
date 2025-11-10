@@ -25,6 +25,8 @@ import {
   validateInsert,
 } from '@rljson/rljson';
 
+import { traverse } from 'object-traversal';
+
 import {
   Controller,
   ControllerRefs,
@@ -338,9 +340,10 @@ export class Db {
             '/' +
             resolvedPropertyKey;
 
-          const propertyColumnInfo = columnSelection.columns.find(
-            (c) => c.route === propertyRoute,
-          );
+          const propertyColumnInfo = columnInfos
+            .get(componentKey)!
+            .find((cI) => cI.route === propertyRoute);
+
           if (!!propertyColumnInfo) {
             const joinColumnRoute = Route.fromFlat(
               `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}`,
@@ -380,7 +383,8 @@ export class Db {
       joinRows,
       new ColumnSelection(Array.from(joinColumnInfos.values())),
       objectMap,
-    );
+      Route.fromFlat(`${cakeKey}@${cakeRef}`),
+    ).select(columnSelection);
   }
 
   private _resolveComponentProperties(
@@ -426,8 +430,8 @@ export class Db {
               }
 
               prefixedResolvedRefCompData[`${refTableKey}/${refPropKey}`].push({
-                ref,
-                value,
+                _ref: ref,
+                _value: value,
               });
             }
           }
@@ -554,7 +558,7 @@ export class Db {
   async insert(
     insert: Insert<any>,
     options?: { skipNotification?: boolean; skipHistory?: boolean },
-  ): Promise<InsertHistoryRow<any>> {
+  ): Promise<InsertHistoryRow<any>[]> {
     const initialRoute = Route.fromFlat(insert.route);
     const runs = await this._resolveInsert(insert);
     const errors = validateInsert(insert);
@@ -581,8 +585,8 @@ export class Db {
     route: Route,
     runFns: Record<string, ControllerRunFn<any>>,
     options?: { skipNotification?: boolean; skipHistory?: boolean },
-  ): Promise<InsertHistoryRow<any>> {
-    let result: InsertHistoryRow<any>;
+  ): Promise<InsertHistoryRow<any>[]> {
+    let results: InsertHistoryRow<any>[];
     let tableKey: string;
 
     //Run parent controller with child refs as value
@@ -612,54 +616,98 @@ export class Db {
 
       //Iterate over child values and create Inserts for each
       const childKeys = this._childKeys(insert.value);
-      const childRefs: Record<string, string> = {};
+      const childRefs: Record<string, string[]> = {};
 
       for (const k of childKeys) {
         const childValue = (insert.value as any)[k];
         const childInsert: Insert<any> = { ...insert, value: childValue };
-        const childResult = await this._insert(childInsert, childRoute, runFns);
+        const childResults = await this._insert(
+          childInsert,
+          childRoute,
+          runFns,
+        );
         const childRefKey = childRoute.top.tableKey + 'Ref';
-        const childRef = (childResult as any)[childRefKey] as string;
+        const childRefArray = childResults.map(
+          (childResult) => (childResult as any)[childRefKey] as string,
+        );
 
-        childRefs[k] = childRef;
+        childRefs[k] = childRefArray;
       }
 
       //Run parent controller with child refs as value
       const runFn = runFns[tableKey];
-      result = {
-        ...(await runFn(
-          insert.command,
-          {
-            ...insert.value,
-            ...childRefs,
-          },
-          insert.origin,
-        )),
-        previous,
-      };
+
+      results = [
+        ...(
+          await runFn(
+            insert.command,
+            {
+              ...insert.value,
+              ...childRefs,
+            },
+            insert.origin,
+          )
+        ).map((r) => ({ ...r, ...{ previous } })),
+      ];
     } else {
       //Run root controller
       tableKey = route.root.tableKey;
       const runFn = runFns[tableKey];
 
+      const insertValue = insert.value;
+      for (const [propertyKey, propertyValue] of Object.entries(insert.value)) {
+        if (
+          propertyValue &&
+          typeof propertyValue === 'object' &&
+          !!(propertyValue as any)._tableKey
+        ) {
+          const referenceRoute = (propertyValue as any)._tableKey;
+
+          // Remove _tableKey from propertyValue to avoid issues during insert
+          delete (propertyValue as any)._tableKey;
+
+          const referenceInsert: Insert<any> = {
+            command: insert.command,
+            route: referenceRoute,
+            value: propertyValue,
+          };
+          const referencesWritten = (
+            await this._insert(
+              referenceInsert,
+              Route.fromFlat(referenceRoute),
+              runFns,
+            )
+          ).map((h) => (h as any)[referenceRoute + 'Ref']);
+
+          insertValue[propertyKey] =
+            referencesWritten.length === 1
+              ? referencesWritten[0]
+              : referencesWritten;
+        }
+      }
+
       //Run on controller, get InsertHistoryRow from return, pass previous revisions
-      result = {
-        ...(await runFn(insert.command, insert.value, insert.origin)),
-        previous,
-      };
+      results = [
+        ...(await runFn(insert.command, insertValue, insert.origin)).map(
+          (r) => ({ ...r, previous }),
+        ),
+      ];
     }
 
-    //Write route to result
-    result.route = insert.route;
+    for (const result of results) {
+      //Write route to result
+      result.route = insert.route;
 
-    //Write insertHistory
-    if (!options?.skipHistory) await this._writeInsertHistory(tableKey, result);
+      //Write insertHistory
+      if (!options?.skipHistory)
+        await this._writeInsertHistory(tableKey, result);
 
-    //Notify listeners
-    if (!options?.skipNotification)
-      this.notify.notify(Route.fromFlat(insert.route), result);
+      //Notify listeners
+      if (!options?.skipNotification)
+        this.notify.notify(Route.fromFlat(insert.route), result);
+    }
 
-    return result;
+    return results;
   }
 
   // ...........................................................................
@@ -702,6 +750,17 @@ export class Db {
     const controllers = await this._indexedControllers(
       Route.fromFlat(Insert.route),
     );
+
+    // Add Controllers for unrelated component references
+    const referencedComponentTableKeys: Set<string> = new Set();
+    traverse(Insert.value, ({ key, parent }) => {
+      if (key == '_tableKey')
+        referencedComponentTableKeys.add(parent![key] as string);
+    });
+    for (const tableKey of referencedComponentTableKeys) {
+      controllers[tableKey] ??= await this.getController(tableKey);
+    }
+
     const runFns: Record<string, ControllerRunFn<any>> = {};
     for (const tableKey of Object.keys(controllers)) {
       runFns[tableKey] = controllers[tableKey].insert.bind(

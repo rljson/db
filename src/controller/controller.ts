@@ -30,7 +30,7 @@ export type ControllerRunFn<N extends string> = (
   value: Json,
   origin?: Ref,
   refs?: ControllerRefs,
-) => Promise<InsertHistoryRow<N>>;
+) => Promise<InsertHistoryRow<N>[]>;
 
 // ...........................................................................
 /**

@@ -76,7 +76,7 @@ export class CakeController<N extends string>
     }
 
     // Validate refs or try to read them from the first row of the table
-    if (this._refs && this._refs.base) {
+    if (this._refs && this._refs.base && this._refs.base.length > 0) {
       // Validate base cake exists
       const {
         [this._tableKey]: { _data: baseCakes },
@@ -132,15 +132,26 @@ export class CakeController<N extends string>
     value: Json,
     origin?: Ref,
     refs?: ControllerRefs,
-  ): Promise<InsertHistoryRow<any>> {
+  ): Promise<InsertHistoryRow<any>[]> {
     // Validate command
     if (!command.startsWith('add')) {
       throw new Error(`Command ${command} is not supported by CakeController.`);
     }
 
+    if (this._refs?.base) delete this._refs.base; // Remove base ref to avoid conflicts
+
+    const normalizedValue: { [layerTable: string]: string } = {};
+    for (const [layerTable, layerRef] of Object.entries(
+      value as { [layerTable: string]: string },
+    )) {
+      normalizedValue[layerTable] = Array.isArray(layerRef)
+        ? layerRef[0]
+        : layerRef;
+    }
+
     // Overwrite base layers with given layers
     const cake = {
-      layers: { ...this._baseLayers, ...value },
+      layers: { ...this._baseLayers, ...normalizedValue },
       ...(refs || this._refs),
     };
 
@@ -162,7 +173,7 @@ export class CakeController<N extends string>
       timeId: timeId(),
     } as InsertHistoryRow<any>;
 
-    return result;
+    return [result];
   }
 
   async get(where: string | Json, filter?: Json): Promise<Rljson> {

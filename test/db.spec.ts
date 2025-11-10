@@ -158,9 +158,10 @@ describe('Db', () => {
           type: 'Macan Electric',
         } as CarGeneral,
       };
-      const insertHistoryRow = (await db.insert(
+      const insertHistoryRows = (await db.insert(
         insert0,
-      )) as InsertHistoryRow<'CarGeneral'>;
+      )) as InsertHistoryRow<'CarGeneral'>[];
+      const insertHistoryRow = insertHistoryRows[0];
 
       const insertHistoryRowsByRef = await db.getInsertHistoryRowsByRef(
         'carGeneral',
@@ -185,9 +186,10 @@ describe('Db', () => {
         } as CarGeneral,
       };
 
-      const insertHistoryRow = (await db.insert(
+      const insertHistoryRows = (await db.insert(
         insert0,
-      )) as InsertHistoryRow<'CarGeneral'>;
+      )) as InsertHistoryRow<'CarGeneral'>[];
+      const insertHistoryRow = insertHistoryRows[0];
 
       const insertHistoryRowByTimeId = await db.getInsertHistoryRowByTimeId(
         'carGeneral',
@@ -214,9 +216,10 @@ describe('Db', () => {
         } as CarGeneral,
       };
 
-      const insertHistoryRow = (await db.insert(
+      const insertHistoryRows = (await db.insert(
         insert0,
-      )) as InsertHistoryRow<'CarGeneral'>;
+      )) as InsertHistoryRow<'CarGeneral'>[];
+      const insertHistoryRow = insertHistoryRows[0];
 
       const timeIds = await db.getTimeIdsForRef(
         'carGeneral',
@@ -461,10 +464,11 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const addedLayerInsertHistory = (await db.insert(
+      const addedLayerInsertHistorys = (await db.insert(
         Insert,
-      )) as InsertHistoryRow<'CarGeneralLayer'>;
+      )) as InsertHistoryRow<'CarGeneralLayer'>[];
 
+      const addedLayerInsertHistory = addedLayerInsertHistorys[0];
       //Search for first carGeneral
       const where = {
         carGeneral: rmhsh(carsExample().carGeneral._data[0]) as {
@@ -602,7 +606,8 @@ describe('Db', () => {
         origin: 'H45H',
         acknowledged: false,
       };
-      const cakeInsertHistoryRow = await db.insert(layerInsert);
+      const cakeInsertHistoryRows = await db.insert(layerInsert);
+      const cakeInsertHistoryRow = cakeInsertHistoryRows[0];
       const cakeRevisionTimeId = cakeInsertHistoryRow.timeId;
 
       //Get layer revision TimeId
@@ -667,7 +672,9 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.insert(Insert);
+      const results = await db.insert(Insert);
+      const result = results[0];
+
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
@@ -708,7 +715,9 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.insert(Insert);
+      const results = await db.insert(Insert);
+      const result = results[0];
+
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
@@ -749,7 +758,9 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.insert(Insert);
+      const results = await db.insert(Insert);
+      const result = results[0];
+
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
@@ -770,8 +781,8 @@ describe('Db', () => {
         origin: 'H45H',
         acknowledged: false,
       };
-
-      const result = await db.insert(Insert);
+      const results = await db.insert(Insert);
+      const result = results[0];
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralLayerRef).toBeDefined();
@@ -792,7 +803,8 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.insert(Insert);
+      const results = await db.insert(Insert);
+      const result = results[0];
 
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
@@ -819,7 +831,8 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.insert(Insert);
+      const results = await db.insert(Insert);
+      const result = results[0];
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carTechnicalRef).toBeDefined();
@@ -840,7 +853,7 @@ describe('Db', () => {
 
       const writtenDimensionRow = await db.core.readRow(
         'carDimensions',
-        writtenComponent.dimensions as string,
+        (writtenComponent.dimensions as any)[0] as string,
       );
       expect(writtenDimensionRow).toBeDefined();
       expect(writtenDimensionRow?.carDimensions?._data.length).toBe(1);
@@ -872,7 +885,9 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.insert(Insert);
+      const results = await db.insert(Insert);
+      const result = results[0];
+
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralLayerRef).toBeDefined();
@@ -921,8 +936,9 @@ describe('Db', () => {
         origin: 'H45H',
         acknowledged: false,
       };
+      const results = await db.insert(Insert);
+      const result = results[0];
 
-      const result = await db.insert(Insert);
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carCakeRef).toBeDefined();
