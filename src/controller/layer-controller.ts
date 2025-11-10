@@ -116,6 +116,11 @@ export class LayerController<N extends string>
     for (const [sliceId, compRef] of Object.entries(
       value as Record<string, any>,
     )) {
+      if (Array.isArray(compRef) && compRef.length > 1) {
+        throw new Error(
+          `LayerController insert: Component ref for slice ${sliceId} cannot be an array of size > 1. No 1:n relations supported.`,
+        );
+      }
       normalizedValue[sliceId] = Array.isArray(compRef)
         ? compRef[0]
         : (compRef as ComponentRef);

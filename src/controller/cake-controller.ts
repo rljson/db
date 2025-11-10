@@ -144,6 +144,12 @@ export class CakeController<N extends string>
     for (const [layerTable, layerRef] of Object.entries(
       value as { [layerTable: string]: string },
     )) {
+      if (Array.isArray(layerRef) && layerRef.length > 1) {
+        throw new Error(
+          `CakeController insert: Layer ref for table ${layerTable} cannot be an array of size > 1. No 1:n relations supported.`,
+        );
+      }
+
       normalizedValue[layerTable] = Array.isArray(layerRef)
         ? layerRef[0]
         : layerRef;
