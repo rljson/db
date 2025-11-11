@@ -6,7 +6,7 @@
 
 import { IoMem } from '@rljson/io';
 import { equals } from '@rljson/json';
-import { Insert, InsertHistoryRow } from '@rljson/rljson';
+import { Insert, InsertHistoryRow, Route } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -73,9 +73,12 @@ describe('MultiEditProcessor', () => {
         command: 'add',
       };
 
-      const { [`${cakeKey}EditsRef`]: editRef } = await db.insert(editInsert, {
-        skipHistory: true,
-      });
+      const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
+        editInsert,
+        {
+          skipHistory: true,
+        },
+      );
 
       const multiEdit: MultiEdit = {
         previous: null,
@@ -111,7 +114,7 @@ describe('MultiEditProcessor', () => {
           command: 'add',
         };
 
-        const { [`${cakeKey}EditsRef`]: editRef } = await db.insert(
+        const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
           editInsert,
           {
             skipHistory: true,
@@ -149,7 +152,7 @@ describe('MultiEditProcessor', () => {
           command: 'add',
         };
 
-        const { [`${cakeKey}EditsRef`]: editRef } = await db.insert(
+        const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
           editInsert,
           {
             skipHistory: true,
@@ -187,7 +190,7 @@ describe('MultiEditProcessor', () => {
           command: 'add',
         };
 
-        const { [`${cakeKey}EditsRef`]: editRef } = await db.insert(
+        const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
           editInsert,
           {
             skipHistory: true,
@@ -225,7 +228,7 @@ describe('MultiEditProcessor', () => {
           command: 'add',
         };
 
-        const { [`${cakeKey}EditsRef`]: editRef } = await db.insert(
+        const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
           editInsert,
           {
             skipHistory: true,
@@ -250,7 +253,7 @@ describe('MultiEditProcessor', () => {
 
       it('SetValue Referenced & Insert', async () => {
         const editSetValueReferenced: Edit = {
-          name: 'Set: length = 4200',
+          name: 'Set: length = 4800',
           action: exampleEditSetValueReferenced(),
           _hash: '',
         } as Edit;
@@ -281,7 +284,7 @@ describe('MultiEditProcessor', () => {
           multiEdit,
         );
 
-        expect(proc.join.rows.every((c) => equals(c, [4200]))).toBe(true);
+        expect(proc.join.rows.every((c) => equals(c, [4800]))).toBe(true);
 
         const inserts = proc.join.insert();
 
@@ -291,6 +294,30 @@ describe('MultiEditProcessor', () => {
         }
 
         expect(insertResults).toBeDefined();
+        expect(insertResults.length).toBe(1);
+
+        const writtenCakeRef = insertResults[0][`${cakeKey}Ref`] as string;
+        const writtenData = await db.get(
+          Route.fromFlat(
+            `/${cakeKey}@${writtenCakeRef}/carTechnicalLayer/carTechnical/carDimensions/length`,
+          ),
+          {
+            carTechnicalLayer: {
+              carTechnical: {
+                carDimensions: {
+                  length: 4800,
+                },
+              },
+            },
+          },
+        );
+
+        expect(writtenData['carDimensions']._data.length).toBe(6);
+        expect(
+          writtenData['carDimensions']._data.every(
+            (d: any) => d['length'] === 4800,
+          ),
+        ).toBe(true);
       });
     });
     describe('Multiple Edits', async () => {
@@ -355,10 +382,10 @@ describe('MultiEditProcessor', () => {
 
         for (const insert of editInserts) {
           //Insert Edit
-          const res = await db.insert(insert, {
+          const results = await db.insert(insert, {
             skipHistory: true,
           });
-          editRefs.push(res[`${cakeKey}EditsRef`]!);
+          editRefs.push(results[0][`${cakeKey}EditsRef`]!);
         }
 
         //Create MultiEdit chain
@@ -379,11 +406,11 @@ describe('MultiEditProcessor', () => {
             command: 'add',
           };
 
-          const res = await db.insert(multiEditInsert, {
+          const results = await db.insert(multiEditInsert, {
             skipHistory: true,
           });
 
-          previousMultiEditRef = res[`${cakeKey}MultiEditsRef`]!; //Update previous ref
+          previousMultiEditRef = results[0][`${cakeKey}MultiEditsRef`]!; //Update previous ref
         }
 
         multiEditProc = await MultiEditProcessor.fromModel(
@@ -418,7 +445,7 @@ describe('MultiEditProcessor', () => {
         const lengths = result
           .map((r) => r[4])
           .flatMap((l: { ref: string; value: number }[]) =>
-            l.map((li) => li.value),
+            l.map((li) => (li as any)._value),
           );
 
         expect(lengths.every((length) => length > 4000)).toBe(true);
@@ -439,7 +466,7 @@ describe('MultiEditProcessor', () => {
 
         const insertResults: InsertHistoryRow<any>[] = [];
         for (const insert of inserts) {
-          insertResults.push(await db.insert(insert));
+          insertResults.push(...(await db.insert(insert)));
         }
 
         expect(insertResults).toBeDefined();

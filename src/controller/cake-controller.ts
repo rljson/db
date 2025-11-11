@@ -92,12 +92,13 @@ export class CakeController<N extends string>
       // Store base layers from base cake
       this._baseLayers = rmhsh(baseCake.layers);
     } else {
-      // Try to read refs from first row of cakes table (Fallback)
+      // Try to read refs from first (latest?) row of cakes table (Fallback)
       const cake = this._table._data[0] as CakeControllerRefs;
       this._refs = {
         sliceIdsTable: cake.sliceIdsTable,
         sliceIdsRow: cake.sliceIdsRow,
       };
+      this._baseLayers = rmhsh(cake.layers!);
     }
   }
 

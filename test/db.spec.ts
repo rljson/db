@@ -1009,7 +1009,8 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.insert(Insert);
+      const results = await db.insert(Insert);
+      const result = results[0];
 
       expect(callback).toHaveBeenCalledTimes(1);
       expect(callback).toHaveBeenCalledWith(result);
@@ -1046,8 +1047,11 @@ describe('Db', () => {
         acknowledged: false,
       };
 
-      const result = await db.insert(Insert);
-      const result2 = await db.insert(Insert2);
+      const results = await db.insert(Insert);
+      const result = results[0];
+
+      const results2 = await db.insert(Insert2);
+      const result2 = results2[0];
 
       expect(callback).toHaveBeenCalledTimes(2);
       expect(callback).toHaveBeenNthCalledWith(1, result);

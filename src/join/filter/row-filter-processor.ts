@@ -205,8 +205,12 @@ export class RowFilterProcessor {
 
       if (Array.isArray(cellValue)) {
         for (const v of cellValue) {
-          if (typeof v === 'object' && v !== null) {
-            const matchValue = v.value;
+          if (
+            typeof v === 'object' &&
+            v !== null &&
+            v.hasOwnProperty('_value')
+          ) {
+            const matchValue = v._value;
             if (filter.matches(matchValue)) {
               result.push(i);
               break;

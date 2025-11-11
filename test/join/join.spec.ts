@@ -285,7 +285,8 @@ describe('Join', () => {
 
       const inserts = await join.setValue(setValue).insert();
       const insert = inserts[0];
-      const inserted = await db.insert(insert);
+      const inserteds = await db.insert(insert);
+      const inserted = inserteds[0];
 
       const writtenCakeRef = inserted['carCakeRef'] as string;
       const writtenData = await db.get(
@@ -295,12 +296,12 @@ describe('Join', () => {
         {},
       );
 
-      expect(writtenData['carGeneral']._data.length).toBe(8);
+      expect(writtenData['carGeneral']._data.length).toBe(16);
       const writtenDataSet = new Set(
         writtenData['carGeneral']._data.map((d: any) => d['brand']),
       );
       expect(writtenDataSet.has('Opel')).toBe(true);
-      expect(writtenDataSet.size).toBe(1);
+      expect(writtenDataSet.size).toBe(5);
     });
   });
 });

@@ -112,21 +112,22 @@ export class Db {
     const segmentController = controllers[segment.tableKey];
     const segmentRef = await this._getReferenceOfRouteSegment(segment);
 
+    const hashRequested = typeof where === 'string';
+
     //Build where for segment
     //If string given -> build _hash object
-    let segmentWhere =
-      typeof where === 'object' ? where : ({ _hash: where } as Json);
+    let segmentWhere = hashRequested ? ({ _hash: where } as Json) : where;
+
+    //If ref through route given, add to where object
+    segmentWhere = segmentRef
+      ? ({ ...segmentWhere, ...{ _hash: segmentRef } } as Json)
+      : segmentWhere;
 
     //If encapsulated, drill into object
     segmentWhere =
       segment.tableKey in segmentWhere
         ? (segmentWhere[segment.tableKey] as Json)
         : segmentWhere;
-
-    //If ref through route given, add to where object
-    segmentWhere = segmentRef
-      ? ({ ...segmentWhere, ...{ _hash: segmentRef } } as Json)
-      : segmentWhere;
 
     const childSegmentLevel = segmentLevel + 1;
     const childSegment = route.segments[childSegmentLevel];
@@ -143,43 +144,76 @@ export class Db {
       parent = this.isolatePropertyFromComponents(parent, route.propertyKey!);
     }
 
-    const children: Rljson[] = [];
-    const filteredParentRows: Map<string, Json> = new Map();
-
     if (!segmentIsDeepest) {
-      const childRefs = await segmentController.getChildRefs(
-        segmentWhereWithoutChildWhere,
-        {},
-      );
-      for (const { tableKey, columnKey, ref } of childRefs) {
-        if (tableKey !== childSegment.tableKey) continue;
+      const children: Rljson[] = [];
+      const filteredParentRows: Map<string, Json> = new Map();
 
-        const child = await this._get(
+      if (hashRequested) {
+        children.push(
+          await this._get(route, {}, controllers, childSegmentLevel),
+        );
+      } else {
+        //Get children with given where
+        const childWhere =
+          (segmentWhere[childSegment.tableKey] as Json | string) ?? {};
+
+        const allChildrenByWhere = await this._get(
           route,
-          { ...segmentWhere, ...{ _hash: ref } },
+          childWhere,
           controllers,
           childSegmentLevel,
         );
-        children.push(child);
 
-        //Filter parent to only include rows that have the child ref
+        //Get this child's data from all children
+        const thisChildren = allChildrenByWhere[childSegment.tableKey];
 
-        for (const childObjs of child[tableKey]._data) {
-          const childRef = (childObjs as Json)['_hash'] as string;
-          for (const row of parent[segment.tableKey]._data) {
-            if (filteredParentRows.has((row as Json)['_hash'] as string))
-              continue;
+        //These are the children from deeper levels that we do not need
+        // to filter against, but we have to keep them
+        const deeperChildren = { ...allChildrenByWhere };
+        delete deeperChildren[childSegment.tableKey];
 
-            const includesChild = segmentController.filterRow(
-              row,
-              columnKey ?? tableKey,
-              childRef,
-            );
-            if (includesChild) {
-              filteredParentRows.set(
-                (row as Json)['_hash'] as string,
-                row as Json,
+        children.push(deeperChildren);
+
+        //Get child refs from parent
+        const childRefs = await segmentController.getChildRefs(
+          segmentWhereWithoutChildWhere,
+          {},
+        );
+
+        for (const { tableKey, columnKey, ref } of childRefs) {
+          if (tableKey !== childSegment.tableKey) continue;
+
+          const childRefIsInWhere = thisChildren._data.find(
+            (c) => ref === c._hash,
+          );
+
+          if (!childRefIsInWhere) continue;
+
+          const child = {
+            [tableKey]: { _data: [childRefIsInWhere] },
+          } as Rljson;
+
+          children.push(child);
+
+          //Filter parent to only include rows that have the child ref
+
+          for (const childObjs of child[tableKey]._data) {
+            const childRef = (childObjs as Json)['_hash'] as string;
+            for (const row of parent[segment.tableKey]._data) {
+              if (filteredParentRows.has((row as Json)['_hash'] as string))
+                continue;
+
+              const includesChild = segmentController.filterRow(
+                row,
+                columnKey ?? tableKey,
+                childRef,
               );
+              if (includesChild) {
+                filteredParentRows.set(
+                  (row as Json)['_hash'] as string,
+                  row as Json,
+                );
+              }
             }
           }
         }
@@ -194,7 +228,6 @@ export class Db {
           },
         },
       };
-
       return merge(parentWithFilteredRows, ...children) as Rljson;
     }
 

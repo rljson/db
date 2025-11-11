@@ -115,7 +115,7 @@ export const exampleEditSetValueReferenced = (): EditAction => ({
   type: 'setValue',
   data: {
     route: 'carCake/carTechnicalLayer/carTechnical/carDimensions/length',
-    value: 4200,
+    value: 4800,
     _hash: '',
   } as EditActionSetValue,
   _hash: '',
