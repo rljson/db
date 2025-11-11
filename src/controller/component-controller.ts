@@ -119,6 +119,9 @@ export class ComponentController<N extends string, T extends Json>
 
     const results: InsertHistoryRow<N>[] = [];
     for (const component of components) {
+      //Remove internal flags
+      delete (component as any)._somethingToInsert;
+
       const rlJson = { [this._tableKey]: { _data: [component] } } as Rljson;
 
       //Write component to io

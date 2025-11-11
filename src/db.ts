@@ -7,39 +7,20 @@
 import { Io } from '@rljson/io';
 import { Json, merge } from '@rljson/json';
 import {
-  CakesTable,
-  ColumnCfg,
-  ComponentsTable,
-  Insert,
-  InsertHistoryRow,
-  InsertHistoryTimeId,
-  isTimeId,
-  Layer,
-  LayersTable,
-  Ref,
-  Rljson,
-  Route,
-  RouteSegment,
-  SliceId,
-  SliceIds,
-  validateInsert,
+  CakesTable, ColumnCfg, ComponentsTable, Insert, InsertHistoryRow, InsertHistoryTimeId, isTimeId,
+  Layer, LayersTable, Ref, Rljson, Route, RouteSegment, SliceId, SliceIds, validateInsert
 } from '@rljson/rljson';
 
 import { traverse } from 'object-traversal';
 
 import {
-  Controller,
-  ControllerRefs,
-  ControllerRunFn,
-  createController,
+  Controller, ControllerRefs, ControllerRunFn, createController
 } from './controller/controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRows } from './join/join.ts';
-import {
-  ColumnInfo,
-  ColumnSelection,
-} from './join/selection/column-selection.ts';
+import { ColumnInfo, ColumnSelection } from './join/selection/column-selection.ts';
 import { Notify } from './notify.ts';
+
 
 /**
  * Access Rljson data
@@ -149,15 +130,20 @@ export class Db {
       const filteredParentRows: Map<string, Json> = new Map();
 
       if (hashRequested) {
-        children.push(
-          await this._get(route, {}, controllers, childSegmentLevel),
+        //Get all children of hash
+        const childrenOfHash = await this._get(
+          route,
+          {},
+          controllers,
+          childSegmentLevel,
         );
+        children.push(childrenOfHash);
       } else {
         //Get children with given where
         const childWhere =
           (segmentWhere[childSegment.tableKey] as Json | string) ?? {};
 
-        const allChildrenByWhere = await this._get(
+        const childrenByWhere = await this._get(
           route,
           childWhere,
           controllers,
@@ -165,14 +151,13 @@ export class Db {
         );
 
         //Get this child's data from all children
-        const thisChildren = allChildrenByWhere[childSegment.tableKey];
+        const segmentChildrenByWhere = childrenByWhere[childSegment.tableKey];
 
         //These are the children from deeper levels that we do not need
         // to filter against, but we have to keep them
-        const deeperChildren = { ...allChildrenByWhere };
-        delete deeperChildren[childSegment.tableKey];
-
-        children.push(deeperChildren);
+        const otherChildrenByWhere = { ...childrenByWhere };
+        delete otherChildrenByWhere[childSegment.tableKey];
+        children.push(otherChildrenByWhere);
 
         //Get child refs from parent
         const childRefs = await segmentController.getChildRefs(
@@ -183,7 +168,7 @@ export class Db {
         for (const { tableKey, columnKey, ref } of childRefs) {
           if (tableKey !== childSegment.tableKey) continue;
 
-          const childRefIsInWhere = thisChildren._data.find(
+          const childRefIsInWhere = segmentChildrenByWhere._data.find(
             (c) => ref === c._hash,
           );
 
@@ -194,6 +179,22 @@ export class Db {
           } as Rljson;
 
           children.push(child);
+
+          // const childrenOfReferencedChild = await this._get(
+          //   route,
+          //   ref,
+          //   controllers,
+          //   childSegmentLevel,
+          // );
+          // delete childrenOfReferencedChild[tableKey];
+
+          // if (
+          //   !otherChildrenByWhere ||
+          //   (Object.keys(otherChildrenByWhere).length == 0 &&
+          //     Object.keys(childrenOfReferencedChild).length > 0)
+          // ) {
+          //   children.push(childrenOfReferencedChild);
+          // }
 
           //Filter parent to only include rows that have the child ref
 

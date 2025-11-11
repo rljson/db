@@ -302,10 +302,11 @@ describe('Db', () => {
           type: 'Macan Electric',
         } as CarGeneral,
       };
-      const insertHistoryRow = (await db.insert(
+      const insertHistoryRows = (await db.insert(
         insert0,
-      )) as InsertHistoryRow<'CarGeneral'>;
+      )) as InsertHistoryRow<'CarGeneral'>[];
 
+      const insertHistoryRow = insertHistoryRows[0];
       const ref = await db.getRefOfTimeId(
         'carGeneral',
         insertHistoryRow.timeId,

@@ -504,6 +504,8 @@ export class Join {
       for (const [compRouteFlat, compInsertObj] of Object.entries(
         insertComponentObjects,
       )) {
+        if (!(compInsertObj as any)._somethingToInsert) continue;
+
         const compRoute = Route.fromFlat(compRouteFlat);
 
         /* v8 ignore else -- @preserve */
@@ -576,6 +578,11 @@ export class Join {
           result[refRoute] = {
             ...(result[refRoute] as Json),
             ...insertObj,
+            ...{
+              _somethingToInsert:
+                (result[refRoute] as any)._somethingToInsert ||
+                (refObject as any)._somethingToInsert,
+            },
           };
         }
       } else {
@@ -598,11 +605,17 @@ export class Join {
           return col.route.propertyKey === propertyKey;
         });
 
+        const somethingToInsert = (propValue && !!propValue.insert) ?? false;
+
         result[compKey] = {
           ...(result[compKey] as Json),
           [refPropertyKey]: propValue
             ? propValue.insert ?? propValue.value
             : null,
+          ...{
+            _somethingToInsert:
+              (result[compKey] as any)._somethingToInsert || somethingToInsert,
+          },
         };
       }
     }

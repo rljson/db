@@ -464,12 +464,27 @@ describe('MultiEditProcessor', () => {
         const join = multiEditProc.join;
         const inserts = join.insert();
 
+        expect(inserts.length).toBe(1);
+
         const insertResults: InsertHistoryRow<any>[] = [];
         for (const insert of inserts) {
           insertResults.push(...(await db.insert(insert)));
         }
 
         expect(insertResults).toBeDefined();
+        expect(insertResults.length).toBe(1);
+
+        const writtenCakeRef = insertResults[0][`${cakeKey}Ref`] as string;
+        const {
+          carGeneral: { _data: writtenCarGeneral },
+        } = await db.get(
+          Route.fromFlat(
+            `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/serviceIntervals`,
+          ),
+          {},
+        );
+
+        expect(writtenCarGeneral.length).toBe(join.rows.length);
       });
     });
   });
