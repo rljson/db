@@ -8,12 +8,16 @@
           "VIN1",
           "VIN2",
           "VIN3",
-          "VIN4"
+          "VIN4",
+          "VIN5",
+          "VIN6",
+          "VIN7",
+          "VIN8"
         ],
-        "_hash": "awcaW-4l-eJAl1q6F1Avdt"
+        "_hash": "2RefO1-vC_FbgYaC1FWzFo"
       }
     ],
-    "_hash": "eHIVAhgASVPy4LnBe9C3H1"
+    "_hash": "q4-vd4L--q-D7NYnF4PkZs"
   },
   "carGeneral": {
     "_tableCfg": "Tq-GIJawWlas1J3Is-QjOe",
@@ -114,9 +118,99 @@
           }
         ],
         "_hash": "Q3580DMxv1MyAqJpdZh1br"
+      },
+      {
+        "brand": "BMW",
+        "type": "i4",
+        "doors": 5,
+        "energyConsumption": 19.5,
+        "units": {
+          "energy": "kWh/100km",
+          "_hash": "5ju7Tr04ivEfiuXkcC6_Oi"
+        },
+        "serviceIntervals": [
+          20000,
+          40000,
+          60000
+        ],
+        "isElectric": true,
+        "meta": [
+          {
+            "pressText": "A sporty electric sedan.",
+            "_hash": "4TsUeWP1aUpcF2gIwFTG_W"
+          },
+          {
+            "pressText": "Delivers dynamic performance with zero emissions.",
+            "_hash": "QVNwcoJ2iHO8X20vuZYRs8"
+          }
+        ],
+        "_hash": "rwi9ORx4TjvAk36CMg_HWd"
+      },
+      {
+        "brand": "BMW",
+        "type": "3 Series",
+        "doors": 4,
+        "energyConsumption": 5.8,
+        "units": {
+          "energy": "l/100km",
+          "_hash": "0F0YNkaxZXwYfkwI8hLmHB"
+        },
+        "serviceIntervals": [
+          15000,
+          30000,
+          45000
+        ],
+        "isElectric": false,
+        "meta": {
+          "pressText": "A classic executive car.",
+          "_hash": "6Hf75Mef9bzEClx8omm-IP"
+        },
+        "_hash": "exT61bmlrIpiAFxEYPEGwm"
+      },
+      {
+        "brand": "Tesla",
+        "type": "Model 3",
+        "doors": 4,
+        "energyConsumption": 15,
+        "units": {
+          "energy": "kWh/100km",
+          "_hash": "5ju7Tr04ivEfiuXkcC6_Oi"
+        },
+        "serviceIntervals": [
+          25000,
+          50000,
+          75000
+        ],
+        "isElectric": true,
+        "meta": {
+          "pressText": "A revolutionary electric sedan.",
+          "_hash": "JrccLDnNeAnXwrf9jJHdSq"
+        },
+        "_hash": "Opx1GsrWm9Wq55cEAwTURw"
+      },
+      {
+        "brand": "Tesla",
+        "type": "Model Y",
+        "doors": 5,
+        "energyConsumption": 16.5,
+        "units": {
+          "energy": "kWh/100km",
+          "_hash": "5ju7Tr04ivEfiuXkcC6_Oi"
+        },
+        "serviceIntervals": [
+          25000,
+          50000,
+          75000
+        ],
+        "isElectric": true,
+        "meta": {
+          "pressText": "A versatile electric SUV.",
+          "_hash": "peUtMdYee4YV4V1fFs0eB9"
+        },
+        "_hash": "yQiZeWhWFFNNzxNL8x-U2c"
       }
     ],
-    "_hash": "eBUkjzJZqPF5ZbO6NknaC-"
+    "_hash": "Pf8xfbESWWPpUI-QbuNVMM"
   },
   "carDimensions": {
     "_tableCfg": "XOdQaoIy829zQkONlQOM6Y",
@@ -139,9 +233,33 @@
         "width": 1900,
         "length": 4500,
         "_hash": "x01mi9n_4Ew6phadYckL-D"
+      },
+      {
+        "height": 1650,
+        "width": 1950,
+        "length": 4700,
+        "_hash": "81XwuRP4deRp7grcBxzbgt"
+      },
+      {
+        "height": 1500,
+        "width": 1820,
+        "length": 4200,
+        "_hash": "KBtvDE2uc3yZz3ytVaZbH1"
+      },
+      {
+        "height": 1550,
+        "width": 1880,
+        "length": 4300,
+        "_hash": "iaL_iUicHEBC4pB7qqbX7q"
+      },
+      {
+        "height": 1450,
+        "width": 1830,
+        "length": 4150,
+        "_hash": "sImPV57noUS86i58YDAZTt"
       }
     ],
-    "_hash": "BoZcOWWYB7QPTcsSX1wxGH"
+    "_hash": "D8tlp21w3gfFLXh0nRViIQ"
   },
   "carTechnical": {
     "_tableCfg": "OXvp3M8zt0dWygHTZfTp7I",
@@ -171,9 +289,39 @@
           "x01mi9n_4Ew6phadYckL-D"
         ],
         "_hash": "pIO6oyjkD7NLXVQJ56nAOl"
+      },
+      {
+        "engine": "Electric",
+        "transmission": "Single-Speed",
+        "gears": 1,
+        "dimensions": "81XwuRP4deRp7grcBxzbgt",
+        "repairedByWorkshop": "Workshop B",
+        "_hash": "rw2gFcQeT-f877fu-dSfk_"
+      },
+      {
+        "engine": "Electric",
+        "transmission": "Single-Speed",
+        "gears": 1,
+        "dimensions": "KBtvDE2uc3yZz3ytVaZbH1",
+        "_hash": "BjW1xlRpuqDvrgIhUZ_p4x"
+      },
+      {
+        "engine": "Petrol",
+        "transmission": "Manual",
+        "gears": 6,
+        "dimensions": "iaL_iUicHEBC4pB7qqbX7q",
+        "repairedByWorkshop": "Workshop A",
+        "_hash": "U6PRAGZ0Wh68Xk-2MT2UJ3"
+      },
+      {
+        "engine": "Electric",
+        "transmission": "Single-Speed",
+        "gears": 1,
+        "dimensions": "sImPV57noUS86i58YDAZTt",
+        "_hash": "ZvPbbZJ5iWX2XSL5cfVOZg"
       }
     ],
-    "_hash": "c3inrK0Ew_Bwgzrjk1e5nx"
+    "_hash": "8dqxcspQYmkVxaRts7Y-DR"
   },
   "carColor": {
     "_tableCfg": "ly3011-E3YdeftOYLKqzXd",
@@ -202,9 +350,33 @@
         "roof": "silver",
         "highlights": "chrome",
         "_hash": "t4lmf3SUmDscWUkJwnzBEu"
+      },
+      {
+        "sides": "black",
+        "roof": "black",
+        "highlights": "black",
+        "_hash": "jST690KdFZovVXUj27AizW"
+      },
+      {
+        "sides": "white",
+        "roof": "white",
+        "highlights": "chrome",
+        "_hash": "WE1rQF7DhIlFwL2_cAPXpP"
+      },
+      {
+        "sides": "grey",
+        "roof": "black",
+        "highlights": "chrome",
+        "_hash": "4DxFgMGn8tjHRhjyHveWeU"
+      },
+      {
+        "sides": "red",
+        "roof": "white",
+        "highlights": "black",
+        "_hash": "bLglKhI-Trh1xn7yWRuLir"
       }
     ],
-    "_hash": "YhyJxZgmsvDrg-jZXukAmU"
+    "_hash": "eATkLFjbf_FgNtwXLzOYiM"
   },
   "carGeneralLayer": {
     "_tableCfg": "JYefyjTR46Fo-c8Tlo6P7n",
@@ -216,15 +388,19 @@
           "VIN2": "Eidc3z-qU7LMsurYm5jCtT",
           "VIN3": "UiJ3Z6DmwDdLib05RKrxby",
           "VIN4": "Q3580DMxv1MyAqJpdZh1br",
-          "_hash": "FMFr-VtN1vRqpI8ILb2LvL"
+          "VIN5": "rwi9ORx4TjvAk36CMg_HWd",
+          "VIN6": "exT61bmlrIpiAFxEYPEGwm",
+          "VIN7": "Opx1GsrWm9Wq55cEAwTURw",
+          "VIN8": "yQiZeWhWFFNNzxNL8x-U2c",
+          "_hash": "rbvDxZ42yL9kVRIgp7ZpbK"
         },
         "sliceIdsTable": "carSliceId",
-        "sliceIdsTableRow": "awcaW-4l-eJAl1q6F1Avdt",
+        "sliceIdsTableRow": "2RefO1-vC_FbgYaC1FWzFo",
         "componentsTable": "carGeneral",
-        "_hash": "rwmS-sgn_nqowxjx86HWCQ"
+        "_hash": "F6m5VlMcDCz0s39i5nZRcf"
       }
     ],
-    "_hash": "MMuMakLamIZAlhFQfbRw-D"
+    "_hash": "I--kkbwDm89BnlC8ImfYyh"
   },
   "carTechnicalLayer": {
     "_tableCfg": "0iL8Czul98-LD7oXDW9SWO",
@@ -236,15 +412,19 @@
           "VIN2": "8bCHqjbXoMBgM3S5oRAvHO",
           "VIN3": "pIO6oyjkD7NLXVQJ56nAOl",
           "VIN4": "pIO6oyjkD7NLXVQJ56nAOl",
-          "_hash": "-7Kf97vFV8Zv00Ir3WJdym"
+          "VIN5": "BjW1xlRpuqDvrgIhUZ_p4x",
+          "VIN6": "U6PRAGZ0Wh68Xk-2MT2UJ3",
+          "VIN7": "ZvPbbZJ5iWX2XSL5cfVOZg",
+          "VIN8": "pIO6oyjkD7NLXVQJ56nAOl",
+          "_hash": "661RQngn0gnLwyMsV0Od-i"
         },
         "sliceIdsTable": "carSliceId",
-        "sliceIdsTableRow": "awcaW-4l-eJAl1q6F1Avdt",
+        "sliceIdsTableRow": "2RefO1-vC_FbgYaC1FWzFo",
         "componentsTable": "carTechnical",
-        "_hash": "aao3HID9MaJHwwzFnDYQFZ"
+        "_hash": "jAwepLTvCXMkSqkHM_8yDJ"
       }
     ],
-    "_hash": "EEZ_ze6-xcToIPIjX7oznf"
+    "_hash": "uk2fPd9RiDqSX3FbKv9zqL"
   },
   "carColorLayer": {
     "_tableCfg": "AqNt4hM9EEUx-s1AaDtzOs",
@@ -256,15 +436,19 @@
           "VIN2": "5vRZZ-vTbp1zhman-kDIV3",
           "VIN3": "8dfs1C-xIMp9mpRF0xnKeP",
           "VIN4": "t4lmf3SUmDscWUkJwnzBEu",
-          "_hash": "b0NMZqyhngsM8qmEGtdvyh"
+          "VIN5": "jST690KdFZovVXUj27AizW",
+          "VIN6": "WE1rQF7DhIlFwL2_cAPXpP",
+          "VIN7": "4DxFgMGn8tjHRhjyHveWeU",
+          "VIN8": "bLglKhI-Trh1xn7yWRuLir",
+          "_hash": "qjM28PYkXQ47R-an0HLhi4"
         },
         "sliceIdsTable": "carSliceId",
-        "sliceIdsTableRow": "awcaW-4l-eJAl1q6F1Avdt",
+        "sliceIdsTableRow": "2RefO1-vC_FbgYaC1FWzFo",
         "componentsTable": "carColor",
-        "_hash": "dIR0Tv0T-LcP-l7_69xGOo"
+        "_hash": "xiTv2UKaEHSk1wd44XU0K0"
       }
     ],
-    "_hash": "IZ_C7tsRoY9rD4tJQBE0ld"
+    "_hash": "g_j4PxRQo1bwnHeIuaaHNP"
   },
   "carCake": {
     "_tableCfg": "5tcrs9FhrPleZv_JXzetfy",
@@ -272,17 +456,17 @@
     "_data": [
       {
         "sliceIdsTable": "carSliceId",
-        "sliceIdsRow": "awcaW-4l-eJAl1q6F1Avdt",
+        "sliceIdsRow": "2RefO1-vC_FbgYaC1FWzFo",
         "layers": {
-          "carGeneralLayer": "rwmS-sgn_nqowxjx86HWCQ",
-          "carTechnicalLayer": "aao3HID9MaJHwwzFnDYQFZ",
-          "carColorLayer": "dIR0Tv0T-LcP-l7_69xGOo",
-          "_hash": "XV9-ipwrmmQW-TdtTg0eBd"
+          "carGeneralLayer": "F6m5VlMcDCz0s39i5nZRcf",
+          "carTechnicalLayer": "jAwepLTvCXMkSqkHM_8yDJ",
+          "carColorLayer": "xiTv2UKaEHSk1wd44XU0K0",
+          "_hash": "3cIQ_f-V_63X2MOt1jb7t9"
         },
-        "_hash": "UeYPUism1sVtF6tLiOwh_Y"
+        "_hash": "CDGdGBeIalWNKAVLKw1eRQ"
       }
     ],
-    "_hash": "EgqApPi0VuBcpWFJKmH-Rj"
+    "_hash": "2BdVyvTH0icsc5gd0iIcSx"
   },
   "wheelSliceId": {
     "_tableCfg": "e91MNbEo8gwnBHaEQxX6wt",

@@ -32,7 +32,7 @@ export abstract class BaseController<T extends TableType>
     value: Json,
     origin?: Ref,
     refs?: ControllerRefs,
-  ): Promise<InsertHistoryRow<any>>;
+  ): Promise<InsertHistoryRow<any>[]>;
 
   // ...........................................................................
   abstract init(): Promise<void>;

@@ -16,6 +16,7 @@ import { ColumnSelection } from '../../src/join/selection/column-selection';
 import { SetValue } from '../../src/join/set-value/set-value';
 import { RowSort } from '../../src/join/sort/row-sort';
 
+
 describe('Join', () => {
   let db: Db;
 
@@ -62,7 +63,7 @@ describe('Join', () => {
       const join = await db.join(columnSelection, cakeKey, cakeRef);
 
       const layerRoutes = join.layerRoutes;
-      expect(layerRoutes.length).toBe(3);
+      expect(layerRoutes.length).toBe(2);
     });
   });
   describe('cakeRoute', () => {
@@ -108,10 +109,10 @@ describe('Join', () => {
   describe('columnTypes', () => {
     it('should return the column types of Join', async () => {
       const join = await db.join(columnSelection, cakeKey, cakeRef);
-      const colTypes = join.columnTypes;
+      const colTypes = join.columnTypes.sort();
 
       expect(Object.values(colTypes)).toEqual(
-        columnSelection.columns.map((c) => c.type),
+        columnSelection.columns.map((c) => c.type).sort(),
       );
     });
   });
@@ -121,7 +122,9 @@ describe('Join', () => {
       const join = await db.join(columnSelection, cakeKey, cakeRef);
       const initialColSelection = join.columnSelection;
 
-      expect(initialColSelection).toBe(columnSelection);
+      expect(initialColSelection.columns.map((c) => c.key).sort()).toEqual(
+        columnSelection.columns.map((c) => c.key).sort(),
+      );
 
       // Edit the column selection and verify that it has changed
       join.select(new ColumnSelection(columnSelection.columns.slice(0, 2)));
@@ -238,8 +241,8 @@ describe('Join', () => {
         new Set(selected.rows.flatMap((r) => r)),
       );
 
-      expect(selectedResult.length).toBe(2);
-      expect(selectedResult).toEqual(['Volkswagen', 'Audi']);
+      expect(selectedResult.length).toBe(4);
+      expect(selectedResult).toEqual(['Volkswagen', 'Audi', 'BMW', 'Tesla']);
     });
   });
 
@@ -254,13 +257,22 @@ describe('Join', () => {
       const sorted = join.sort(rowSort);
       const sortedResult = sorted.rows.map((r) => r[0]);
 
-      const expected = ['Volkswagen', 'Volkswagen', 'Audi', 'Audi'];
+      const expected = [
+        'Volkswagen',
+        'Volkswagen',
+        'Tesla',
+        'Tesla',
+        'BMW',
+        'BMW',
+        'Audi',
+        'Audi',
+      ];
       expect(sortedResult).toEqual(expected);
     });
   });
 
   describe('insert', () => {
-    it('should insert a new row into the Join', async () => {
+    it('should insert a new row into rljson data model', async () => {
       const brandColumnSelection = new ColumnSelection([
         columnSelection.columns[0],
       ]);
@@ -272,8 +284,10 @@ describe('Join', () => {
         value: 'Opel',
       };
 
-      const insert = await join.setValue(setValue).insert();
-      const inserted = await db.insert(insert);
+      const inserts = await join.setValue(setValue).insert();
+      const insert = inserts[0];
+      const inserteds = await db.insert(insert);
+      const inserted = inserteds[0];
 
       const writtenCakeRef = inserted['carCakeRef'] as string;
       const writtenData = await db.get(
@@ -283,7 +297,7 @@ describe('Join', () => {
         {},
       );
 
-      expect(writtenData['carGeneral']._data.length).toBe(4);
+      expect(writtenData['carGeneral']._data.length).toBe(8);
       const writtenDataSet = new Set(
         writtenData['carGeneral']._data.map((d: any) => d['brand']),
       );

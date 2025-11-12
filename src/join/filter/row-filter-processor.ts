@@ -204,8 +204,32 @@ export class RowFilterProcessor {
     for (const i of remainingIndices) {
       const cellValue = join.value(i, columnIndex);
 
-      if (filter.matches(cellValue)) {
-        result.push(i);
+      if (Array.isArray(cellValue)) {
+        for (const v of cellValue) {
+          /* v8 ignore else -- @preserve */
+          if (
+            typeof v === 'object' &&
+            v !== null &&
+            v.hasOwnProperty('_value')
+          ) {
+            const matchValue = v._value;
+
+            /* v8 ignore else -- @preserve */
+            if (filter.matches(matchValue)) {
+              result.push(i);
+              break;
+            }
+          } else {
+            if (filter.matches(v)) {
+              result.push(i);
+              break;
+            }
+          }
+        }
+      } else {
+        if (filter.matches(cellValue)) {
+          result.push(i);
+        }
       }
     }
 
@@ -277,8 +301,8 @@ export class RowFilterProcessor {
       const route = item.route;
       if (availableRoutes.includes(route) === false) {
         throw new Error(
-          `RowFilterProcessor: Error while applying filter to view: ` +
-            `There is a column filter for route "${route}", but the view ` +
+          `RowFilterProcessor: Error while applying filter to join: ` +
+            `There is a column filter for route "${route}", but the join ` +
             `does not have a column with this route.\n\nAvailable routes:\n` +
             `${availableRoutes.map((a) => `- ${a}`).join('\n')}`,
         );

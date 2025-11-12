@@ -6,24 +6,15 @@ import { hsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  ComponentRef,
-  InsertCommand,
-  InsertHistoryRow,
-  Layer,
-  LayerRef,
-  LayersTable,
-  Ref,
-  Rljson,
-  SliceId,
-  SliceIdsRef,
-  TableKey,
-  timeId,
+  ComponentRef, InsertCommand, InsertHistoryRow, Layer, LayerRef, LayersTable, Ref, Rljson, SliceId,
+  SliceIdsRef, TableKey, timeId
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
 import { Controller, ControllerRefs } from './controller.ts';
+
 
 export interface LayerControllerRefs extends Partial<Layer> {
   base?: LayerRef;
@@ -104,7 +95,7 @@ export class LayerController<N extends string>
     value: Json,
     origin?: Ref,
     refs?: ControllerRefs,
-  ): Promise<InsertHistoryRow<any>> {
+  ): Promise<InsertHistoryRow<any>[]> {
     // Validate command
     if (!command.startsWith('add') && !command.startsWith('remove')) {
       throw new Error(
@@ -112,16 +103,31 @@ export class LayerController<N extends string>
       );
     }
 
+    const normalizedValue: Record<SliceId, ComponentRef> = {};
+    for (const [sliceId, compRef] of Object.entries(
+      value as Record<string, any>,
+    )) {
+      /* v8 ignore next -- @preserve */
+      if (Array.isArray(compRef) && compRef.length > 1) {
+        throw new Error(
+          `LayerController insert: Component ref for slice ${sliceId} cannot be an array of size > 1. No 1:n relations supported.`,
+        );
+      }
+      normalizedValue[sliceId] = Array.isArray(compRef)
+        ? compRef[0]
+        : (compRef as ComponentRef);
+    }
+
     // layer to add/remove
     const layer =
       command.startsWith('add') === true
         ? {
-            add: value as Record<SliceId, ComponentRef>,
+            add: normalizedValue as Record<SliceId, ComponentRef>,
             ...(refs || this._refs),
           }
         : ({
             add: {},
-            remove: value as Record<SliceId, ComponentRef>,
+            remove: normalizedValue as Record<SliceId, ComponentRef>,
             ...(refs || this._refs),
           } as Layer & { _hash?: string });
 
@@ -143,7 +149,7 @@ export class LayerController<N extends string>
       timeId: timeId(),
     } as InsertHistoryRow<any>;
 
-    return result;
+    return [result];
   }
 
   async get(where: string | Json, filter?: Json): Promise<Rljson> {

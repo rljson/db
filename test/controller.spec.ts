@@ -338,12 +338,13 @@ describe('Controller', () => {
         ).rejects.toThrow('Refs are not supported on ComponentController.');
 
         //Valid Run
-        const insertHistoryFirstRow =
+        const insertHistoryFirstRows =
           await carGeneralComponentController.insert(
             'add',
             carGeneralValue,
             origin,
           );
+        const insertHistoryFirstRow = insertHistoryFirstRows[0];
         expect(insertHistoryFirstRow).toBeDefined();
         expect(insertHistoryFirstRow.timeId).toBeDefined();
         expect(insertHistoryFirstRow.carGeneralRef).toBeDefined();
@@ -364,12 +365,14 @@ describe('Controller', () => {
           _hash: '', // hash will be generated automatically
         };
 
-        const insertHistorySecondRow =
+        const insertHistorySecondRows =
           await carGeneralComponentController.insert(
             'add',
             carGeneralValueSecond,
             origin,
           );
+        const insertHistorySecondRow = insertHistorySecondRows[0];
+
         expect(insertHistorySecondRow).toBeDefined();
         expect(insertHistorySecondRow.timeId).toBeDefined();
         expect(insertHistorySecondRow.carGeneralRef).toBeDefined();
@@ -659,11 +662,13 @@ describe('Controller', () => {
           } as Record<SliceId, string>,
         };
 
-        const insertHistoryFirstRow = await carGeneralLayerController.insert(
+        const insertHistoryFirstRows = await carGeneralLayerController.insert(
           'add',
           carGeneralLayerValue,
           origin,
         );
+        const insertHistoryFirstRow = insertHistoryFirstRows[0];
+
         expect(insertHistoryFirstRow).toBeDefined();
         expect(insertHistoryFirstRow.timeId).toBeDefined();
         expect(insertHistoryFirstRow.carGeneralLayerRef).toBeDefined();
@@ -680,11 +685,13 @@ describe('Controller', () => {
           } as Record<SliceId, string>,
         };
 
-        const insertHistorySecondRow = await carGeneralLayerController.insert(
+        const insertHistorySecondRows = await carGeneralLayerController.insert(
           'add',
           carGeneralLayerValueSecond,
           origin,
         );
+        const insertHistorySecondRow = insertHistorySecondRows[0];
+
         expect(insertHistorySecondRow).toBeDefined();
         expect(insertHistorySecondRow.timeId).toBeDefined();
         expect(insertHistorySecondRow.carGeneralLayerRef).toBeDefined();
@@ -716,11 +723,12 @@ describe('Controller', () => {
           VIN1: (carsExample().carGeneral._data[1]._hash as string) || '',
         } as Record<SliceId, string>;
 
-        const insertHistoryFirstRow = await carGeneralLayerController.insert(
+        const insertHistoryFirstRows = await carGeneralLayerController.insert(
           'remove',
           removeValue,
           origin,
         );
+        const insertHistoryFirstRow = insertHistoryFirstRows[0];
 
         expect(insertHistoryFirstRow).toBeDefined();
         expect(insertHistoryFirstRow.timeId).toBeDefined();
@@ -972,11 +980,12 @@ describe('Controller', () => {
           id: 'MyFirstCake',
         };
 
-        const insertHistoryFirstRow = await carCakeController.insert(
+        const insertHistoryFirstRows = await carCakeController.insert(
           'add',
           carCakeValue,
           origin,
         );
+        const insertHistoryFirstRow = insertHistoryFirstRows[0];
         expect(insertHistoryFirstRow).toBeDefined();
         expect(insertHistoryFirstRow.timeId).toBeDefined();
         expect(insertHistoryFirstRow.carCakeRef).toBeDefined();
@@ -998,11 +1007,12 @@ describe('Controller', () => {
           id: 'MySecondCake',
         };
 
-        const insertHistorySecondRow = await carCakeController.insert(
+        const insertHistorySecondRows = await carCakeController.insert(
           'add',
           carCakeValueSecond,
           origin,
         );
+        const insertHistorySecondRow = insertHistorySecondRows[0];
         expect(insertHistorySecondRow).toBeDefined();
         expect(insertHistorySecondRow.timeId).toBeDefined();
         expect(insertHistorySecondRow.carCakeRef).toBeDefined();
