@@ -7,37 +7,20 @@
 import { Io } from '@rljson/io';
 import { Json, merge } from '@rljson/json';
 import {
-  CakesTable,
-  ColumnCfg,
-  ComponentsTable,
-  Insert,
-  InsertHistoryRow,
-  InsertHistoryTimeId,
-  isTimeId,
-  Layer,
-  LayersTable,
-  Ref,
-  Rljson,
-  Route,
-  RouteSegment,
-  SliceId,
-  SliceIds,
-  validateInsert,
+  CakesTable, ColumnCfg, ComponentsTable, Insert, InsertHistoryRow, InsertHistoryTimeId, isTimeId,
+  Layer, LayersTable, Ref, Rljson, Route, RouteSegment, SliceId, SliceIds, TableKey, validateInsert
 } from '@rljson/rljson';
 
+import { traverse } from 'object-traversal';
+
 import {
-  Controller,
-  ControllerRefs,
-  ControllerRunFn,
-  createController,
+  Controller, ControllerRefs, ControllerRunFn, createController
 } from './controller/controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRows } from './join/join.ts';
-import {
-  ColumnInfo,
-  ColumnSelection,
-} from './join/selection/column-selection.ts';
+import { ColumnInfo, ColumnSelection } from './join/selection/column-selection.ts';
 import { Notify } from './notify.ts';
+
 
 /**
  * Access Rljson data
@@ -96,107 +79,173 @@ export class Db {
     }
   }
 
+  // ...........................................................................
+  /**
+   * Resolves the route and returns corresponding data for any segment of the route,
+   * matching recursive filters and where clauses
+   *
+   * @param route - The route to get data from
+   * @param where - The recursive filtering key/value pairs to apply to the data
+   * @param controllers - The controllers to use for fetching data
+   * @param filter - Optional filter to apply to the data at the current route segment
+   * @returns - An Rljson object matching the route and filters
+   */
   async _get(
     route: Route,
     where: string | Json,
     controllers: Record<string, Controller<any, any>>,
-    segmentLevel?: number,
+    filter?: Array<{
+      tableKey: TableKey;
+      columnKey?: string;
+      ref: Ref;
+    }>,
   ): Promise<Rljson> {
-    //Start at top segment
-    if (segmentLevel === undefined) segmentLevel = 0;
+    const nodeTableKey = route.top.tableKey;
+    const nodeRoute = route;
+    const nodeRouteRef = await this._getReferenceOfRouteSegment(nodeRoute.top);
+    const nodeController = controllers[nodeTableKey];
 
-    const segment = route.segments[segmentLevel];
-    const segmentIsDeepest = segmentLevel === route.segments.length - 1;
-    const segmentController = controllers[segment.tableKey];
-    const segmentRef = await this._getReferenceOfRouteSegment(segment);
+    let nodeWhere = typeof where === 'object' ? { ...where } : where;
 
-    //Build where for segment
-    //If string given -> build _hash object
-    let segmentWhere =
-      typeof where === 'object' ? where : ({ _hash: where } as Json);
-
-    //If encapsulated, drill into object
-    segmentWhere =
-      segment.tableKey in segmentWhere
-        ? (segmentWhere[segment.tableKey] as Json)
-        : segmentWhere;
-
-    //If ref through route given, add to where object
-    segmentWhere = segmentRef
-      ? ({ ...segmentWhere, ...{ _hash: segmentRef } } as Json)
-      : segmentWhere;
-
-    const childSegmentLevel = segmentLevel + 1;
-    const childSegment = route.segments[childSegmentLevel];
-
-    const segmentWhereWithoutChildWhere = { ...segmentWhere };
-    //Delete child segment key from where
-    if (!segmentIsDeepest && childSegment.tableKey in segmentWhere)
-      delete segmentWhereWithoutChildWhere[childSegment.tableKey];
-
-    let parent = await segmentController.get(segmentWhereWithoutChildWhere, {});
-
-    //Isolate Property if deepest segment has property key
-    if (segmentIsDeepest && route.hasPropertyKey) {
-      parent = this.isolatePropertyFromComponents(parent, route.propertyKey!);
+    // If not root, remove child prompts from where
+    if (!route.isRoot && typeof nodeWhere === 'object') {
+      delete nodeWhere[nodeRoute.deeper().top.tableKey];
     }
 
-    const children: Rljson[] = [];
-    const filteredParentRows: Map<string, Json> = new Map();
+    // Add ref to where
+    /* v8 ignore next -- @preserve */
+    nodeWhere = nodeWhere
+      ? typeof nodeWhere === 'string'
+        ? { _hash: nodeWhere }
+        : nodeWhere
+      : {};
 
-    if (!segmentIsDeepest) {
-      const childRefs = await segmentController.getChildRefs(
-        segmentWhereWithoutChildWhere,
-        {},
+    //  Add route ref to where
+    if (nodeRouteRef && nodeRouteRef.length > 0)
+      nodeWhere = { ...nodeWhere, ...{ _hash: nodeRouteRef } };
+
+    // Delete internal flags
+    delete (nodeWhere as Json)['_through'];
+    delete (nodeWhere as Json)['_tableKey'];
+
+    // Fetch Node Data (actual access to underlying data model)
+    const {
+      [nodeTableKey]: { _data: nodeRows, _type: nodeType, _hash: nodeHash },
+    } = await nodeController.get(nodeWhere);
+
+    // Filter Node Rows by given filter
+    const nodeRowsFiltered: Json[] = [];
+    if (filter && filter.length > 0) {
+      for (const f of filter) {
+        if (f.tableKey !== nodeTableKey) continue;
+        for (const nodeRow of nodeRows) {
+          if (nodeRow._hash === f.ref) {
+            nodeRowsFiltered.push(nodeRow);
+          }
+        }
+      }
+    } else {
+      nodeRowsFiltered.push(...(nodeRows as Json[]));
+    }
+
+    // Construct Node w/ only filtered rows
+    const node = {
+      [nodeTableKey]: {
+        _data: nodeRowsFiltered,
+        _type: nodeType,
+        _hash: nodeHash,
+      },
+    } as Rljson;
+
+    // Return if is root node (deepest level, base case)
+    if (route.isRoot) {
+      if (route.hasPropertyKey) {
+        return this.isolatePropertyFromComponents(node, route.propertyKey!);
+      }
+      return node;
+    }
+
+    // Fetch Children Data
+    const childrenRoute = route.deeper();
+    const childrenTableKey = childrenRoute.top.tableKey;
+    /* v8 ignore next -- @preserve */
+    const childrenWhere = (
+      typeof where === 'object' ? where[childrenTableKey] ?? {} : {}
+    ) as Json | string;
+
+    const childrenThroughProperty = (childrenWhere as any)?._through;
+
+    const nodeChildrenArray = [];
+    const nodeRowsMatchingChildrenRefs = new Map<string, Json>();
+
+    // Iterate over Node Rows to get Children
+    for (let i = 0; i < nodeRowsFiltered.length; i++) {
+      const nodeRow = nodeRowsFiltered[i];
+
+      // Child References of this Node Row = Filter for Children
+      const childrenRefs = await nodeController.getChildRefs(
+        (nodeRow as any)._hash,
       );
-      for (const { tableKey, columnKey, ref } of childRefs) {
-        if (tableKey !== childSegment.tableKey) continue;
 
-        const child = await this._get(
-          route,
-          { ...segmentWhere, ...{ _hash: ref } },
-          controllers,
-          childSegmentLevel,
+      const rowChildren = await this._get(
+        childrenRoute,
+        childrenWhere,
+        controllers,
+        childrenRefs,
+      );
+
+      // No Children found for where + route => skip
+      if (rowChildren[childrenTableKey]._data.length === 0) continue;
+
+      nodeChildrenArray.push(rowChildren);
+
+      // We have to check which Node Rows have Children matching the filter,
+      // if get is used with _through to filter against referenced component values
+      if (childrenThroughProperty) {
+        const childrenHashes = rowChildren[childrenTableKey]._data.map(
+          (rc) => rc._hash as string,
         );
-        children.push(child);
+        for (const nr of nodeRowsFiltered) {
+          {
+            const throughHashesInRowCouldBeArray = (nr as any)[
+              childrenThroughProperty
+            ];
+            const throughHashesInRow = Array.isArray(
+              throughHashesInRowCouldBeArray,
+            )
+              ? throughHashesInRowCouldBeArray
+              : [throughHashesInRowCouldBeArray];
 
-        //Filter parent to only include rows that have the child ref
-
-        for (const childObjs of child[tableKey]._data) {
-          const childRef = (childObjs as Json)['_hash'] as string;
-          for (const row of parent[segment.tableKey]._data) {
-            if (filteredParentRows.has((row as Json)['_hash'] as string))
-              continue;
-
-            const includesChild = segmentController.filterRow(
-              row,
-              columnKey ?? tableKey,
-              childRef,
-            );
-            if (includesChild) {
-              filteredParentRows.set(
-                (row as Json)['_hash'] as string,
-                row as Json,
-              );
+            for (const th of throughHashesInRow) {
+              if (childrenHashes.includes(th)) {
+                nodeRowsMatchingChildrenRefs.set((nr as any)._hash, nr);
+              }
             }
           }
         }
       }
-
-      //Build final parent with filtered rows
-      const parentWithFilteredRows = {
-        [segment.tableKey]: {
-          ...parent[segment.tableKey],
-          ...{
-            _data: Array.from(filteredParentRows.values()),
-          },
-        },
-      };
-
-      return merge(parentWithFilteredRows, ...children) as Rljson;
     }
 
-    return parent;
+    // Merge Children Data
+    const nodeChildren = merge(...(nodeChildrenArray as Rljson[]));
+
+    // If filtering by child refs, only return node rows that had children matching the filter
+    if (childrenThroughProperty) {
+      const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());
+      return {
+        ...node,
+        ...{
+          [nodeTableKey]: {
+            _data: matchedNodeRows,
+            _type: nodeType,
+            _hash: nodeHash,
+          },
+        },
+        ...nodeChildren,
+      } as Rljson;
+    }
+
+    return { ...node, ...nodeChildren } as Rljson;
   }
 
   // ...........................................................................
@@ -260,6 +309,13 @@ export class Db {
       layers.set(layerKey, layer!);
     }
 
+    //Get Components
+    const components: Map<string, ComponentsTable<Json>> = new Map();
+    for (const [tableKey, table] of Object.entries(data)) {
+      if (table._type !== 'components') continue;
+      components.set(tableKey, table as ComponentsTable<Json>);
+    }
+
     //Merge Layers Slice Ids,
     const mergedSliceIds: Set<SliceId> = new Set();
     for (const layer of layers.values()) {
@@ -277,65 +333,87 @@ export class Db {
       }
     }
 
-    // Build ColumnCfgs
+    // Build ColumnCfgs and Infos for Layer referenced Components
     const columnCfgs: Map<string, ColumnCfg[]> = new Map();
     const columnInfos: Map<string, ColumnInfo[]> = new Map();
+    let objectMap: Json = {};
     for (const [layerKey, layer] of layers.entries()) {
       const componentKey = layer.componentsTable;
-      const { columns: colCfgs } = await this.core.tableCfg(componentKey);
+      const componentResolved = await this._resolveComponent(
+        `${cakeKey}/${layerKey}/`,
+        componentKey,
+      );
 
-      const columnCfg: ColumnCfg[] = [];
-      const columnInfo: ColumnInfo[] = [];
-      for (let i = 0; i < colCfgs.length; i++) {
-        if (colCfgs[i].key === '_hash') continue;
+      objectMap = { ...objectMap, ...componentResolved.objectMap };
 
-        const colCfg = colCfgs[i];
-        columnCfg.push(colCfg);
-        columnInfo.push({
-          ...colCfg,
-          alias: `${colCfg.key}`,
-          route: Route.fromFlat(
-            `/${cakeKey}/${layerKey}/${componentKey}/${colCfg.key}`,
-          ).flat.slice(1),
-          titleShort: colCfg.key,
-          titleLong: colCfg.key,
-        });
-      }
+      columnInfos.set(componentKey, componentResolved.columnInfos);
 
-      columnInfos.set(componentKey, columnInfo);
-      columnCfgs.set(componentKey, columnCfg);
+      columnCfgs.set(componentKey, componentResolved.columnCfgs);
     }
 
     //Join Rows to SliceIds
     const rowMap: Map<SliceId, JoinColumn<any>[]> = new Map();
+    const joinColumnInfos: Map<string, ColumnInfo> = new Map();
+
     for (const sliceId of mergedSliceIds) {
-      let sliceIdRow: JoinColumn<any>[] = [];
+      const sliceIdRow: JoinColumn<any>[] = [];
+
       for (const [layerKey, layer] of layers.entries()) {
         const layerRef = layer._hash;
         const componentKey = layer.componentsTable;
         const componentRef = layer.add[sliceId];
-
         const componentsTable = data[componentKey] as ComponentsTable<Json>;
-        const component = componentsTable._data.find(
+        const rowComponentProperties = componentsTable._data.find(
           (r) => r._hash === componentRef,
         )!;
-        const colCfgs = columnCfgs.get(componentKey)!;
 
-        // Build Join Columns by Column Configs (for loop)
+        const resolvedProperties = this._resolveComponentProperties(
+          rowComponentProperties,
+          objectMap,
+          data,
+        );
+
         const joinColumns: JoinColumn<any>[] = [];
-        for (let i = 0; i < colCfgs.length; i++) {
-          const columnCfg = colCfgs[i];
-          joinColumns.push({
-            route: Route.fromFlat(
-              `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}/${columnCfg.key}`,
-            ).toRouteWithProperty(),
-            value: component[columnCfg.key] ?? null,
-            insert: null,
-          } as JoinColumn<any>);
+        for (const [
+          resolvedPropertyKey,
+          resolvedPropertyValue,
+        ] of Object.entries(resolvedProperties)) {
+          const propertyRoute =
+            cakeKey +
+            '/' +
+            layerKey +
+            '/' +
+            componentKey +
+            '/' +
+            resolvedPropertyKey;
+
+          const propertyColumnInfo = columnInfos
+            .get(componentKey)!
+            .find((cI) => cI.route === propertyRoute);
+
+          if (!!propertyColumnInfo) {
+            const joinColumnRoute = Route.fromFlat(
+              `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}`,
+            );
+            joinColumnRoute.propertyKey = resolvedPropertyKey;
+
+            joinColumnInfos.set(resolvedPropertyKey, {
+              ...propertyColumnInfo,
+              key: resolvedPropertyKey,
+              route: joinColumnRoute.flatWithoutRefs.slice(1),
+            });
+
+            joinColumns.push({
+              route: joinColumnRoute,
+              value: resolvedPropertyValue ?? null,
+              insert: null,
+            } as JoinColumn<any>);
+          }
         }
 
-        sliceIdRow = [...sliceIdRow, ...joinColumns];
+        sliceIdRow.push(...joinColumns);
       }
+
       rowMap.set(sliceId, sliceIdRow);
     }
 
@@ -347,12 +425,151 @@ export class Db {
       });
     }
 
-    // Build ColumnSelection
-    const joinColumnInfos = Array.from(columnInfos.values()).flat();
-    const joinColumnSelection = new ColumnSelection(joinColumnInfos);
-
     // Return Join
-    return new Join(joinRows, joinColumnSelection).select(columnSelection);
+    return new Join(
+      joinRows,
+      new ColumnSelection(Array.from(joinColumnInfos.values())),
+      objectMap,
+    ).select(columnSelection);
+  }
+
+  private _resolveComponentProperties(
+    componentData: Json,
+    objectMapOrRoute: Json | string,
+    baseData: Rljson,
+  ): Json {
+    let result = {};
+
+    for (const [propertyKey, propertyObjectMap] of Object.entries(
+      objectMapOrRoute,
+    )) {
+      if (propertyKey === '_tableKey') continue;
+      if (typeof propertyObjectMap === 'object') {
+        const refs = Array.isArray(componentData[propertyKey])
+          ? (componentData[propertyKey] as Ref[])
+          : [componentData[propertyKey] as Ref];
+
+        const refTableKey = (propertyObjectMap as Json)['_tableKey'] as string;
+        const refCompTable = baseData[refTableKey] as ComponentsTable<Json>;
+
+        if (!refCompTable) continue;
+
+        const prefixedResolvedRefCompData: Record<string, Json[]> = {};
+        for (const ref of refs) {
+          const refCompData = refCompTable._data.find((r) => r._hash === ref);
+
+          if (refCompData) {
+            const resolvedRefCompData = this._resolveComponentProperties(
+              refCompData,
+              propertyObjectMap as Json,
+              baseData,
+            );
+
+            for (const [refPropKey, value] of Object.entries(
+              resolvedRefCompData,
+            )) {
+              if (
+                !prefixedResolvedRefCompData[`${refTableKey}/${refPropKey}`]
+              ) {
+                prefixedResolvedRefCompData[`${refTableKey}/${refPropKey}`] =
+                  [];
+              }
+
+              prefixedResolvedRefCompData[`${refTableKey}/${refPropKey}`].push({
+                _ref: ref,
+                _value: value,
+              });
+            }
+          }
+          result = {
+            ...result,
+            ...prefixedResolvedRefCompData,
+          };
+        }
+      }
+      result = {
+        ...result,
+        ...{ [propertyKey]: componentData[propertyKey] },
+      };
+    }
+    return result;
+  }
+
+  // ...........................................................................
+  /**
+   * Resolve a component's columns, including referenced components
+   *
+   * @param baseRoute - The base route for the component
+   * @param componentKey - The component's table key
+   * @returns - The resolved column configurations, column infos, and object map
+   */
+  private async _resolveComponent(
+    baseRoute: string,
+    componentKey: string,
+  ): Promise<{
+    columnCfgs: ColumnCfg[];
+    columnInfos: ColumnInfo[];
+    objectMap: Json;
+  }> {
+    const { columns: colCfgs } = await this.core.tableCfg(componentKey);
+
+    const objectMap: Json = {};
+    const columnCfgs: ColumnCfg[] = [];
+    const columnInfos: ColumnInfo[] = [];
+
+    for (let i = 0; i < colCfgs.length; i++) {
+      if (colCfgs[i].key === '_hash') continue;
+
+      const colCfg = colCfgs[i];
+
+      if (colCfg.ref) {
+        const columnCfgsAndInfosForRef = await this._resolveComponent(
+          baseRoute + `/${componentKey}`,
+          colCfg.ref.tableKey,
+        );
+
+        objectMap[colCfg.key] = {
+          _tableKey: colCfg.ref.tableKey,
+          ...columnCfgsAndInfosForRef.objectMap,
+        };
+
+        const columnCfgsForRef = columnCfgsAndInfosForRef.columnCfgs.map(
+          (cc) => ({
+            ...cc,
+            key: colCfg.ref!.tableKey + '/' + cc.key,
+          }),
+        );
+        const columnInfosForRef = columnCfgsAndInfosForRef.columnInfos.map(
+          (cc) => ({
+            ...cc,
+            key: colCfg.ref!.tableKey + '/' + cc.key,
+          }),
+        );
+
+        columnCfgs.push(...columnCfgsForRef);
+        columnInfos.push(...columnInfosForRef);
+      }
+
+      /* v8 ignore next -- @preserve */
+      const columnRoute = Route.fromFlat(
+        baseRoute.length > 0
+          ? `${baseRoute}/${componentKey}/${colCfg.key}`
+          : `/${componentKey}/${colCfg.key}`,
+      ).flat.slice(1);
+
+      if (!objectMap[colCfg.key]) objectMap[colCfg.key] = columnRoute;
+
+      columnCfgs.push(colCfg);
+      columnInfos.push({
+        ...colCfg,
+        alias: `${colCfg.key}`,
+        route: columnRoute,
+        titleShort: colCfg.key,
+        titleLong: colCfg.key,
+      });
+    }
+
+    return { columnCfgs, columnInfos, objectMap };
   }
 
   // ...........................................................................
@@ -366,8 +583,13 @@ export class Db {
     //Make Component Routes unique
     const uniqueComponentRoutes: Set<string> = new Set();
     for (const colInfo of columnSelection.columns) {
-      const route = Route.fromFlat(colInfo.route).toRouteWithProperty();
-      uniqueComponentRoutes.add(route.toRouteWithoutProperty().flat);
+      const componentRoute = Route.fromFlat(colInfo.route);
+      const isolatedComponentRoute = await this.isolatePropertyKeyFromRoute(
+        componentRoute,
+      );
+      uniqueComponentRoutes.add(
+        isolatedComponentRoute.toRouteWithoutProperty().flat,
+      );
     }
 
     // Fetch Data from all controller routes
@@ -390,8 +612,8 @@ export class Db {
    */
   async insert(
     insert: Insert<any>,
-    options?: { skipNotification?: boolean },
-  ): Promise<InsertHistoryRow<any>> {
+    options?: { skipNotification?: boolean; skipHistory?: boolean },
+  ): Promise<InsertHistoryRow<any>[]> {
     const initialRoute = Route.fromFlat(insert.route);
     const runs = await this._resolveInsert(insert);
     const errors = validateInsert(insert);
@@ -417,9 +639,9 @@ export class Db {
     insert: Insert<any>,
     route: Route,
     runFns: Record<string, ControllerRunFn<any>>,
-    options?: { skipNotification?: boolean },
-  ): Promise<InsertHistoryRow<any>> {
-    let result: InsertHistoryRow<any>;
+    options?: { skipNotification?: boolean; skipHistory?: boolean },
+  ): Promise<InsertHistoryRow<any>[]> {
+    let results: InsertHistoryRow<any>[];
     let tableKey: string;
 
     //Run parent controller with child refs as value
@@ -449,54 +671,98 @@ export class Db {
 
       //Iterate over child values and create Inserts for each
       const childKeys = this._childKeys(insert.value);
-      const childRefs: Record<string, string> = {};
+      const childRefs: Record<string, string[]> = {};
 
       for (const k of childKeys) {
         const childValue = (insert.value as any)[k];
         const childInsert: Insert<any> = { ...insert, value: childValue };
-        const childResult = await this._insert(childInsert, childRoute, runFns);
+        const childResults = await this._insert(
+          childInsert,
+          childRoute,
+          runFns,
+        );
         const childRefKey = childRoute.top.tableKey + 'Ref';
-        const childRef = (childResult as any)[childRefKey] as string;
+        const childRefArray = childResults.map(
+          (childResult) => (childResult as any)[childRefKey] as string,
+        );
 
-        childRefs[k] = childRef;
+        childRefs[k] = childRefArray;
       }
 
       //Run parent controller with child refs as value
       const runFn = runFns[tableKey];
-      result = {
-        ...(await runFn(
-          insert.command,
-          {
-            ...insert.value,
-            ...childRefs,
-          },
-          insert.origin,
-        )),
-        previous,
-      };
+
+      results = [
+        ...(
+          await runFn(
+            insert.command,
+            {
+              ...insert.value,
+              ...childRefs,
+            },
+            insert.origin,
+          )
+        ).map((r) => ({ ...r, ...{ previous } })),
+      ];
     } else {
       //Run root controller
       tableKey = route.root.tableKey;
       const runFn = runFns[tableKey];
 
+      const insertValue = insert.value;
+      for (const [propertyKey, propertyValue] of Object.entries(insert.value)) {
+        if (
+          propertyValue &&
+          typeof propertyValue === 'object' &&
+          !!(propertyValue as any)._tableKey
+        ) {
+          const referenceRoute = (propertyValue as any)._tableKey;
+
+          // Remove _tableKey from propertyValue to avoid issues during insert
+          delete (propertyValue as any)._tableKey;
+
+          const referenceInsert: Insert<any> = {
+            command: insert.command,
+            route: referenceRoute,
+            value: propertyValue,
+          };
+          const referencesWritten = (
+            await this._insert(
+              referenceInsert,
+              Route.fromFlat(referenceRoute),
+              runFns,
+            )
+          ).map((h) => (h as any)[referenceRoute + 'Ref']);
+
+          insertValue[propertyKey] =
+            referencesWritten.length === 1
+              ? referencesWritten[0]
+              : referencesWritten;
+        }
+      }
+
       //Run on controller, get InsertHistoryRow from return, pass previous revisions
-      result = {
-        ...(await runFn(insert.command, insert.value, insert.origin)),
-        previous,
-      };
+      results = [
+        ...(await runFn(insert.command, insertValue, insert.origin)).map(
+          (r) => ({ ...r, previous }),
+        ),
+      ];
     }
 
-    //Write route to result
-    result.route = insert.route;
+    for (const result of results) {
+      //Write route to result
+      result.route = insert.route;
 
-    //Write insertHistory
-    await this._writeInsertHistory(tableKey, result);
+      //Write insertHistory
+      if (!options?.skipHistory)
+        await this._writeInsertHistory(tableKey, result);
 
-    //Notify listeners
-    if (!options?.skipNotification)
-      this.notify.notify(Route.fromFlat(insert.route), result);
+      //Notify listeners
+      if (!options?.skipNotification)
+        this.notify.notify(Route.fromFlat(insert.route), result);
+    }
 
-    return result;
+    return results;
   }
 
   // ...........................................................................
@@ -539,6 +805,17 @@ export class Db {
     const controllers = await this._indexedControllers(
       Route.fromFlat(Insert.route),
     );
+
+    // Add Controllers for unrelated component references
+    const referencedComponentTableKeys: Set<string> = new Set();
+    traverse(Insert.value, ({ key, parent }) => {
+      if (key == '_tableKey')
+        referencedComponentTableKeys.add(parent![key] as string);
+    });
+    for (const tableKey of referencedComponentTableKeys) {
+      controllers[tableKey] ??= await this.getController(tableKey);
+    }
+
     const runFns: Record<string, ControllerRunFn<any>> = {};
     for (const tableKey of Object.keys(controllers)) {
       runFns[tableKey] = controllers[tableKey].insert.bind(
@@ -664,15 +941,11 @@ export class Db {
         ._data as InsertHistoryRow<any>[];
 
       //Sort table
-      tableData.sort((a, b) => {
-        const aTime = a.timeId.split(':')[1];
-        const bTime = b.timeId.split(':')[1];
-        if (options.ascending) {
-          return aTime.localeCompare(bTime);
-        } else {
-          return bTime.localeCompare(aTime);
-        }
-      });
+      tableData.sort((a, b) =>
+        options!.ascending
+          ? a.timeId.localeCompare(b.timeId)
+          : b.timeId.localeCompare(a.timeId),
+      );
 
       return {
         [insertHistoryTable]: { _data: tableData, _type: 'insertHistory' },
@@ -774,17 +1047,25 @@ export class Db {
    * @returns A route with extracted property key
    */
   async isolatePropertyKeyFromRoute(route: Route): Promise<Route> {
-    //Check if last segment is property of component
-    const lastSegment = route.segments[route.segments.length - 1];
-    const tableKey = lastSegment.tableKey;
-    const tableExists = await this._io.tableExists(tableKey);
-    if (!Route.segmentHasRef(lastSegment) && !tableExists) {
-      //Last Segment is probably property of component
-      const result = route.upper();
-      result.propertyKey = lastSegment.tableKey;
-      return result;
+    const segmentLength = route.segments.length;
+    let propertyKey = '';
+    let result: Route = route;
+    for (let i = segmentLength; i > 0; i--) {
+      const segment = route.segments[i - 1];
+      const tableKey = segment.tableKey;
+      const tableExists = await this._io.tableExists(tableKey);
+
+      /* v8 ignore next -- @preserve */
+      if (!tableExists) {
+        propertyKey =
+          propertyKey.length > 0
+            ? segment.tableKey + '/' + propertyKey
+            : segment.tableKey;
+        result = result.upper();
+        result.propertyKey = propertyKey;
+      }
     }
-    return route;
+    return result;
   }
 
   // ...........................................................................

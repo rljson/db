@@ -6,25 +6,14 @@ import { hsh, rmhsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  Cake,
-  CakesTable,
-  InsertHistoryRow,
-  LayerRef,
-  Ref,
-  Rljson,
-  SliceIdsRef,
-  TableKey,
-  timeId,
+  Cake, CakesTable, InsertHistoryRow, LayerRef, Ref, Rljson, SliceIdsRef, TableKey, timeId
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
-import {
-  Controller,
-  ControllerCommands,
-  ControllerRefs,
-} from './controller.ts';
+import { Controller, ControllerCommands, ControllerRefs } from './controller.ts';
+
 
 export interface CakeValue extends Json {
   layers: {
@@ -76,7 +65,7 @@ export class CakeController<N extends string>
     }
 
     // Validate refs or try to read them from the first row of the table
-    if (this._refs && this._refs.base) {
+    if (this._refs && this._refs.base && this._refs.base.length > 0) {
       // Validate base cake exists
       const {
         [this._tableKey]: { _data: baseCakes },
@@ -92,12 +81,13 @@ export class CakeController<N extends string>
       // Store base layers from base cake
       this._baseLayers = rmhsh(baseCake.layers);
     } else {
-      // Try to read refs from first row of cakes table (Fallback)
+      // Try to read refs from first (latest?) row of cakes table (Fallback)
       const cake = this._table._data[0] as CakeControllerRefs;
       this._refs = {
         sliceIdsTable: cake.sliceIdsTable,
         sliceIdsRow: cake.sliceIdsRow,
       };
+      this._baseLayers = rmhsh(cake.layers!);
     }
   }
 
@@ -132,15 +122,34 @@ export class CakeController<N extends string>
     value: Json,
     origin?: Ref,
     refs?: ControllerRefs,
-  ): Promise<InsertHistoryRow<any>> {
+  ): Promise<InsertHistoryRow<any>[]> {
     // Validate command
     if (!command.startsWith('add')) {
       throw new Error(`Command ${command} is not supported by CakeController.`);
     }
 
+    /* v8 ignore next -- @preserve */
+    if (this._refs?.base) delete this._refs.base; // Remove base ref to avoid conflicts
+
+    const normalizedValue: { [layerTable: string]: string } = {};
+    for (const [layerTable, layerRef] of Object.entries(
+      value as { [layerTable: string]: string },
+    )) {
+      /* v8 ignore next -- @preserve */
+      if (Array.isArray(layerRef) && layerRef.length > 1) {
+        throw new Error(
+          `CakeController insert: Layer ref for table ${layerTable} cannot be an array of size > 1. No 1:n relations supported.`,
+        );
+      }
+
+      normalizedValue[layerTable] = Array.isArray(layerRef)
+        ? layerRef[0]
+        : layerRef;
+    }
+
     // Overwrite base layers with given layers
     const cake = {
-      layers: { ...this._baseLayers, ...value },
+      layers: { ...this._baseLayers, ...normalizedValue },
       ...(refs || this._refs),
     };
 
@@ -162,7 +171,7 @@ export class CakeController<N extends string>
       timeId: timeId(),
     } as InsertHistoryRow<any>;
 
-    return result;
+    return [result];
   }
 
   async get(where: string | Json, filter?: Json): Promise<Rljson> {

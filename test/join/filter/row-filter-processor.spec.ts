@@ -16,7 +16,6 @@ import { StringFilterProcessor } from '../../../src/join/filter/string-filter-pr
 import { Join, JoinColumn, JoinRows } from '../../../src/join/join';
 import { ColumnSelection } from '../../../src/join/selection/column-selection';
 
-
 describe('RowFilterProcessor', () => {
   const fa = new NumberFilterProcessor('equals', 42);
   const fb = new StringFilterProcessor('equals', 'foo');
@@ -560,7 +559,7 @@ describe('RowFilterProcessor', () => {
         const filter = new RowFilterProcessor(filters, 'and');
 
         expect(() => filter.applyTo(join)).toThrow(
-          'RowFilterProcessor: Error while applying filter to view: There is a column filter for route "d", but the view does not have a column with this route.',
+          'RowFilterProcessor: Error while applying filter to join: There is a column filter for route "d", but the join does not have a column with this route.',
         );
       });
     });
