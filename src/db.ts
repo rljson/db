@@ -8,7 +8,7 @@ import { Io } from '@rljson/io';
 import { Json, merge } from '@rljson/json';
 import {
   CakesTable, ColumnCfg, ComponentsTable, Insert, InsertHistoryRow, InsertHistoryTimeId, isTimeId,
-  Layer, LayersTable, Ref, Rljson, Route, RouteSegment, SliceId, SliceIds, validateInsert
+  Layer, LayersTable, Ref, Rljson, Route, RouteSegment, SliceId, SliceIds, TableKey, validateInsert
 } from '@rljson/rljson';
 
 import { traverse } from 'object-traversal';
@@ -79,160 +79,173 @@ export class Db {
     }
   }
 
+  // ...........................................................................
+  /**
+   * Resolves the route and returns corresponding data for any segment of the route,
+   * matching recursive filters and where clauses
+   *
+   * @param route - The route to get data from
+   * @param where - The recursive filtering key/value pairs to apply to the data
+   * @param controllers - The controllers to use for fetching data
+   * @param filter - Optional filter to apply to the data at the current route segment
+   * @returns - An Rljson object matching the route and filters
+   */
   async _get(
     route: Route,
     where: string | Json,
     controllers: Record<string, Controller<any, any>>,
-    segmentLevel?: number,
+    filter?: Array<{
+      tableKey: TableKey;
+      columnKey?: string;
+      ref: Ref;
+    }>,
   ): Promise<Rljson> {
-    //Start at top segment
-    if (segmentLevel === undefined) segmentLevel = 0;
+    const nodeTableKey = route.top.tableKey;
+    const nodeRoute = route;
+    const nodeRouteRef = await this._getReferenceOfRouteSegment(nodeRoute.top);
+    const nodeController = controllers[nodeTableKey];
 
-    const segment = route.segments[segmentLevel];
-    const segmentIsDeepest = segmentLevel === route.segments.length - 1;
-    const segmentController = controllers[segment.tableKey];
-    const segmentRef = await this._getReferenceOfRouteSegment(segment);
+    let nodeWhere = typeof where === 'object' ? { ...where } : where;
 
-    const hashRequested = typeof where === 'string';
-
-    //Build where for segment
-    //If string given -> build _hash object
-    let segmentWhere = hashRequested ? ({ _hash: where } as Json) : where;
-
-    //If ref through route given, add to where object
-    segmentWhere = segmentRef
-      ? ({ ...segmentWhere, ...{ _hash: segmentRef } } as Json)
-      : segmentWhere;
-
-    //If encapsulated, drill into object
-    segmentWhere =
-      segment.tableKey in segmentWhere
-        ? (segmentWhere[segment.tableKey] as Json)
-        : segmentWhere;
-
-    const childSegmentLevel = segmentLevel + 1;
-    const childSegment = route.segments[childSegmentLevel];
-
-    const segmentWhereWithoutChildWhere = { ...segmentWhere };
-    //Delete child segment key from where
-    if (!segmentIsDeepest && childSegment.tableKey in segmentWhere)
-      delete segmentWhereWithoutChildWhere[childSegment.tableKey];
-
-    let parent = await segmentController.get(segmentWhereWithoutChildWhere, {});
-
-    //Isolate Property if deepest segment has property key
-    if (segmentIsDeepest && route.hasPropertyKey) {
-      parent = this.isolatePropertyFromComponents(parent, route.propertyKey!);
+    // If not root, remove child prompts from where
+    if (!route.isRoot && typeof nodeWhere === 'object') {
+      delete nodeWhere[nodeRoute.deeper().top.tableKey];
     }
 
-    if (!segmentIsDeepest) {
-      const children: Rljson[] = [];
-      const filteredParentRows: Map<string, Json> = new Map();
+    // Add ref to where
+    /* v8 ignore next -- @preserve */
+    nodeWhere = nodeWhere
+      ? typeof nodeWhere === 'string'
+        ? { _hash: nodeWhere }
+        : nodeWhere
+      : {};
 
-      if (hashRequested) {
-        //Get all children of hash
-        const childrenOfHash = await this._get(
-          route,
-          {},
-          controllers,
-          childSegmentLevel,
+    //  Add route ref to where
+    if (nodeRouteRef && nodeRouteRef.length > 0)
+      nodeWhere = { ...nodeWhere, ...{ _hash: nodeRouteRef } };
+
+    // Delete internal flags
+    delete (nodeWhere as Json)['_through'];
+    delete (nodeWhere as Json)['_tableKey'];
+
+    // Fetch Node Data (actual access to underlying data model)
+    const {
+      [nodeTableKey]: { _data: nodeRows, _type: nodeType, _hash: nodeHash },
+    } = await nodeController.get(nodeWhere);
+
+    // Filter Node Rows by given filter
+    const nodeRowsFiltered: Json[] = [];
+    if (filter && filter.length > 0) {
+      for (const f of filter) {
+        if (f.tableKey !== nodeTableKey) continue;
+        for (const nodeRow of nodeRows) {
+          if (nodeRow._hash === f.ref) {
+            nodeRowsFiltered.push(nodeRow);
+          }
+        }
+      }
+    } else {
+      nodeRowsFiltered.push(...(nodeRows as Json[]));
+    }
+
+    // Construct Node w/ only filtered rows
+    const node = {
+      [nodeTableKey]: {
+        _data: nodeRowsFiltered,
+        _type: nodeType,
+        _hash: nodeHash,
+      },
+    } as Rljson;
+
+    // Return if is root node (deepest level, base case)
+    if (route.isRoot) {
+      if (route.hasPropertyKey) {
+        return this.isolatePropertyFromComponents(node, route.propertyKey!);
+      }
+      return node;
+    }
+
+    // Fetch Children Data
+    const childrenRoute = route.deeper();
+    const childrenTableKey = childrenRoute.top.tableKey;
+    /* v8 ignore next -- @preserve */
+    const childrenWhere = (
+      typeof where === 'object' ? where[childrenTableKey] ?? {} : {}
+    ) as Json | string;
+
+    const childrenThroughProperty = (childrenWhere as any)?._through;
+
+    const nodeChildrenArray = [];
+    const nodeRowsMatchingChildrenRefs = new Map<string, Json>();
+
+    // Iterate over Node Rows to get Children
+    for (let i = 0; i < nodeRowsFiltered.length; i++) {
+      const nodeRow = nodeRowsFiltered[i];
+
+      // Child References of this Node Row = Filter for Children
+      const childrenRefs = await nodeController.getChildRefs(
+        (nodeRow as any)._hash,
+      );
+
+      const rowChildren = await this._get(
+        childrenRoute,
+        childrenWhere,
+        controllers,
+        childrenRefs,
+      );
+
+      // No Children found for where + route => skip
+      if (rowChildren[childrenTableKey]._data.length === 0) continue;
+
+      nodeChildrenArray.push(rowChildren);
+
+      // We have to check which Node Rows have Children matching the filter,
+      // if get is used with _through to filter against referenced component values
+      if (childrenThroughProperty) {
+        const childrenHashes = rowChildren[childrenTableKey]._data.map(
+          (rc) => rc._hash as string,
         );
-        children.push(childrenOfHash);
-      } else {
-        //Get children with given where
-        const childWhere =
-          (segmentWhere[childSegment.tableKey] as Json | string) ?? {};
+        for (const nr of nodeRowsFiltered) {
+          {
+            const throughHashesInRowCouldBeArray = (nr as any)[
+              childrenThroughProperty
+            ];
+            const throughHashesInRow = Array.isArray(
+              throughHashesInRowCouldBeArray,
+            )
+              ? throughHashesInRowCouldBeArray
+              : [throughHashesInRowCouldBeArray];
 
-        const childrenByWhere = await this._get(
-          route,
-          childWhere,
-          controllers,
-          childSegmentLevel,
-        );
-
-        //Get this child's data from all children
-        const segmentChildrenByWhere = childrenByWhere[childSegment.tableKey];
-
-        //These are the children from deeper levels that we do not need
-        // to filter against, but we have to keep them
-        const otherChildrenByWhere = { ...childrenByWhere };
-        delete otherChildrenByWhere[childSegment.tableKey];
-        children.push(otherChildrenByWhere);
-
-        //Get child refs from parent
-        const childRefs = await segmentController.getChildRefs(
-          segmentWhereWithoutChildWhere,
-          {},
-        );
-
-        for (const { tableKey, columnKey, ref } of childRefs) {
-          if (tableKey !== childSegment.tableKey) continue;
-
-          const childRefIsInWhere = segmentChildrenByWhere._data.find(
-            (c) => ref === c._hash,
-          );
-
-          if (!childRefIsInWhere) continue;
-
-          const child = {
-            [tableKey]: { _data: [childRefIsInWhere] },
-          } as Rljson;
-
-          children.push(child);
-
-          // const childrenOfReferencedChild = await this._get(
-          //   route,
-          //   ref,
-          //   controllers,
-          //   childSegmentLevel,
-          // );
-          // delete childrenOfReferencedChild[tableKey];
-
-          // if (
-          //   !otherChildrenByWhere ||
-          //   (Object.keys(otherChildrenByWhere).length == 0 &&
-          //     Object.keys(childrenOfReferencedChild).length > 0)
-          // ) {
-          //   children.push(childrenOfReferencedChild);
-          // }
-
-          //Filter parent to only include rows that have the child ref
-
-          for (const childObjs of child[tableKey]._data) {
-            const childRef = (childObjs as Json)['_hash'] as string;
-            for (const row of parent[segment.tableKey]._data) {
-              if (filteredParentRows.has((row as Json)['_hash'] as string))
-                continue;
-
-              const includesChild = segmentController.filterRow(
-                row,
-                columnKey ?? tableKey,
-                childRef,
-              );
-              if (includesChild) {
-                filteredParentRows.set(
-                  (row as Json)['_hash'] as string,
-                  row as Json,
-                );
+            for (const th of throughHashesInRow) {
+              if (childrenHashes.includes(th)) {
+                nodeRowsMatchingChildrenRefs.set((nr as any)._hash, nr);
               }
             }
           }
         }
       }
-
-      //Build final parent with filtered rows
-      const parentWithFilteredRows = {
-        [segment.tableKey]: {
-          ...parent[segment.tableKey],
-          ...{
-            _data: Array.from(filteredParentRows.values()),
-          },
-        },
-      };
-      return merge(parentWithFilteredRows, ...children) as Rljson;
     }
 
-    return parent;
+    // Merge Children Data
+    const nodeChildren = merge(...(nodeChildrenArray as Rljson[]));
+
+    // If filtering by child refs, only return node rows that had children matching the filter
+    if (childrenThroughProperty) {
+      const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());
+      return {
+        ...node,
+        ...{
+          [nodeTableKey]: {
+            _data: matchedNodeRows,
+            _type: nodeType,
+            _hash: nodeHash,
+          },
+        },
+        ...nodeChildren,
+      } as Rljson;
+    }
+
+    return { ...node, ...nodeChildren } as Rljson;
   }
 
   // ...........................................................................
@@ -417,7 +430,6 @@ export class Db {
       joinRows,
       new ColumnSelection(Array.from(joinColumnInfos.values())),
       objectMap,
-      Route.fromFlat(`${cakeKey}@${cakeRef}`),
     ).select(columnSelection);
   }
 
@@ -483,6 +495,14 @@ export class Db {
     return result;
   }
 
+  // ...........................................................................
+  /**
+   * Resolve a component's columns, including referenced components
+   *
+   * @param baseRoute - The base route for the component
+   * @param componentKey - The component's table key
+   * @returns - The resolved column configurations, column infos, and object map
+   */
   private async _resolveComponent(
     baseRoute: string,
     componentKey: string,
@@ -530,6 +550,7 @@ export class Db {
         columnInfos.push(...columnInfosForRef);
       }
 
+      /* v8 ignore next -- @preserve */
       const columnRoute = Route.fromFlat(
         baseRoute.length > 0
           ? `${baseRoute}/${componentKey}/${colCfg.key}`

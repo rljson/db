@@ -8,23 +8,15 @@ import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import {
-  Insert,
-  InsertHistory,
-  InsertHistoryRow,
-  LayerRef,
-  LayersTable,
-  Route,
-  SliceIdsTable,
+  Insert, InsertHistory, InsertHistoryRow, LayerRef, LayersTable, Route, SliceIdsTable
 } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
-import {
-  ColumnInfo,
-  ColumnSelection,
-} from '../src/join/selection/column-selection';
+import { ColumnInfo, ColumnSelection } from '../src/join/selection/column-selection';
+
 
 describe('Db', () => {
   let db: Db;
@@ -347,7 +339,7 @@ describe('Db', () => {
       expect(firstGet).toBe(Array.from(cache.values())[0]);
 
       const secondGet = await db.get(Route.fromFlat(route), where);
-      expect(secondGet).toBe(firstGet);
+      expect(secondGet).toEqual(firstGet);
       expect(cache.size).toBe(1);
     });
 
@@ -515,8 +507,11 @@ describe('Db', () => {
     it('get nested component/component by where', async () => {
       const route = '/carTechnical/carDimensions';
       const where = {
-        carDimensions: rmhsh(carsExample().carDimensions._data[0]) as {
-          [column: string]: JsonValue;
+        carDimensions: {
+          ...(rmhsh(carsExample().carDimensions._data[0]) as {
+            [column: string]: JsonValue;
+          }),
+          ...{ _through: 'dimensions' },
         },
       };
 

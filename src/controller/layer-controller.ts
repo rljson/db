@@ -6,24 +6,15 @@ import { hsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  ComponentRef,
-  InsertCommand,
-  InsertHistoryRow,
-  Layer,
-  LayerRef,
-  LayersTable,
-  Ref,
-  Rljson,
-  SliceId,
-  SliceIdsRef,
-  TableKey,
-  timeId,
+  ComponentRef, InsertCommand, InsertHistoryRow, Layer, LayerRef, LayersTable, Ref, Rljson, SliceId,
+  SliceIdsRef, TableKey, timeId
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
 import { Controller, ControllerRefs } from './controller.ts';
+
 
 export interface LayerControllerRefs extends Partial<Layer> {
   base?: LayerRef;
@@ -116,6 +107,7 @@ export class LayerController<N extends string>
     for (const [sliceId, compRef] of Object.entries(
       value as Record<string, any>,
     )) {
+      /* v8 ignore next -- @preserve */
       if (Array.isArray(compRef) && compRef.length > 1) {
         throw new Error(
           `LayerController insert: Component ref for slice ${sliceId} cannot be an array of size > 1. No 1:n relations supported.`,

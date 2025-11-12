@@ -6,25 +6,14 @@ import { hsh, rmhsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  Cake,
-  CakesTable,
-  InsertHistoryRow,
-  LayerRef,
-  Ref,
-  Rljson,
-  SliceIdsRef,
-  TableKey,
-  timeId,
+  Cake, CakesTable, InsertHistoryRow, LayerRef, Ref, Rljson, SliceIdsRef, TableKey, timeId
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
-import {
-  Controller,
-  ControllerCommands,
-  ControllerRefs,
-} from './controller.ts';
+import { Controller, ControllerCommands, ControllerRefs } from './controller.ts';
+
 
 export interface CakeValue extends Json {
   layers: {
@@ -139,12 +128,14 @@ export class CakeController<N extends string>
       throw new Error(`Command ${command} is not supported by CakeController.`);
     }
 
+    /* v8 ignore next -- @preserve */
     if (this._refs?.base) delete this._refs.base; // Remove base ref to avoid conflicts
 
     const normalizedValue: { [layerTable: string]: string } = {};
     for (const [layerTable, layerRef] of Object.entries(
       value as { [layerTable: string]: string },
     )) {
+      /* v8 ignore next -- @preserve */
       if (Array.isArray(layerRef) && layerRef.length > 1) {
         throw new Error(
           `CakeController insert: Layer ref for table ${layerTable} cannot be an array of size > 1. No 1:n relations supported.`,

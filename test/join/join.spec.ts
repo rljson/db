@@ -16,6 +16,7 @@ import { ColumnSelection } from '../../src/join/selection/column-selection';
 import { SetValue } from '../../src/join/set-value/set-value';
 import { RowSort } from '../../src/join/sort/row-sort';
 
+
 describe('Join', () => {
   let db: Db;
 
@@ -296,12 +297,12 @@ describe('Join', () => {
         {},
       );
 
-      expect(writtenData['carGeneral']._data.length).toBe(16);
+      expect(writtenData['carGeneral']._data.length).toBe(8);
       const writtenDataSet = new Set(
         writtenData['carGeneral']._data.map((d: any) => d['brand']),
       );
       expect(writtenDataSet.has('Opel')).toBe(true);
-      expect(writtenDataSet.size).toBe(5);
+      expect(writtenDataSet.size).toBe(1);
     });
   });
 });

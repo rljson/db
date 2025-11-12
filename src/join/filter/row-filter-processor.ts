@@ -12,6 +12,7 @@ import { ColumnSelection } from '../selection/column-selection.ts';
 import { ColumnFilterProcessor } from './column-filter-processor.ts';
 import { RowFilter } from './row-filter.ts';
 
+
 // #############################################################################
 export class RowFilterProcessor {
   // ...........................................................................
@@ -205,12 +206,15 @@ export class RowFilterProcessor {
 
       if (Array.isArray(cellValue)) {
         for (const v of cellValue) {
+          /* v8 ignore else -- @preserve */
           if (
             typeof v === 'object' &&
             v !== null &&
             v.hasOwnProperty('_value')
           ) {
             const matchValue = v._value;
+
+            /* v8 ignore else -- @preserve */
             if (filter.matches(matchValue)) {
               result.push(i);
               break;

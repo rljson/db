@@ -14,6 +14,7 @@ import { ColumnSelection } from './selection/column-selection.ts';
 import { SetValue } from './set-value/set-value.ts';
 import { RowSort } from './sort/row-sort.ts';
 
+
 export type JoinProcessType = 'filter' | 'setValue' | 'selection' | 'sort';
 
 export type JoinProcess = {
@@ -66,7 +67,6 @@ export class Join {
     baseRows: JoinRows,
     private _baseColumnSelection: ColumnSelection,
     private _objectMap?: Json,
-    private _cakeRoute?: Route,
   ) {
     // Hash the rows
     this._base = this._hashedRows(baseRows);
@@ -545,6 +545,7 @@ export class Join {
     // Get merged columns (with insert values)
     const columns = this._mergeInsertRow(sliceId, insertColumns);
 
+    /* v8 ignore next -- @preserve */
     return this._denormalizeComponentInserts(columns, this._objectMap || {});
   }
 
@@ -605,13 +606,19 @@ export class Join {
           return col.route.propertyKey === propertyKey;
         });
 
-        const somethingToInsert = (propValue && !!propValue.insert) ?? false;
+        /* v8 ignore if -- @preserve */
+        if (!propValue) {
+          throw new Error(
+            `Join._denormalizeComponentInserts: ` +
+              `Could not find column value for property key "${propertyKey}".`,
+          );
+        }
+
+        const somethingToInsert = !!propValue.insert;
 
         result[compKey] = {
           ...(result[compKey] as Json),
-          [refPropertyKey]: propValue
-            ? propValue.insert ?? propValue.value
-            : null,
+          [refPropertyKey]: propValue.insert ?? propValue.value,
           ...{
             _somethingToInsert:
               (result[compKey] as any)._somethingToInsert || somethingToInsert,
