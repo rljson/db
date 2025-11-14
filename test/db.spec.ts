@@ -538,6 +538,27 @@ describe('Db', () => {
         carsExample().carDimensions._data[0]._hash,
       );
     });
+    it('get any nested cake/layer/component', async () => {
+      const route = '/carCake/carGeneralLayer/carGeneral';
+      const where = {};
+
+      const result = await db.get(Route.fromFlat(route), where);
+      expect(result).toBeDefined();
+      expect(result.carCake).toBeDefined();
+      expect(result.carCake._data.length).toBe(
+        carsExample().carCake._data.length,
+      );
+
+      expect(result.carGeneralLayer).toBeDefined();
+      expect(result.carGeneralLayer._data.length).toBe(
+        carsExample().carGeneralLayer._data.length,
+      );
+
+      expect(result.carGeneral).toBeDefined();
+      expect(result.carGeneral._data.length).toBe(
+        carsExample().carGeneral._data.length,
+      );
+    });
     it('get nested cake/layer/component by where', async () => {
       const route = '/carCake/carGeneralLayer/carGeneral';
       const where = {
@@ -1205,7 +1226,7 @@ describe('Db', () => {
   });
   describe('join', () => {
     const cakeKey = 'carCake';
-    const cakeRef = carsExample().carCake._data[0]._hash as string;
+    const cakeRef = carsExample().carCake._data[2]._hash as string;
 
     it('should be defined', () => {
       expect(db.join).toBeDefined();
