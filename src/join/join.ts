@@ -14,7 +14,6 @@ import { ColumnSelection } from './selection/column-selection.ts';
 import { SetValue } from './set-value/set-value.ts';
 import { RowSort } from './sort/row-sort.ts';
 
-
 export type JoinProcessType = 'filter' | 'setValue' | 'selection' | 'sort';
 
 export type JoinProcess = {

@@ -8,6 +8,7 @@ import { equals, Json, JsonValue, merge } from '@rljson/json';
 import {
   ColumnCfg,
   ComponentsTable,
+  ContentType,
   InsertHistoryRow,
   Ref,
   Rljson,
@@ -30,6 +31,14 @@ export class ComponentController<N extends string, T extends Json>
   implements Controller<ComponentsTable<T>, N>
 {
   private _tableCfg: TableCfg | null = null;
+
+  private _allowedContentTypes: ContentType[] = [
+    'components',
+    'edits',
+    'editHistory',
+    'multiEdits',
+  ];
+
   private _resolvedColumns: {
     base: ColumnCfg[];
     references: Record<TableKey, ColumnCfg[]>;
@@ -54,7 +63,7 @@ export class ComponentController<N extends string, T extends Json>
     // Table must be of type components
     const rljson = await this._core.dumpTable(this._tableKey);
     const table = rljson[this._tableKey];
-    if (table._type !== 'components') {
+    if (this._allowedContentTypes.indexOf(table._type) === -1) {
       throw new Error(`Table ${this._tableKey} is not of type components.`);
     }
 

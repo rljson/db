@@ -6,17 +6,22 @@
 
 import { IoMem } from '@rljson/io';
 import { equals } from '@rljson/json';
-import { Insert, InsertHistoryRow, Route } from '@rljson/rljson';
+import {
+  createEditHistoryTableCfg,
+  createEditTableCfg,
+  createMultiEditTableCfg,
+  Edit,
+  Insert,
+  InsertHistoryRow,
+  MultiEdit,
+  Route,
+} from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { carsExample } from '../../src/cars-example';
 import { Db } from '../../src/db';
-import {
-  createEditTableCfg,
-  Edit,
-  exampleEditColumnSelection,
-} from '../../src/edit/edit';
+import { exampleEditColumnSelection } from '../../src/edit/edit';
 import {
   exampleEditActionColumnSelection,
   exampleEditActionColumnSelectionOnlySomeColumns,
@@ -25,8 +30,6 @@ import {
   exampleEditActionSetValue,
   exampleEditSetValueReferenced,
 } from '../../src/edit/edit-action';
-import { createMultiEditHistoryTableCfg } from '../../src/edit/edit-history';
-import { createMultiEditTableCfg, MultiEdit } from '../../src/edit/multi-edit';
 import { MultiEditProcessor } from '../../src/edit/multi-edit-processor';
 
 describe('MultiEditProcessor', () => {
@@ -52,7 +55,7 @@ describe('MultiEditProcessor', () => {
     //Create Tables for Edit TableCfgs
     await db.core.createTable(createMultiEditTableCfg(cakeKey));
     await db.core.createTable(createEditTableCfg(cakeKey));
-    await db.core.createTable(createMultiEditHistoryTableCfg(cakeKey));
+    await db.core.createTable(createEditHistoryTableCfg(cakeKey));
 
     //Import Data
     await db.core.import(carsExample());

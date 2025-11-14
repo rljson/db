@@ -4,14 +4,37 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { Json } from '@rljson/json';
-import { ColumnCfg, TableCfg } from '@rljson/rljson';
+import { Edit } from '@rljson/rljson';
 
-import { EditAction, exampleEditActionColumnSelection } from './edit-action.ts';
+import {
+  EditActionColumnSelection,
+  EditActionRowFilter,
+  EditActionRowSort,
+  EditActionSetValue,
+  exampleEditActionColumnSelection,
+} from './edit-action.ts';
 
-export interface Edit extends Json {
+export interface EditColumnSelection extends Edit {
   name: string;
-  action: EditAction;
+  action: EditActionColumnSelection;
+  _hash: string;
+}
+
+export interface EditRowFilter extends Edit {
+  name: string;
+  action: EditActionRowFilter;
+  _hash: string;
+}
+
+export interface EditSetValue extends Edit {
+  name: string;
+  action: EditActionSetValue;
+  _hash: string;
+}
+
+export interface EditRowSort extends Edit {
+  name: string;
+  action: EditActionRowSort;
   _hash: string;
 }
 
@@ -20,29 +43,3 @@ export const exampleEditColumnSelection = (): Edit => ({
   action: exampleEditActionColumnSelection(),
   _hash: '',
 });
-
-export const createEditTableCfg = (cakeKey: string): TableCfg =>
-  ({
-    key: `${cakeKey}Edits`,
-    type: 'components',
-    columns: [
-      {
-        key: '_hash',
-        type: 'string',
-        titleLong: 'Hash',
-        titleShort: 'Hash',
-      },
-      {
-        key: 'name',
-        type: 'string',
-        titleLong: 'Edit Name',
-        titleShort: 'Name',
-      },
-      {
-        key: 'action',
-        type: 'json',
-        titleLong: 'Edit Action',
-        titleShort: 'Action',
-      },
-    ] as ColumnCfg[],
-  } as TableCfg);

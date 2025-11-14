@@ -80,6 +80,9 @@ export const createController = async (
       ctrl = new LayerController(core, tableKey, refs as LayerControllerRefs);
       break;
     case 'components':
+    case 'edits':
+    case 'editHistory':
+    case 'multiEdits':
       ctrl = new ComponentController(core, tableKey, refs as ControllerRefs);
       break;
     case 'cakes':

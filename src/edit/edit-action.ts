@@ -4,11 +4,10 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { Json } from '@rljson/json';
+import { EditAction } from '@rljson/rljson';
 
 import { ColumnFilter } from '../join/filter/column-filter.ts';
 import { RowFilter } from '../join/filter/row-filter.ts';
-import { JoinProcessType } from '../join/join.ts';
 import {
   ColumnInfo,
   ColumnSelection,
@@ -16,22 +15,26 @@ import {
 import { SetValue } from '../join/set-value/set-value.ts';
 import { RowSortType } from '../join/sort/row-sort.ts';
 
-export type EditActionProcessType = JoinProcessType;
+export interface EditActionColumnSelection extends EditAction {
+  type: 'selection';
+  data: {
+    columns: ColumnInfo[];
+  };
+}
 
-export type EditActionColumnSelection = ColumnInfo[];
-export type EditActionRowFilter = RowFilter;
-export type EditActionSetValue = SetValue;
-export type EditActionRowSort = RowSortType;
+export interface EditActionRowFilter extends EditAction {
+  type: 'filter';
+  data: RowFilter;
+}
 
-export interface EditAction extends Json {
-  name: string;
-  type: EditActionProcessType;
-  data:
-    | EditActionColumnSelection
-    | EditActionRowFilter
-    | EditActionSetValue
-    | EditActionRowSort;
-  _hash: string;
+export interface EditActionSetValue extends EditAction {
+  type: 'setValue';
+  data: SetValue;
+}
+
+export interface EditActionRowSort extends EditAction {
+  type: 'sort';
+  data: RowSortType;
 }
 
 //..................................................................................
@@ -40,12 +43,15 @@ export interface EditAction extends Json {
  * Example EditAction of type 'selection'
  * @returns An example EditAction representing a column selection
  */
-export const exampleEditActionColumnSelection = (): EditAction => ({
-  name: 'Car Selection',
-  type: 'selection',
-  data: ColumnSelection.exampleCarsColumnSelection().columns,
-  _hash: '',
-});
+export const exampleEditActionColumnSelection =
+  (): EditActionColumnSelection => ({
+    name: 'Car Selection',
+    type: 'selection',
+    data: {
+      columns: ColumnSelection.exampleCarsColumnSelection().columns,
+    },
+    _hash: '',
+  });
 
 //..................................................................................
 
@@ -54,10 +60,13 @@ export const exampleEditActionColumnSelection = (): EditAction => ({
  * @returns An example EditAction representing a column selection with limited columns
  */
 export const exampleEditActionColumnSelectionOnlySomeColumns =
-  (): EditAction => ({
+  (): EditActionColumnSelection => ({
     name: 'Car Selection - Some Columns',
     type: 'selection',
-    data: ColumnSelection.exampleCarsColumnSelectionOnlySomeColumns().columns,
+    data: {
+      columns:
+        ColumnSelection.exampleCarsColumnSelectionOnlySomeColumns().columns,
+    },
     _hash: '',
   });
 
@@ -67,7 +76,7 @@ export const exampleEditActionColumnSelectionOnlySomeColumns =
  * Example EditAction of type 'filter'
  * @returns An example EditAction representing a row filter
  */
-export const exampleEditActionRowFilter = (): EditAction => ({
+export const exampleEditActionRowFilter = (): EditActionRowFilter => ({
   name: 'Electric Cars Filter',
   type: 'filter',
   data: {
@@ -90,7 +99,7 @@ export const exampleEditActionRowFilter = (): EditAction => ({
     operator: 'and',
     value: true,
     _hash: '',
-  } as EditActionRowFilter,
+  },
   _hash: '',
 });
 
@@ -99,25 +108,29 @@ export const exampleEditActionRowFilter = (): EditAction => ({
  * @returns An example EditAction representing a set value action
  */
 
-export const exampleEditActionSetValue = (): EditAction => ({
+export const exampleEditActionSetValue = (): EditActionSetValue => ({
   name: 'Set: Service Intervals to [15000, 30000, 45000, 60000]',
   type: 'setValue',
   data: {
     route: 'carCake/carGeneralLayer/carGeneral/serviceIntervals',
     value: [15000, 30000, 45000, 60000],
     _hash: '',
-  } as EditActionSetValue,
+  },
   _hash: '',
 });
 
-export const exampleEditSetValueReferenced = (): EditAction => ({
+/**
+ * Example EditAction of type 'setValue' for a referenced column
+ * @returns An example EditAction representing a set value action for a referenced column
+ */
+export const exampleEditSetValueReferenced = (): EditActionSetValue => ({
   name: 'Set: Length to 4200',
   type: 'setValue',
   data: {
     route: 'carCake/carTechnicalLayer/carTechnical/carDimensions/length',
     value: 4800,
     _hash: '',
-  } as EditActionSetValue,
+  },
   _hash: '',
 });
 
@@ -125,11 +138,11 @@ export const exampleEditSetValueReferenced = (): EditAction => ({
  * Example EditAction of type 'sort'
  * @returns An example EditAction representing a row sort action
  */
-export const exampleEditActionRowSort = (): EditAction => ({
+export const exampleEditActionRowSort = (): EditActionRowSort => ({
   name: 'Sort By Brand Edit',
   type: 'sort',
   data: {
     ['carCake/carGeneralLayer/carGeneral/brand']: 'asc',
-  } as EditActionRowSort,
+  },
   _hash: '',
 });
