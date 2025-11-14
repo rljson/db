@@ -1,6 +1,6 @@
 {
   "carSliceId": {
-    "_tableCfg": "8nu13TE7dyRMtIJLNjiUH3",
+    "_tableCfg": "vwkMMovjx_aZb_2o0R_rlT",
     "_type": "sliceIds",
     "_data": [
       {
@@ -15,9 +15,23 @@
           "VIN8"
         ],
         "_hash": "2RefO1-vC_FbgYaC1FWzFo"
+      },
+      {
+        "add": [
+          "VIN9",
+          "VIN10"
+        ],
+        "_hash": "wsQ0dP7o3dfoV3q0AXxaC6"
+      },
+      {
+        "add": [
+          "VIN11",
+          "VIN12"
+        ],
+        "_hash": "bRu3UyUhLn_eUfyY6tHdT2"
       }
     ],
-    "_hash": "q4-vd4L--q-D7NYnF4PkZs"
+    "_hash": "9_qjEwElDSoue0gKMo7_kc"
   },
   "carGeneral": {
     "_tableCfg": "Tq-GIJawWlas1J3Is-QjOe",
@@ -208,9 +222,93 @@
           "_hash": "peUtMdYee4YV4V1fFs0eB9"
         },
         "_hash": "yQiZeWhWFFNNzxNL8x-U2c"
+      },
+      {
+        "brand": "Ford",
+        "type": "Mustang Mach-E",
+        "doors": 5,
+        "energyConsumption": 17,
+        "units": {
+          "energy": "kWh/100km",
+          "_hash": "5ju7Tr04ivEfiuXkcC6_Oi"
+        },
+        "serviceIntervals": [
+          20000,
+          40000,
+          60000
+        ],
+        "isElectric": true,
+        "meta": {
+          "pressText": "An electric SUV with Mustang heritage.",
+          "_hash": "U6eMd5GpSOBP4VvbQBtZ1q"
+        },
+        "_hash": "VJ91TX0Yb282VgNq0iktMg"
+      },
+      {
+        "brand": "Chevrolet",
+        "type": "Bolt EV",
+        "doors": 5,
+        "energyConsumption": 14,
+        "units": {
+          "energy": "kWh/100km",
+          "_hash": "5ju7Tr04ivEfiuXkcC6_Oi"
+        },
+        "serviceIntervals": [
+          20000,
+          40000,
+          60000
+        ],
+        "isElectric": true,
+        "meta": {
+          "pressText": "An affordable electric hatchback.",
+          "_hash": "tT-UExztjsCA9zYQyJ5ExW"
+        },
+        "_hash": "sGb6PHYpzJkM-HyUsXKIyH"
+      },
+      {
+        "brand": "Nissan",
+        "type": "Leaf",
+        "doors": 5,
+        "energyConsumption": 15.5,
+        "units": {
+          "energy": "kWh/100km",
+          "_hash": "5ju7Tr04ivEfiuXkcC6_Oi"
+        },
+        "serviceIntervals": [
+          20000,
+          40000,
+          60000
+        ],
+        "isElectric": true,
+        "meta": {
+          "pressText": "A pioneering electric vehicle.",
+          "_hash": "l4ukg9w1VK5vWfw74LlIIX"
+        },
+        "_hash": "KySYlJqoyIEchZqL_heLyH"
+      },
+      {
+        "brand": "Hyundai",
+        "type": "Kona Electric",
+        "doors": 5,
+        "energyConsumption": 14.5,
+        "units": {
+          "energy": "kWh/100km",
+          "_hash": "5ju7Tr04ivEfiuXkcC6_Oi"
+        },
+        "serviceIntervals": [
+          20000,
+          40000,
+          60000
+        ],
+        "isElectric": true,
+        "meta": {
+          "pressText": "A compact electric SUV.",
+          "_hash": "DadQGD6z74J5u2LI-r-VtB"
+        },
+        "_hash": "IzpMNlXi9uLSLx27dIwjLB"
       }
     ],
-    "_hash": "Pf8xfbESWWPpUI-QbuNVMM"
+    "_hash": "XHrPXjYOcalczo8zJjcHO7"
   },
   "carDimensions": {
     "_tableCfg": "XOdQaoIy829zQkONlQOM6Y",
@@ -257,9 +355,33 @@
         "width": 1830,
         "length": 4150,
         "_hash": "sImPV57noUS86i58YDAZTt"
+      },
+      {
+        "height": 1700,
+        "width": 2000,
+        "length": 4800,
+        "_hash": "7RYtC1lETNj7nBJjIUgew3"
+      },
+      {
+        "height": 1350,
+        "width": 1750,
+        "length": 3900,
+        "_hash": "WziugnTiGfVwO7yYlm9r8Q"
+      },
+      {
+        "height": 1750,
+        "width": 2050,
+        "length": 4900,
+        "_hash": "SDxVonDzOxdjrJ2r3CsQAI"
+      },
+      {
+        "height": 1600,
+        "width": 1920,
+        "length": 4600,
+        "_hash": "Ai04EgpTsgaQrYd1aazMX2"
       }
     ],
-    "_hash": "D8tlp21w3gfFLXh0nRViIQ"
+    "_hash": "KS0HqoBEYj0KzQT49k7JXL"
   },
   "carTechnical": {
     "_tableCfg": "OXvp3M8zt0dWygHTZfTp7I",
@@ -319,9 +441,39 @@
         "gears": 1,
         "dimensions": "sImPV57noUS86i58YDAZTt",
         "_hash": "ZvPbbZJ5iWX2XSL5cfVOZg"
+      },
+      {
+        "engine": "Electric",
+        "transmission": "Single-Speed",
+        "gears": 1,
+        "dimensions": "7RYtC1lETNj7nBJjIUgew3",
+        "repairedByWorkshop": "Workshop C",
+        "_hash": "6vWO0WD4cT1Yo61UIXzNA0"
+      },
+      {
+        "engine": "Electric",
+        "transmission": "Single-Speed",
+        "gears": 1,
+        "dimensions": "WziugnTiGfVwO7yYlm9r8Q",
+        "_hash": "YBDD53CbQXH27rKMl1gAZ4"
+      },
+      {
+        "engine": "Electric",
+        "transmission": "Single-Speed",
+        "gears": 1,
+        "dimensions": "SDxVonDzOxdjrJ2r3CsQAI",
+        "repairedByWorkshop": "Workshop B",
+        "_hash": "12MN9ZSKbX-8oK1jHSdiFP"
+      },
+      {
+        "engine": "Electric",
+        "transmission": "Single-Speed",
+        "gears": 1,
+        "dimensions": "Ai04EgpTsgaQrYd1aazMX2",
+        "_hash": "if6y59aWx09S-ucZB3_E8O"
       }
     ],
-    "_hash": "8dqxcspQYmkVxaRts7Y-DR"
+    "_hash": "OkdHY5J39TuKCYBXy9Shgf"
   },
   "carColor": {
     "_tableCfg": "ly3011-E3YdeftOYLKqzXd",
@@ -398,9 +550,31 @@
         "sliceIdsTableRow": "2RefO1-vC_FbgYaC1FWzFo",
         "componentsTable": "carGeneral",
         "_hash": "F6m5VlMcDCz0s39i5nZRcf"
+      },
+      {
+        "add": {
+          "VIN9": "VJ91TX0Yb282VgNq0iktMg",
+          "VIN10": "sGb6PHYpzJkM-HyUsXKIyH",
+          "_hash": "M6b3yFa9nsYgyKmS2fGXnx"
+        },
+        "sliceIdsTable": "carSliceId",
+        "sliceIdsTableRow": "wsQ0dP7o3dfoV3q0AXxaC6",
+        "componentsTable": "carGeneral",
+        "_hash": "24AM7LwAR_wIvnrJC0lSSX"
+      },
+      {
+        "add": {
+          "VIN11": "KySYlJqoyIEchZqL_heLyH",
+          "VIN12": "IzpMNlXi9uLSLx27dIwjLB",
+          "_hash": "1UXkS3rzhI6QMaDHnWXZYB"
+        },
+        "sliceIdsTable": "carSliceId",
+        "sliceIdsTableRow": "bRu3UyUhLn_eUfyY6tHdT2",
+        "componentsTable": "carGeneral",
+        "_hash": "F9ywtrm8LAVJZucUwZtC7k"
       }
     ],
-    "_hash": "I--kkbwDm89BnlC8ImfYyh"
+    "_hash": "wOjdU-A3TgLoY2cZxUo9wN"
   },
   "carTechnicalLayer": {
     "_tableCfg": "0iL8Czul98-LD7oXDW9SWO",
@@ -422,9 +596,31 @@
         "sliceIdsTableRow": "2RefO1-vC_FbgYaC1FWzFo",
         "componentsTable": "carTechnical",
         "_hash": "jAwepLTvCXMkSqkHM_8yDJ"
+      },
+      {
+        "add": {
+          "VIN9": "6vWO0WD4cT1Yo61UIXzNA0",
+          "VIN10": "YBDD53CbQXH27rKMl1gAZ4",
+          "_hash": "g_GS7wUrMwwpbx9u1zdHfJ"
+        },
+        "sliceIdsTable": "carSliceId",
+        "sliceIdsTableRow": "wsQ0dP7o3dfoV3q0AXxaC6",
+        "componentsTable": "carTechnical",
+        "_hash": "UH_-cODxngEpkR1Lg4OPSX"
+      },
+      {
+        "add": {
+          "VIN11": "12MN9ZSKbX-8oK1jHSdiFP",
+          "VIN12": "if6y59aWx09S-ucZB3_E8O",
+          "_hash": "FVhOwRb1q2QX5T9jRv7z5d"
+        },
+        "sliceIdsTable": "carSliceId",
+        "sliceIdsTableRow": "bRu3UyUhLn_eUfyY6tHdT2",
+        "componentsTable": "carTechnical",
+        "_hash": "IHgyngUiVoVz_oPTytzybd"
       }
     ],
-    "_hash": "uk2fPd9RiDqSX3FbKv9zqL"
+    "_hash": "mbgNvMYdzGGw2bRLDa3KAF"
   },
   "carColorLayer": {
     "_tableCfg": "AqNt4hM9EEUx-s1AaDtzOs",
@@ -446,9 +642,31 @@
         "sliceIdsTableRow": "2RefO1-vC_FbgYaC1FWzFo",
         "componentsTable": "carColor",
         "_hash": "xiTv2UKaEHSk1wd44XU0K0"
+      },
+      {
+        "add": {
+          "VIN9": "t4lmf3SUmDscWUkJwnzBEu",
+          "VIN10": "t4lmf3SUmDscWUkJwnzBEu",
+          "_hash": "Ig6bnWVhotGrajiDRLCDjb"
+        },
+        "sliceIdsTable": "carSliceId",
+        "sliceIdsTableRow": "wsQ0dP7o3dfoV3q0AXxaC6",
+        "componentsTable": "carColor",
+        "_hash": "O8f4TOaByWXRfzUlbQD0W1"
+      },
+      {
+        "add": {
+          "VIN11": "bLglKhI-Trh1xn7yWRuLir",
+          "VIN12": "jST690KdFZovVXUj27AizW",
+          "_hash": "CZbL-xzfb0LFcm4XbihKRo"
+        },
+        "sliceIdsTable": "carSliceId",
+        "sliceIdsTableRow": "bRu3UyUhLn_eUfyY6tHdT2",
+        "componentsTable": "carColor",
+        "_hash": "oH_umPCVs7pvuj7LMOTpYC"
       }
     ],
-    "_hash": "g_j4PxRQo1bwnHeIuaaHNP"
+    "_hash": "OhnL-hfiQFgYpYRfxLGbeJ"
   },
   "carCake": {
     "_tableCfg": "5tcrs9FhrPleZv_JXzetfy",
@@ -464,12 +682,34 @@
           "_hash": "3cIQ_f-V_63X2MOt1jb7t9"
         },
         "_hash": "CDGdGBeIalWNKAVLKw1eRQ"
+      },
+      {
+        "sliceIdsTable": "carSliceId",
+        "sliceIdsRow": "wsQ0dP7o3dfoV3q0AXxaC6",
+        "layers": {
+          "carGeneralLayer": "24AM7LwAR_wIvnrJC0lSSX",
+          "carTechnicalLayer": "UH_-cODxngEpkR1Lg4OPSX",
+          "carColorLayer": "O8f4TOaByWXRfzUlbQD0W1",
+          "_hash": "Ttl_AuLVnq1v19X6VBwSaf"
+        },
+        "_hash": "gWFPcI3_PfEtEC_ZlqdBfB"
+      },
+      {
+        "sliceIdsTable": "carSliceId",
+        "sliceIdsRow": "bRu3UyUhLn_eUfyY6tHdT2",
+        "layers": {
+          "carGeneralLayer": "F9ywtrm8LAVJZucUwZtC7k",
+          "carTechnicalLayer": "IHgyngUiVoVz_oPTytzybd",
+          "carColorLayer": "oH_umPCVs7pvuj7LMOTpYC",
+          "_hash": "mGlkXOKFxxUVwtkcmrbeJy"
+        },
+        "_hash": "87-bRhOXhmjExKVX8hjXLg"
       }
     ],
-    "_hash": "2BdVyvTH0icsc5gd0iIcSx"
+    "_hash": "ORP2i1qv_RboxgMVX7klFF"
   },
   "wheelSliceId": {
-    "_tableCfg": "e91MNbEo8gwnBHaEQxX6wt",
+    "_tableCfg": "cEQ5opF8Aer4QYeB53bkUf",
     "_type": "sliceIds",
     "_data": [
       {
@@ -480,7 +720,7 @@
         "_hash": "JPP7A-skpEe1KuDS11mtBH"
       }
     ],
-    "_hash": "xrvMf_1f12kdOxOcg-XgCM"
+    "_hash": "OXuF5Ue8ntPgsTEIMHFOUY"
   },
   "wheelBrand": {
     "_tableCfg": "ptvTcf77Kjult2RFlE0EaH",
@@ -565,11 +805,56 @@
     ],
     "_hash": "4YoTh9vwOhlMToJLNfBkQz"
   },
+  "siteSliceId": {
+    "_tableCfg": "7km61iyq2BFnZz2a9Gh3ZU",
+    "_type": "sliceIds",
+    "_data": [
+      {
+        "add": [
+          "Site1",
+          "Site2",
+          "Site3"
+        ],
+        "_hash": "b8QlmpS2kT0_oti-0-6JTI"
+      }
+    ],
+    "_hash": "n1DviV_kre9vE3VyP8lQ5S"
+  },
+  "siteGeneral": {
+    "_tableCfg": "4ricJTQmnW17WX7OhMHwkD",
+    "_type": "components",
+    "_data": [
+      {
+        "manager": "Alice Johnson",
+        "street": "Maple Street",
+        "houseNr": 12,
+        "postCode": 12345,
+        "city": "Springfield",
+        "_hash": "jzUEP8xW-uuiaigf9PBoLs"
+      },
+      {
+        "manager": "Bob Smith",
+        "street": "Oak Avenue",
+        "houseNr": 34,
+        "postCode": 67890,
+        "city": "Greenville",
+        "_hash": "QJVwLG9-ncWQG3XQiWy7rF"
+      },
+      {
+        "manager": "Carol Davis",
+        "street": "Pine Lane",
+        "houseNr": 56,
+        "postCode": 11223,
+        "city": "Lakeside",
+        "_hash": "BtE0gKzQ011zq-xz4IoofD"
+      }
+    ],
+    "_hash": "-lSo_ug9EOqs7R3Yf5otSn"
+  },
   "tableCfgs": {
     "_data": [
       {
         "key": "carSliceId",
-        "type": "sliceIds",
         "columns": [
           {
             "key": "_hash",
@@ -579,17 +864,31 @@
             "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
           },
           {
+            "key": "base",
+            "type": "string",
+            "titleLong": "Base SliceId",
+            "titleShort": "Base SliceId",
+            "_hash": "p2DC51_pQdFwf6Eiavgp0A"
+          },
+          {
             "key": "add",
             "type": "jsonArray",
-            "titleLong": "Add",
+            "titleLong": "Added SliceIds",
             "titleShort": "Add",
-            "_hash": "4EKp_7HqRXnpeCWCcoh6Vl"
+            "_hash": "9n2QKBS92p4krX0f2AgHcq"
+          },
+          {
+            "key": "remove",
+            "type": "jsonArray",
+            "titleLong": "Removed SliceIds",
+            "titleShort": "Remove",
+            "_hash": "V8znbXtfIbmq2mwRItHjfD"
           }
         ],
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "8nu13TE7dyRMtIJLNjiUH3"
+        "_hash": "vwkMMovjx_aZb_2o0R_rlT"
       },
       {
         "key": "carGeneral",
@@ -992,7 +1291,6 @@
       },
       {
         "key": "wheelSliceId",
-        "type": "sliceIds",
         "columns": [
           {
             "key": "_hash",
@@ -1002,17 +1300,31 @@
             "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
           },
           {
+            "key": "base",
+            "type": "string",
+            "titleLong": "Base SliceId",
+            "titleShort": "Base SliceId",
+            "_hash": "p2DC51_pQdFwf6Eiavgp0A"
+          },
+          {
             "key": "add",
             "type": "jsonArray",
-            "titleLong": "Add",
+            "titleLong": "Added SliceIds",
             "titleShort": "Add",
-            "_hash": "4EKp_7HqRXnpeCWCcoh6Vl"
+            "_hash": "9n2QKBS92p4krX0f2AgHcq"
+          },
+          {
+            "key": "remove",
+            "type": "jsonArray",
+            "titleLong": "Removed SliceIds",
+            "titleShort": "Remove",
+            "_hash": "V8znbXtfIbmq2mwRItHjfD"
           }
         ],
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "e91MNbEo8gwnBHaEQxX6wt"
+        "_hash": "cEQ5opF8Aer4QYeB53bkUf"
       },
       {
         "key": "wheelBrand",
@@ -1216,6 +1528,104 @@
         "isRoot": false,
         "isShared": true,
         "_hash": "Gxm-GLYcPM0yn2bT9LOMh3"
+      },
+      {
+        "key": "siteSliceId",
+        "columns": [
+          {
+            "key": "_hash",
+            "type": "string",
+            "titleLong": "Hash",
+            "titleShort": "Hash",
+            "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
+          },
+          {
+            "key": "base",
+            "type": "string",
+            "titleLong": "Base SliceId",
+            "titleShort": "Base SliceId",
+            "_hash": "p2DC51_pQdFwf6Eiavgp0A"
+          },
+          {
+            "key": "add",
+            "type": "jsonArray",
+            "titleLong": "Added SliceIds",
+            "titleShort": "Add",
+            "_hash": "9n2QKBS92p4krX0f2AgHcq"
+          },
+          {
+            "key": "remove",
+            "type": "jsonArray",
+            "titleLong": "Removed SliceIds",
+            "titleShort": "Remove",
+            "_hash": "V8znbXtfIbmq2mwRItHjfD"
+          }
+        ],
+        "isHead": false,
+        "isRoot": false,
+        "isShared": true,
+        "_hash": "7km61iyq2BFnZz2a9Gh3ZU"
+      },
+      {
+        "key": "siteGeneral",
+        "type": "components",
+        "columns": [
+          {
+            "key": "_hash",
+            "type": "string",
+            "titleLong": "Hash",
+            "titleShort": "Hash",
+            "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
+          },
+          {
+            "key": "manager",
+            "type": "string",
+            "titleLong": "Site Manager",
+            "titleShort": "Manager",
+            "_hash": "yF_GQXLH1n6vfV_QRS0JLw"
+          },
+          {
+            "key": "street",
+            "type": "string",
+            "titleLong": "Street",
+            "titleShort": "Street",
+            "_hash": "Qn4ukK8iJk2qRu24QrSLRO"
+          },
+          {
+            "key": "houseNr",
+            "type": "number",
+            "titleLong": "House Number",
+            "titleShort": "House Number",
+            "_hash": "Yrb9UOu-uqO_ZQ_NYq9uch"
+          },
+          {
+            "key": "postCode",
+            "type": "number",
+            "titleLong": "Postal Code",
+            "titleShort": "Postal Code",
+            "_hash": "ZilPLNjoddOH3hy3uTr4WN"
+          },
+          {
+            "key": "city",
+            "type": "string",
+            "titleLong": "City",
+            "titleShort": "City",
+            "_hash": "1sh5sSvTAh_uHjHzdaMjde"
+          },
+          {
+            "key": "cars",
+            "type": "jsonArray",
+            "ref": {
+              "tableKey": "carCake",
+              "_hash": "2l4mut6PepEq0qxY-e8q_1"
+            },
+            "_hash": "4ZKzYUP1tB_AW5S0mg4Ne6"
+          }
+        ],
+        "isHead": false,
+        "isRoot": false,
+        "isShared": true,
+        "_hash": "4ricJTQmnW17WX7OhMHwkD"
       }
     ]
   }

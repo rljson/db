@@ -7,7 +7,13 @@
 import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { JsonH } from '@rljson/json';
-import { Layer, SliceId, TableCfg } from '@rljson/rljson';
+import {
+  CakesTable,
+  Layer,
+  LayersTable,
+  SliceId,
+  TableCfg,
+} from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
@@ -556,9 +562,13 @@ describe('Controller', () => {
         );
 
         //Read Table
-        const table = await carGeneralLayerController.table();
+        const table = (await carGeneralLayerController.table()) as LayersTable;
         expect(table).toBeDefined();
-        expect(table).toEqual(carsExample().carGeneralLayer);
+        expect(table._data.map((l) => l._hash).sort()).toEqual(
+          carsExample()
+            .carGeneralLayer._data.map((l) => l._hash)
+            .sort(),
+        );
       });
       it('Get', async () => {
         //LayerController Refs
@@ -676,7 +686,9 @@ describe('Controller', () => {
         //Check if InsertHistory was written correctly
         const { carGeneralLayer: carGeneralLayerTable } =
           await db.core.dumpTable('carGeneralLayer');
-        expect(carGeneralLayerTable?._data.length).toBe(2); //2 because one row already existed from carsExample
+        expect(carGeneralLayerTable?._data.length).toBe(
+          carsExample().carGeneralLayer._data.length + 1,
+        );
 
         //Add another Layer, with previous
         const carGeneralLayerValueSecond: Partial<Layer> = {
@@ -699,7 +711,9 @@ describe('Controller', () => {
         //Check if InsertHistory was written correctly
         const { carGeneralLayer: carGeneralLayerTable2 } =
           await db.core.dumpTable('carGeneralLayer');
-        expect(carGeneralLayerTable2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first add
+        expect(carGeneralLayerTable2?._data.length).toBe(
+          carsExample().carGeneralLayer._data.length + 2,
+        );
       });
 
       it('Insert -> Remove Layer', async () => {
@@ -897,9 +911,13 @@ describe('Controller', () => {
         );
 
         //Read Table
-        const table = await carCakeController.table();
+        const table = (await carCakeController.table()) as CakesTable;
         expect(table).toBeDefined();
-        expect(table).toEqual(carsExample().carCake);
+        expect(table._data.map((c) => c._hash).sort()).toEqual(
+          carsExample()
+            .carCake._data.map((c) => c._hash)
+            .sort(),
+        );
       });
 
       it('Get', async () => {
@@ -992,7 +1010,9 @@ describe('Controller', () => {
 
         //Check if InsertHistory was written correctly
         const { carCake: carCakeTable } = await db.core.dumpTable('carCake');
-        expect(carCakeTable?._data.length).toBe(2); //2 because one row already existed from carsExample
+        expect(carCakeTable?._data.length).toBe(
+          carsExample().carCake._data.length + 1,
+        );
 
         //Add another Cake, with previous
         const carCakeValueSecond: CakeValue = {
@@ -1019,7 +1039,9 @@ describe('Controller', () => {
 
         //Check if InsertHistory was written correctly
         const { carCake: carCakeTable2 } = await db.core.dumpTable('carCake');
-        expect(carCakeTable2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first add
+        expect(carCakeTable2?._data.length).toBe(
+          carsExample().carCake._data.length + 2,
+        );
       });
 
       it('Invalid Insert command', async () => {

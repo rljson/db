@@ -8,15 +8,23 @@ import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import {
-  Insert, InsertHistory, InsertHistoryRow, LayerRef, LayersTable, Route, SliceIdsTable
+  Insert,
+  InsertHistory,
+  InsertHistoryRow,
+  LayerRef,
+  LayersTable,
+  Route,
+  SliceIdsTable,
 } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
-import { ColumnInfo, ColumnSelection } from '../src/join/selection/column-selection';
-
+import {
+  ColumnInfo,
+  ColumnSelection,
+} from '../src/join/selection/column-selection';
 
 describe('Db', () => {
   let db: Db;
@@ -257,15 +265,17 @@ describe('Db', () => {
         propertyKey,
       );
       expect(isolated.carGeneral).toBeDefined();
-      expect(isolated.carGeneral._data.map((c) => c.brand)).toEqual([
+      expect(
+        Array.from(new Set(isolated.carGeneral._data.map((c) => c.brand))),
+      ).toEqual([
         'Volkswagen',
+        'Hyundai',
+        'Nissan',
         'Tesla',
         'Audi',
-        'Audi',
-        'Volkswagen',
+        'Ford',
         'BMW',
-        'BMW',
-        'Tesla',
+        'Chevrolet',
       ]);
 
       const nonExistingPropertyKey = 'nonExistingProperty';

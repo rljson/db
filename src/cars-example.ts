@@ -12,12 +12,18 @@ import {
   ComponentsTable,
   createCakeTableCfg,
   createLayerTableCfg,
+  createSliceIdsTableCfg,
   LayersTable,
   Rljson,
   SliceIdsTable,
   TableCfg,
   TablesCfgTable,
 } from '@rljson/rljson';
+
+//Corporate Group
+//Companies
+//Branches
+//Sites
 
 export interface CarsExample extends Rljson {
   carSliceId: SliceIdsTable;
@@ -64,17 +70,9 @@ export interface CarTechnical extends JsonH {
 export const carsExample = (): CarsExample => {
   //CarSliceId
   //................................................................
-  const carSliceIdTableCfg = hip<TableCfg>({
-    key: 'carSliceId',
-    type: 'sliceIds',
-    columns: [
-      { key: '_hash', type: 'string', titleLong: 'Hash', titleShort: 'Hash' },
-      { key: 'add', type: 'jsonArray', titleLong: 'Add', titleShort: 'Add' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
+  const carSliceIdTableCfg = hip<TableCfg>(
+    createSliceIdsTableCfg('carSliceId'),
+  ) as TableCfg;
 
   const carSliceId = hip<any>({
     _tableCfg: carSliceIdTableCfg._hash,
@@ -82,6 +80,14 @@ export const carsExample = (): CarsExample => {
     _data: [
       {
         add: ['VIN1', 'VIN2', 'VIN3', 'VIN4', 'VIN5', 'VIN6', 'VIN7', 'VIN8'],
+        _hash: '',
+      },
+      {
+        add: ['VIN9', 'VIN10'],
+        _hash: '',
+      },
+      {
+        add: ['VIN11', 'VIN12'],
         _hash: '',
       },
     ],
@@ -292,6 +298,74 @@ export const carsExample = (): CarsExample => {
         },
         _hash: '',
       },
+      {
+        brand: 'Ford',
+        type: 'Mustang Mach-E',
+        doors: 5,
+        energyConsumption: 17.0,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: true,
+        meta: {
+          pressText: 'An electric SUV with Mustang heritage.',
+          _hash: '',
+        },
+        _hash: '',
+      },
+      {
+        brand: 'Chevrolet',
+        type: 'Bolt EV',
+        doors: 5,
+        energyConsumption: 14.0,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: true,
+        meta: {
+          pressText: 'An affordable electric hatchback.',
+          _hash: '',
+        },
+        _hash: '',
+      },
+      {
+        brand: 'Nissan',
+        type: 'Leaf',
+        doors: 5,
+        energyConsumption: 15.5,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: true,
+        meta: {
+          pressText: 'A pioneering electric vehicle.',
+          _hash: '',
+        },
+        _hash: '',
+      },
+      {
+        brand: 'Hyundai',
+        type: 'Kona Electric',
+        doors: 5,
+        energyConsumption: 14.5,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: true,
+        meta: {
+          pressText: 'A compact electric SUV.',
+          _hash: '',
+        },
+        _hash: '',
+      },
     ],
     _hash: '',
   }) as ComponentsTable<CarGeneral>;
@@ -356,6 +430,30 @@ export const carsExample = (): CarsExample => {
         height: 1450,
         width: 1830,
         length: 4150,
+        _hash: '',
+      },
+      {
+        height: 1700,
+        width: 2000,
+        length: 4800,
+        _hash: '',
+      },
+      {
+        height: 1350,
+        width: 1750,
+        length: 3900,
+        _hash: '',
+      },
+      {
+        height: 1750,
+        width: 2050,
+        length: 4900,
+        _hash: '',
+      },
+      {
+        height: 1600,
+        width: 1920,
+        length: 4600,
         _hash: '',
       },
     ],
@@ -443,6 +541,36 @@ export const carsExample = (): CarsExample => {
         transmission: 'Single-Speed',
         gears: 1,
         dimensions: carDimensions._data[6]._hash,
+        _hash: '',
+      },
+      {
+        engine: 'Electric',
+        transmission: 'Single-Speed',
+        gears: 1,
+        dimensions: carDimensions._data[7]._hash,
+        repairedByWorkshop: 'Workshop C',
+        _hash: '',
+      },
+      {
+        engine: 'Electric',
+        transmission: 'Single-Speed',
+        gears: 1,
+        dimensions: carDimensions._data[8]._hash,
+        _hash: '',
+      },
+      {
+        engine: 'Electric',
+        transmission: 'Single-Speed',
+        gears: 1,
+        dimensions: carDimensions._data[9]._hash,
+        repairedByWorkshop: 'Workshop B',
+        _hash: '',
+      },
+      {
+        engine: 'Electric',
+        transmission: 'Single-Speed',
+        gears: 1,
+        dimensions: carDimensions._data[10]._hash,
         _hash: '',
       },
     ],
@@ -548,6 +676,28 @@ export const carsExample = (): CarsExample => {
         componentsTable: 'carGeneral',
         _hash: '',
       },
+      {
+        add: {
+          VIN9: carGeneral._data[8]._hash,
+          VIN10: carGeneral._data[9]._hash,
+          _hash: '',
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: carSliceId._data[1]._hash,
+        componentsTable: 'carGeneral',
+        _hash: '',
+      },
+      {
+        add: {
+          VIN11: carGeneral._data[10]._hash,
+          VIN12: carGeneral._data[11]._hash,
+          _hash: '',
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: carSliceId._data[2]._hash,
+        componentsTable: 'carGeneral',
+        _hash: '',
+      },
     ],
     _hash: '',
   }) as LayersTable;
@@ -574,6 +724,28 @@ export const carsExample = (): CarsExample => {
         },
         sliceIdsTable: 'carSliceId',
         sliceIdsTableRow: carSliceId._data[0]._hash,
+        componentsTable: 'carTechnical',
+        _hash: '',
+      },
+      {
+        add: {
+          VIN9: carTechnical._data[7]._hash,
+          VIN10: carTechnical._data[8]._hash,
+          _hash: '',
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: carSliceId._data[1]._hash,
+        componentsTable: 'carTechnical',
+        _hash: '',
+      },
+      {
+        add: {
+          VIN11: carTechnical._data[9]._hash,
+          VIN12: carTechnical._data[10]._hash,
+          _hash: '',
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: carSliceId._data[2]._hash,
         componentsTable: 'carTechnical',
         _hash: '',
       },
@@ -606,6 +778,28 @@ export const carsExample = (): CarsExample => {
         componentsTable: 'carColor',
         _hash: '',
       },
+      {
+        add: {
+          VIN9: carColor._data[3]._hash,
+          VIN10: carColor._data[3]._hash,
+          _hash: '',
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: carSliceId._data[1]._hash,
+        componentsTable: 'carColor',
+        _hash: '',
+      },
+      {
+        add: {
+          VIN11: carColor._data[7]._hash,
+          VIN12: carColor._data[4]._hash,
+          _hash: '',
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: carSliceId._data[2]._hash,
+        componentsTable: 'carColor',
+        _hash: '',
+      },
     ],
     _hash: '',
   }) as LayersTable;
@@ -627,23 +821,33 @@ export const carsExample = (): CarsExample => {
           carColorLayer: carColorLayer._data[0]._hash,
         },
       },
+      {
+        sliceIdsTable: 'carSliceId',
+        sliceIdsRow: carSliceId._data[1]._hash,
+        layers: {
+          carGeneralLayer: carGeneralLayer._data[1]._hash,
+          carTechnicalLayer: carTechnicalLayer._data[1]._hash,
+          carColorLayer: carColorLayer._data[1]._hash,
+        },
+      },
+      {
+        sliceIdsTable: 'carSliceId',
+        sliceIdsRow: carSliceId._data[2]._hash,
+        layers: {
+          carGeneralLayer: carGeneralLayer._data[2]._hash,
+          carTechnicalLayer: carTechnicalLayer._data[2]._hash,
+          carColorLayer: carColorLayer._data[2]._hash,
+        },
+      },
     ],
   }) as CakesTable;
 
   //WheelSliceId
   //................................................................
 
-  const wheelSliceIdTableCfg = hip<TableCfg>({
-    key: 'wheelSliceId',
-    type: 'sliceIds',
-    columns: [
-      { key: '_hash', type: 'string', titleLong: 'Hash', titleShort: 'Hash' },
-      { key: 'add', type: 'jsonArray', titleLong: 'Add', titleShort: 'Add' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
+  const wheelSliceIdTableCfg = hip<TableCfg>(
+    createSliceIdsTableCfg('wheelSliceId'),
+  ) as TableCfg;
 
   const wheelSliceId = hip<any>({
     _tableCfg: wheelSliceIdTableCfg._hash,
@@ -786,6 +990,105 @@ export const carsExample = (): CarsExample => {
     ],
   }) as CakesTable;
 
+  //SiteSliceId
+  //................................................................
+  const siteSliceIdTableCfg = hip<TableCfg>(
+    createSliceIdsTableCfg('siteSliceId'),
+  );
+
+  const siteSliceId = hip<any>({
+    _tableCfg: siteSliceIdTableCfg._hash,
+    _type: 'sliceIds',
+    _data: [
+      {
+        add: ['Site1', 'Site2', 'Site3'],
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  }) as SliceIdsTable;
+
+  //SiteGeneral
+  //................................................................
+  const siteGeneralTableCfg = hip<TableCfg>({
+    key: 'siteGeneral',
+    type: 'components',
+    columns: [
+      { key: '_hash', type: 'string', titleLong: 'Hash', titleShort: 'Hash' },
+      {
+        key: 'manager',
+        type: 'string',
+        titleLong: 'Site Manager',
+        titleShort: 'Manager',
+      },
+      {
+        key: 'street',
+        type: 'string',
+        titleLong: 'Street',
+        titleShort: 'Street',
+      },
+      {
+        key: 'houseNr',
+        type: 'number',
+        titleLong: 'House Number',
+        titleShort: 'House Number',
+      },
+      {
+        key: 'postCode',
+        type: 'number',
+        titleLong: 'Postal Code',
+        titleShort: 'Postal Code',
+      },
+      {
+        key: 'city',
+        type: 'string',
+        titleLong: 'City',
+        titleShort: 'City',
+      },
+      {
+        key: 'cars',
+        type: 'jsonArray',
+        ref: {
+          tableKey: 'carCake',
+        },
+      } as ColumnCfg,
+    ] as ColumnCfg[],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  } as TableCfg);
+
+  const siteGeneral = hip<ComponentsTable<JsonH>>({
+    _tableCfg: siteGeneralTableCfg._hash as string,
+    _type: 'components',
+    _data: [
+      {
+        manager: 'Alice Johnson',
+        street: 'Maple Street',
+        houseNr: 12,
+        postCode: 12345,
+        city: 'Springfield',
+        _hash: '',
+      },
+      {
+        manager: 'Bob Smith',
+        street: 'Oak Avenue',
+        houseNr: 34,
+        postCode: 67890,
+        city: 'Greenville',
+        _hash: '',
+      },
+      {
+        manager: 'Carol Davis',
+        street: 'Pine Lane',
+        houseNr: 56,
+        postCode: 11223,
+        city: 'Lakeside',
+        _hash: '',
+      },
+    ],
+  }) as ComponentsTable<JsonH>;
+
   const tableCfgs = {
     _data: [
       carSliceIdTableCfg,
@@ -803,6 +1106,8 @@ export const carsExample = (): CarsExample => {
       wheelBrandLayerTableCfg,
       wheelDimensionLayerTableCfg,
       wheelCakeTableCfg,
+      siteSliceIdTableCfg,
+      siteGeneralTableCfg,
     ],
   } as TablesCfgTable;
 
@@ -822,6 +1127,8 @@ export const carsExample = (): CarsExample => {
     wheelBrandLayer,
     wheelDimensionLayer,
     wheelCake,
+    siteSliceId,
+    siteGeneral,
     tableCfgs,
   };
 

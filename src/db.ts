@@ -7,20 +7,40 @@
 import { Io } from '@rljson/io';
 import { Json, merge } from '@rljson/json';
 import {
-  CakesTable, ColumnCfg, ComponentsTable, Insert, InsertHistoryRow, InsertHistoryTimeId, isTimeId,
-  Layer, LayersTable, Ref, Rljson, Route, RouteSegment, SliceId, SliceIds, TableKey, validateInsert
+  CakesTable,
+  ColumnCfg,
+  ComponentsTable,
+  Insert,
+  InsertHistoryRow,
+  InsertHistoryTimeId,
+  isTimeId,
+  Layer,
+  LayersTable,
+  Ref,
+  Rljson,
+  Route,
+  RouteSegment,
+  SliceId,
+  SliceIds,
+  TableKey,
+  validateInsert,
 } from '@rljson/rljson';
 
 import { traverse } from 'object-traversal';
 
 import {
-  Controller, ControllerRefs, ControllerRunFn, createController
+  Controller,
+  ControllerRefs,
+  ControllerRunFn,
+  createController,
 } from './controller/controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRows } from './join/join.ts';
-import { ColumnInfo, ColumnSelection } from './join/selection/column-selection.ts';
+import {
+  ColumnInfo,
+  ColumnSelection,
+} from './join/selection/column-selection.ts';
 import { Notify } from './notify.ts';
-
 
 /**
  * Access Rljson data
@@ -202,7 +222,7 @@ export class Db {
       // We have to check which Node Rows have Children matching the filter,
       // if get is used with _through to filter against referenced component values
       if (childrenThroughProperty) {
-        const childrenHashes = rowChildren[childrenTableKey]._data.map(
+        const resolvedChildrenHashes = rowChildren[childrenTableKey]._data.map(
           (rc) => rc._hash as string,
         );
         for (const nr of nodeRowsFiltered) {
@@ -217,10 +237,23 @@ export class Db {
               : [throughHashesInRowCouldBeArray];
 
             for (const th of throughHashesInRow) {
-              if (childrenHashes.includes(th)) {
+              if (resolvedChildrenHashes.includes(th)) {
                 nodeRowsMatchingChildrenRefs.set((nr as any)._hash, nr);
               }
             }
+          }
+        }
+      } else {
+        const resolvedChildrenHashes = rowChildren[childrenTableKey]._data.map(
+          (rc) => rc._hash as string,
+        );
+        const childrenRefsOfRow = childrenRefs
+          .map((cr) => (cr.tableKey == childrenTableKey ? cr.ref : null))
+          .filter((cr) => !!cr);
+
+        for (const ch of resolvedChildrenHashes) {
+          if (childrenRefsOfRow.includes(ch)) {
+            nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, nodeRow);
           }
         }
       }
@@ -229,23 +262,19 @@ export class Db {
     // Merge Children Data
     const nodeChildren = merge(...(nodeChildrenArray as Rljson[]));
 
-    // If filtering by child refs, only return node rows that had children matching the filter
-    if (childrenThroughProperty) {
-      const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());
-      return {
-        ...node,
-        ...{
-          [nodeTableKey]: {
-            _data: matchedNodeRows,
-            _type: nodeType,
-            _hash: nodeHash,
-          },
+    // Return Node with matched Children
+    const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());
+    return {
+      ...node,
+      ...{
+        [nodeTableKey]: {
+          _data: matchedNodeRows,
+          _type: nodeType,
+          _hash: nodeHash,
         },
-        ...nodeChildren,
-      } as Rljson;
-    }
-
-    return { ...node, ...nodeChildren } as Rljson;
+      },
+      ...nodeChildren,
+    } as Rljson;
   }
 
   // ...........................................................................
