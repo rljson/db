@@ -9,8 +9,8 @@ import { IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import {
   Insert,
-  InsertHistory,
   InsertHistoryRow,
+  InsertHistoryTable,
   LayerRef,
   LayersTable,
   Route,
@@ -21,6 +21,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
+import { example } from '../src/example/example';
 import {
   ColumnInfo,
   ColumnSelection,
@@ -30,6 +31,12 @@ describe('Db', () => {
   let db: Db;
 
   beforeEach(async () => {
+    // NEW BOOTSTRAPPED EXAMPLE
+    const ex = new example();
+    await ex.init();
+
+    debugger;
+
     //Init io
     const io = new IoMem();
     await io.init();
@@ -722,7 +729,7 @@ describe('Db', () => {
               route: '/carGeneral',
             } as InsertHistoryRow<'CarGeneral'>,
           ],
-        } as InsertHistory<'CarGeneral'>,
+        } as InsertHistoryTable<'CarGeneral'>,
       });
 
       //Create Insert with predecessor ref in route
@@ -766,7 +773,7 @@ describe('Db', () => {
               route: '/carGeneral',
             } as InsertHistoryRow<'CarGeneral'>,
           ],
-        } as InsertHistory<'CarGeneral'>,
+        } as InsertHistoryTable<'CarGeneral'>,
       });
 
       //Create Insert with predecessor ref in route

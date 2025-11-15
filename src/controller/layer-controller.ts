@@ -6,15 +6,24 @@ import { hsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  ComponentRef, InsertCommand, InsertHistoryRow, Layer, LayerRef, LayersTable, Ref, Rljson, SliceId,
-  SliceIdsRef, TableKey, timeId
+  ComponentRef,
+  InsertCommand,
+  InsertHistoryRow,
+  Layer,
+  LayerRef,
+  LayersTable,
+  Ref,
+  Rljson,
+  SliceId,
+  SliceIdsRef,
+  TableKey,
+  timeId,
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
 import { Controller, ControllerRefs } from './controller.ts';
-
 
 export interface LayerControllerRefs extends Partial<Layer> {
   base?: LayerRef;
@@ -23,9 +32,9 @@ export interface LayerControllerRefs extends Partial<Layer> {
   componentsTable: TableKey;
 }
 
-export class LayerController<N extends string>
-  extends BaseController<LayersTable>
-  implements Controller<LayersTable, N>
+export class LayerController<N extends string, C extends Record<string, string>>
+  extends BaseController<LayersTable, C>
+  implements Controller<LayersTable, C, N>
 {
   constructor(
     protected readonly _core: Core,
@@ -81,18 +90,21 @@ export class LayerController<N extends string>
       }
     } else {
       // Try to read refs from first row of layers table (Fallback)
+      // TODO: THIS MUST BE TIME CONSIDERED!!!
       const layer = table._data[0] as LayerControllerRefs;
-      this._refs = {
-        sliceIdsTable: layer.sliceIdsTable,
-        sliceIdsTableRow: layer.sliceIdsTableRow,
-        componentsTable: layer.componentsTable,
-      };
+      if (!!layer) {
+        this._refs = {
+          sliceIdsTable: layer.sliceIdsTable,
+          sliceIdsTableRow: layer.sliceIdsTableRow,
+          componentsTable: layer.componentsTable,
+        };
+      }
     }
   }
 
   async insert(
     command: InsertCommand,
-    value: Json,
+    value: C,
     origin?: Ref,
     refs?: ControllerRefs,
   ): Promise<InsertHistoryRow<any>[]> {
@@ -167,6 +179,7 @@ export class LayerController<N extends string>
     const { [this._tableKey]: table } = await this.get(where, filter);
     const childRefs: Array<{ tableKey: TableKey; ref: Ref }> = [];
 
+    //TODO: Implement layer sorted loop by timeId of InsertHistory
     for (const row of table._data) {
       const layer = row as Layer;
 
@@ -178,6 +191,11 @@ export class LayerController<N extends string>
           ref: compRef,
         });
       }
+
+      // TODO: CONTINUE HERE
+      // USE BASE PROPERTY
+      // const baseChildRefs = await this.getBaseChildRefs(layer._hash as string);
+      // debugger;
     }
 
     return childRefs;

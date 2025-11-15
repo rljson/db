@@ -26,9 +26,13 @@ import {
   ControllerRefs,
 } from './controller.ts';
 
-export class ComponentController<N extends string, T extends Json>
-  extends BaseController<ComponentsTable<T>>
-  implements Controller<ComponentsTable<T>, N>
+export class ComponentController<
+    N extends string,
+    C extends Json,
+    T extends Json,
+  >
+  extends BaseController<ComponentsTable<T>, C>
+  implements Controller<ComponentsTable<T>, C, N>
 {
   private _tableCfg: TableCfg | null = null;
 

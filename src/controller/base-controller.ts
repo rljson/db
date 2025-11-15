@@ -18,8 +18,8 @@ import { Core } from '../core.ts';
 import { CakeControllerCommands } from './cake-controller.ts';
 import { Controller, ControllerRefs } from './controller.ts';
 
-export abstract class BaseController<T extends TableType>
-  implements Controller<any, any>
+export abstract class BaseController<T extends TableType, C extends JsonValue>
+  implements Controller<any, any, any>
 {
   constructor(
     protected readonly _core: Core,
@@ -29,7 +29,7 @@ export abstract class BaseController<T extends TableType>
   // ...........................................................................
   abstract insert(
     command: CakeControllerCommands,
-    value: Json,
+    value: C,
     origin?: Ref,
     refs?: ControllerRefs,
   ): Promise<InsertHistoryRow<any>[]>;

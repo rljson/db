@@ -20,14 +20,18 @@ import { Core } from '../core.ts';
 import { CakeController, CakeControllerRefs } from './cake-controller.ts';
 import { ComponentController } from './component-controller.ts';
 import { LayerController, LayerControllerRefs } from './layer-controller.ts';
+import {
+  SliceIdController,
+  SliceIdControllerRefs,
+} from './slice-id-controller.ts';
 
 export type ControllerRefs = CakeControllerRefs | LayerControllerRefs;
 
 export type ControllerCommands = InsertCommand;
 
-export type ControllerRunFn<N extends string> = (
+export type ControllerRunFn<N extends string, C extends JsonValue> = (
   command: ControllerCommands,
-  value: Json,
+  value: C,
   origin?: Ref,
   refs?: ControllerRefs,
 ) => Promise<InsertHistoryRow<N>[]>;
@@ -46,8 +50,12 @@ export type ControllerRunFn<N extends string> = (
  * @returns {Promise<Json[] | null>} A promise that resolves to an array of JSON objects or null if no data is found.
  * @throws {Error} If the data is invalid.
  */
-export interface Controller<T extends TableType, N extends string> {
-  insert: ControllerRunFn<N>;
+export interface Controller<
+  T extends TableType,
+  C extends JsonValue,
+  N extends string,
+> {
+  insert: ControllerRunFn<N, C>;
   init(): Promise<void>;
   table(): Promise<T>;
   get(where: string | Json, filter?: Json): Promise<Rljson>;
@@ -73,8 +81,8 @@ export const createController = async (
   core: Core,
   tableKey: TableKey,
   refs?: ControllerRefs,
-): Promise<Controller<any, string>> => {
-  let ctrl: Controller<any, string>;
+): Promise<Controller<any, string, any>> => {
+  let ctrl: Controller<any, any, string>;
   switch (type) {
     case 'layers':
       ctrl = new LayerController(core, tableKey, refs as LayerControllerRefs);
@@ -87,6 +95,13 @@ export const createController = async (
       break;
     case 'cakes':
       ctrl = new CakeController(core, tableKey, refs as CakeControllerRefs);
+      break;
+    case 'sliceIds':
+      ctrl = new SliceIdController(
+        core,
+        tableKey,
+        refs as SliceIdControllerRefs,
+      );
       break;
     default:
       throw new Error(`Controller for type ${type} is not implemented yet.`);

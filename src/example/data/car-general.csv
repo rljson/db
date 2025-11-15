@@ -1,0 +1,101 @@
+sliceId; brand; type; doors; energyConsumption; units/energy; serviceIntervals; isElectric; meta;
+VIN1; Volkswagen; Polo; 5; 5.5; l/100km; 15000, 30000, 45000; true;{ pressText: 'A popular compact car.'}
+VIN2; Ford; Mustang; 2; 9.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'An iconic muscle car.'}
+VIN3; Toyota; Corolla; 4; 6.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A reliable sedan.'}
+VIN4; Honda; Civic; 4; 5.8; l/100km; 12000, 24000, 36000; false;{ pressText: 'A sporty compact car.'}
+VIN5; BMW; i3; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A premium electric vehicle.'}
+VIN6; Audi; A4; 4; 7.5; l/100km; 15000, 30000, 45000; false;{ pressText: 'A luxury sedan.'}
+VIN7; Mercedes; C-Class; 4; 7.8; l/100km; 15000, 30000, 45000; false;{ pressText: 'A stylish and comfortable car.'}
+VIN8; Chevrolet; Bolt; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'An affordable electric car.'}
+VIN9; Nissan; Leaf; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A popular electric vehicle.'}
+VIN10; Hyundai; Kona Electric; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A compact electric SUV.'}
+VIN11; Kia; Soul EV; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A quirky electric car.'}
+VIN12; Mazda; CX-5; 4; 8.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A versatile SUV.'}
+VIN13; Subaru; Outback; 4; 7.2; l/100km; 15000, 30000, 45000; false;{ pressText: 'A rugged wagon.'}
+VIN14; Volkswagen; ID.4; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A modern electric SUV.'}
+VIN15; Tesla; Model 3; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A high-performance electric sedan.'}
+VIN16; Tesla; Model Y; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A versatile electric SUV.'}
+VIN17; Ford; F-150 Lightning; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'An electric pickup truck.'}
+VIN18; Rivian; R1T; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A rugged electric truck.'}
+VIN19; Lucid; Air; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A luxury electric sedan.'}
+VIN20; Porsche; Taycan; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A high-performance electric sports car.'}
+VIN21; Jeep; Wrangler 4xe; 4; 2.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A plug-in hybrid SUV.'}
+VIN22; BMW; X5 xDrive45e; 4; 3.8; l/100km; 15000, 30000, 45000; false;{ pressText: 'A luxury plug-in hybrid SUV.'}
+VIN23; Audi; Q5 TFSI e; 4; 3.9; l/100km; 15000, 30000, 45000; false;{ pressText: 'A premium plug-in hybrid SUV.'}
+VIN24; Mercedes; GLE 350 de; 4; 3.3; l/100km; 15000, 30000, 45000; false;{ pressText: 'A stylish plug-in hybrid SUV.'}
+VIN25; Volvo; XC60 Recharge; 4; 2.5; l/100km; 15000, 30000, 45000; false;{ pressText: 'A safe and efficient plug-in hybrid SUV.'}
+VIN26; Toyota; RAV4 Prime; 4; 2.5; l/100km; 15000, 30000, 45000; false;{ pressText: 'A versatile plug-in hybrid SUV.'}
+VIN27; Honda; CR-V Hybrid; 4; 5.3; l/100km; 15000, 30000, 45000; false;{ pressText: 'A fuel-efficient hybrid SUV.'}
+VIN28; Lexus; RX 450h; 4; 6.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A luxury hybrid SUV.'}
+VIN29; Subaru; Crosstrek Hybrid; 4; 6.9; l/100km; 15000, 30000, 45000; false;{ pressText: 'A compact hybrid SUV.'}
+VIN30; Kia; Niro PHEV; 4; 4.4; l/100km; 15000, 30000, 45000; false;{ pressText: 'A practical plug-in hybrid crossover.'}
+VIN31; Hyundai; Ioniq Plug-in Hybrid; 4; 4.4; l/100km; 15000, 30000, 45000; false;{ pressText: 'An efficient plug-in hybrid hatchback.'}
+VIN32; Mini; Countryman PHEV; 4; 4.1; l/100km; 15000, 30000, 45000; false;{ pressText: 'A stylish plug-in hybrid compact SUV.'}
+VIN33; Fiat; 500e; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A compact electric city car.'}
+VIN34; Smart; EQ ForTwo; 2; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A tiny electric urban vehicle.'}
+VIN35; Peugeot; e-208; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A stylish electric hatchback.'}
+VIN36; Renault; Zoe; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A popular electric compact car.'}
+VIN37; Opel; Corsa-e; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'An affordable electric hatchback.'}
+VIN38; Citroën; ë-C4; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A comfortable electric compact car.'}
+VIN39; DS; 3 Crossback E-Tense; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A premium electric compact SUV.'}
+VIN40; Jaguar; I-PACE; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A luxury electric SUV.'}
+VIN41; Alfa Romeo; Tonale PHEV; 4; 2.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A sporty plug-in hybrid SUV.'}
+VIN42; Maserati; Ghibli Hybrid; 4; 3.5; l/100km; 15000, 30000, 45000; false;{ pressText: 'A luxurious hybrid sedan.'}
+VIN43; Ferrari; SF90 Stradale; 2; 3.5; l/100km; 10000, 20000, 30000; false;{ pressText: 'A high-performance hybrid supercar.'}
+VIN44; Lamborghini; Sián FKP 37; 2; 3.8; l/100km; 10000, 20000, 30000; false;{ pressText: 'A limited-edition hybrid supercar.'}
+VIN45; McLaren; Artura; 2; 3.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'A cutting-edge hybrid supercar.'}
+VIN46; Pagani; Huayra R; 2; 6.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'An exclusive hypercar.'}
+VIN47; Koenigsegg; Regera; 2; 4.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'A revolutionary hybrid hypercar.'}
+VIN48; Bugatti; Chiron Pur Sport; 2; 6.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'A pinnacle of automotive engineering.'}
+VIN49; Aston Martin; Valhalla; 2; 4.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'A futuristic hybrid supercar.'}
+VIN50; Lotus; Evija; 2; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A groundbreaking electric hypercar.'}
+VIN51; Cadillac; Lyriq; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A luxury electric SUV.'}
+VIN52; Lincoln; Aviator Grand Touring; 4; 3.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A premium plug-in hybrid SUV.'}
+VIN53; Genesis; GV60; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A stylish electric SUV.'}
+VIN54; Acura; MDX Sport Hybrid; 4; 6.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A luxury hybrid SUV.'}
+VIN55; Infiniti; QX60 Hybrid; 4; 6.5; l/100km; 15000, 30000, 45000; false;{ pressText: 'A spacious hybrid SUV.'}
+VIN56; Tesla; Cybertruck; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A futuristic electric pickup truck.'}
+VIN57; Bollinger; B1; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A rugged electric off-road vehicle.'}
+VIN58; Canoo; Lifestyle Vehicle; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A versatile electric van.'}
+VIN59; Lordstown; Endurance; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'An electric pickup truck for work.'}
+VIN60; Atlis; XT; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A powerful electric pickup truck.'}
+VIN61; Faraday Future; FF 91; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A high-tech electric luxury car.'}
+VIN62; NIO; ES8; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A premium electric SUV from China.'}
+VIN63; XPeng; P7; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A stylish electric sedan from China.'}
+VIN64; Li Auto; Li ONE; 4; 1.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A hybrid electric SUV from China.'}
+VIN65; BYD; Tang EV; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A popular electric SUV from China.'}
+VIN66; Geely; Geometry A; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'An affordable electric sedan from China.'}
+VIN67; Great Wall; Ora Good Cat; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A cute electric compact car from China.'}
+VIN68; MG; ZS EV; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'An affordable electric SUV from the UK.'}
+VIN69; Vauxhall; Corsa-e; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'An electric hatchback for the UK market.'}
+VIN70; Skoda; Enyaq iV; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A practical electric SUV from the Czech Republic.'}
+VIN71; SEAT; Mii Electric; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A compact electric city car from Spain.'}
+VIN72; Dacia; Spring Electric; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'An affordable electric car from Romania.'}
+VIN73; Tata; Nexon EV; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A popular electric SUV from India.'}
+VIN74; Mahindra; eKUV100; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'An affordable electric compact SUV from India.'}
+VIN75; Maruti Suzuki; WagonR Electric; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'An electric hatchback for the Indian market.'}
+VIN76; Renault; Twizy; 2; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A tiny electric urban vehicle.'}
+VIN77; Smart; EQ ForFour; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A compact electric city car.'}
+VIN78; Honda; e; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A stylish electric hatchback.'}
+VIN79; Mini; Electric; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A fun electric compact car.'}
+VIN80; BMW; iX3; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A sporty electric SUV.'}
+VIN81; Audi; e-tron GT; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A high-performance electric sedan.'}
+VIN82; Mercedes; EQC; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A luxury electric SUV.'}
+VIN83; Porsche; Macan EV; 4; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A sporty electric SUV.'}
+VIN84; Jaguar; XE PHEV; 4; 2.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A stylish plug-in hybrid sedan.'}
+VIN85; Land Rover; Range Rover PHEV; 4; 3.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A luxurious plug-in hybrid SUV.'}
+VIN86; Bentley; Bentayga Hybrid; 4; 3.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'A premium hybrid SUV.'}
+VIN87; Rolls-Royce; Spectre; 4; 4.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'A luxurious hybrid coupe.'}
+VIN88; Maybach; GLS 600; 4; 4.0; l/100km; 15000, 30000, 45000; false;{ pressText: 'An ultra-luxury hybrid SUV.'}
+VIN89; Bugatti; Veyron Grand Sport Vitesse; 2; 8.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'A legendary hypercar.'}
+VIN90; Koenigsegg; Jesko; 2; 5.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'A cutting-edge hypercar.'}
+VIN91; Pagani; Zonda HP Barchetta; 2; 6.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'An exclusive hypercar.'}
+VIN92; Rimac; Nevera; 2; 0; kWh/100km; 20000, 40000, 60000; true;{ pressText: 'A revolutionary electric hypercar.'}
+VIN93; Lotus; Emira; 2; 3.5; l/100km; 10000, 20000, 30000; false;{ pressText: 'A stylish sports car.'}
+VIN94; Alpine; A110; 2; 4.2; l/100km; 10000, 20000, 30000; false;{ pressText: 'A lightweight sports car.'}
+VIN95; Caterham; Seven 620R; 2; 6.2; l/100km; 10000, 20000, 30000; false;{ pressText: 'A minimalist sports car.'}
+VIN96; Ariel; Atom 4; 2; 2.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'A high-performance lightweight car.'}
+VIN97; Donkervoort; D8 GTO-JD70; 2; 2.5; l/100km; 10000, 20000, 30000; false;{ pressText: 'A bespoke lightweight sports car.'}
+VIN98; Morgan; Plus Six; 2; 3.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'A classic British sports car with modern performance.'}
+VIN99; TVR; Griffith; 2; 5.0; l/100km; 10000, 20000, 30000; false;{ pressText: 'A powerful British sports car.'}
+VIN100; Wiesmann; GT MF5; 2; 4.4; l/100km; 10000, 20000, 30000; false;{ pressText: 'A handcrafted German sports car.'}

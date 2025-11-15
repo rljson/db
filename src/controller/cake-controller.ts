@@ -6,14 +6,25 @@ import { hsh, rmhsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  Cake, CakesTable, InsertHistoryRow, LayerRef, Ref, Rljson, SliceIdsRef, TableKey, timeId
+  Cake,
+  CakesTable,
+  InsertHistoryRow,
+  LayerRef,
+  Ref,
+  Rljson,
+  SliceIdsRef,
+  TableKey,
+  timeId,
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
-import { Controller, ControllerCommands, ControllerRefs } from './controller.ts';
-
+import {
+  Controller,
+  ControllerCommands,
+  ControllerRefs,
+} from './controller.ts';
 
 export interface CakeValue extends Json {
   layers: {
@@ -30,9 +41,9 @@ export interface CakeControllerRefs extends Partial<Cake> {
   base?: Ref;
 }
 
-export class CakeController<N extends string>
-  extends BaseController<CakesTable>
-  implements Controller<CakesTable, N>
+export class CakeController<N extends string, C extends Record<string, string>>
+  extends BaseController<CakesTable, C>
+  implements Controller<CakesTable, C, N>
 {
   private _table: CakesTable | null = null;
 
@@ -83,11 +94,13 @@ export class CakeController<N extends string>
     } else {
       // Try to read refs from first (latest?) row of cakes table (Fallback)
       const cake = this._table._data[0] as CakeControllerRefs;
-      this._refs = {
-        sliceIdsTable: cake.sliceIdsTable,
-        sliceIdsRow: cake.sliceIdsRow,
-      };
-      this._baseLayers = rmhsh(cake.layers!);
+      if (!!cake) {
+        this._refs = {
+          sliceIdsTable: cake.sliceIdsTable,
+          sliceIdsRow: cake.sliceIdsRow,
+        };
+        this._baseLayers = rmhsh(cake.layers!);
+      }
     }
   }
 
@@ -119,7 +132,7 @@ export class CakeController<N extends string>
 
   async insert(
     command: CakeControllerCommands,
-    value: Json,
+    value: C,
     origin?: Ref,
     refs?: ControllerRefs,
   ): Promise<InsertHistoryRow<any>[]> {
