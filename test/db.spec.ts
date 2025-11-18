@@ -409,7 +409,7 @@ describe('Db', () => {
       expect(result.carGeneralLayer._data.length).toBe(1);
       expect(result.carGeneralLayer._data[0]._hash).toBe(ref);
     });
-    it('get cake by ref', async () => {
+    it('get cake by route ref', async () => {
       const route = '/carCake';
       const ref = (carsExample().carCake._data[0]._hash as string) ?? '';
 
@@ -419,7 +419,7 @@ describe('Db', () => {
       expect(result.carCake._data.length).toBe(1);
       expect(result.carCake._data[0]._hash).toBe(ref);
     });
-    it('get cake/layer by ref', async () => {
+    it('get cake/layer by route ref', async () => {
       const cakeRoute = '/carCake';
       const cakeRef = (carsExample().carCake._data[0]._hash as string) ?? '';
 
@@ -591,7 +591,7 @@ describe('Db', () => {
         carsExample().carGeneral._data[0]._hash,
       );
     });
-    it('get nested cake/layer/component by hash w/ revision hash', async () => {
+    it('get nested cake/layer/component by hash w/ route revision hash', async () => {
       const cakeRevisionHash = carsExample().carCake._data[0]._hash ?? '';
       const layerRevisionHash =
         carsExample().carGeneralLayer._data[0]._hash ?? '';
@@ -622,7 +622,7 @@ describe('Db', () => {
         carsExample().carGeneral._data[0]._hash,
       );
     });
-    it('get nested cake/layer/component by hash w/ revision TimeId', async () => {
+    it('get nested cake/layer/component by hash w/ route revision TimeId', async () => {
       //Add new InsertHistory Entry to Layer Revisions, recursively adding it to the cake
       const layerInsert: Insert<Json> = {
         route: '/carCake/carGeneralLayer',
