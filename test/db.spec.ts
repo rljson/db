@@ -21,7 +21,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
-import { example } from '../src/example/example';
 import {
   ColumnInfo,
   ColumnSelection,
@@ -31,12 +30,6 @@ describe('Db', () => {
   let db: Db;
 
   beforeEach(async () => {
-    // NEW BOOTSTRAPPED EXAMPLE
-    const ex = new example();
-    await ex.init();
-
-    debugger;
-
     //Init io
     const io = new IoMem();
     await io.init();
@@ -450,9 +443,11 @@ describe('Db', () => {
       const result = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carGeneralLayer).toBeDefined();
-      expect(result.carGeneralLayer._data.length).toBe(1);
-      expect(result.carGeneralLayer._data[0]._hash).toBe(
-        carsExample().carGeneralLayer._data[0]._hash,
+      expect(result.carGeneralLayer._data.length).toBe(3); //3 layers because they are chained
+      expect(result.carGeneralLayer._data.map((l) => l._hash).sort()).toEqual(
+        carsExample()
+          .carGeneralLayer._data.map((l) => l._hash)
+          .sort(),
       );
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
@@ -579,14 +574,16 @@ describe('Db', () => {
       const result = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
-      expect(result.carCake._data.length).toBe(1);
+      expect(result.carCake._data.length).toBe(3); //3 cakes because layers are chained
       expect(result.carCake._data[0]._hash).toBe(
         carsExample().carCake._data[0]._hash,
       );
       expect(result.carGeneralLayer).toBeDefined();
-      expect(result.carGeneralLayer._data.length).toBe(1);
-      expect(result.carGeneralLayer._data[0]._hash).toBe(
-        carsExample().carGeneralLayer._data[0]._hash,
+      expect(result.carGeneralLayer._data.length).toBe(3);
+      expect(result.carGeneralLayer._data.map((l) => l._hash).sort()).toEqual(
+        carsExample()
+          .carGeneralLayer._data.map((l) => l._hash)
+          .sort(),
       );
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);

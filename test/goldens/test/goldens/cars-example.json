@@ -1,6 +1,6 @@
 {
   "carSliceId": {
-    "_tableCfg": "vwkMMovjx_aZb_2o0R_rlT",
+    "_tableCfg": "BzT08ZUgQeyH05iw6zkRn5",
     "_type": "sliceIds",
     "_data": [
       {
@@ -31,7 +31,7 @@
         "_hash": "bRu3UyUhLn_eUfyY6tHdT2"
       }
     ],
-    "_hash": "9_qjEwElDSoue0gKMo7_kc"
+    "_hash": "gElJu5DWu2nYv0JKAql-b7"
   },
   "carGeneral": {
     "_tableCfg": "Tq-GIJawWlas1J3Is-QjOe",
@@ -560,7 +560,8 @@
         "sliceIdsTable": "carSliceId",
         "sliceIdsTableRow": "wsQ0dP7o3dfoV3q0AXxaC6",
         "componentsTable": "carGeneral",
-        "_hash": "24AM7LwAR_wIvnrJC0lSSX"
+        "base": "F6m5VlMcDCz0s39i5nZRcf",
+        "_hash": "kH-QEPGsLDi2FK_aAfx44A"
       },
       {
         "add": {
@@ -571,10 +572,11 @@
         "sliceIdsTable": "carSliceId",
         "sliceIdsTableRow": "bRu3UyUhLn_eUfyY6tHdT2",
         "componentsTable": "carGeneral",
-        "_hash": "F9ywtrm8LAVJZucUwZtC7k"
+        "base": "kH-QEPGsLDi2FK_aAfx44A",
+        "_hash": "2I2tFovGZugWNiH4mN3lTQ"
       }
     ],
-    "_hash": "wOjdU-A3TgLoY2cZxUo9wN"
+    "_hash": "iNRuwaTn8xIoT9GrXBgjYF"
   },
   "carTechnicalLayer": {
     "_tableCfg": "0iL8Czul98-LD7oXDW9SWO",
@@ -606,7 +608,8 @@
         "sliceIdsTable": "carSliceId",
         "sliceIdsTableRow": "wsQ0dP7o3dfoV3q0AXxaC6",
         "componentsTable": "carTechnical",
-        "_hash": "UH_-cODxngEpkR1Lg4OPSX"
+        "base": "jAwepLTvCXMkSqkHM_8yDJ",
+        "_hash": "WjBi1Azqw3ox-weHUxxGi0"
       },
       {
         "add": {
@@ -617,10 +620,11 @@
         "sliceIdsTable": "carSliceId",
         "sliceIdsTableRow": "bRu3UyUhLn_eUfyY6tHdT2",
         "componentsTable": "carTechnical",
-        "_hash": "IHgyngUiVoVz_oPTytzybd"
+        "base": "WjBi1Azqw3ox-weHUxxGi0",
+        "_hash": "MMOCy6B25kHCWsaGIEDoqC"
       }
     ],
-    "_hash": "mbgNvMYdzGGw2bRLDa3KAF"
+    "_hash": "-vkZd1oWnm-S9L7rjjl8H1"
   },
   "carColorLayer": {
     "_tableCfg": "AqNt4hM9EEUx-s1AaDtzOs",
@@ -652,7 +656,8 @@
         "sliceIdsTable": "carSliceId",
         "sliceIdsTableRow": "wsQ0dP7o3dfoV3q0AXxaC6",
         "componentsTable": "carColor",
-        "_hash": "O8f4TOaByWXRfzUlbQD0W1"
+        "base": "xiTv2UKaEHSk1wd44XU0K0",
+        "_hash": "RJowkFwRO7H4Lyn79ZceyC"
       },
       {
         "add": {
@@ -663,10 +668,11 @@
         "sliceIdsTable": "carSliceId",
         "sliceIdsTableRow": "bRu3UyUhLn_eUfyY6tHdT2",
         "componentsTable": "carColor",
-        "_hash": "oH_umPCVs7pvuj7LMOTpYC"
+        "base": "RJowkFwRO7H4Lyn79ZceyC",
+        "_hash": "sTAigy8nayUIBTrlVmGU3j"
       }
     ],
-    "_hash": "OhnL-hfiQFgYpYRfxLGbeJ"
+    "_hash": "2kJkbSb7tE05TpJxQ5ycIW"
   },
   "carCake": {
     "_tableCfg": "5tcrs9FhrPleZv_JXzetfy",
@@ -687,29 +693,29 @@
         "sliceIdsTable": "carSliceId",
         "sliceIdsRow": "wsQ0dP7o3dfoV3q0AXxaC6",
         "layers": {
-          "carGeneralLayer": "24AM7LwAR_wIvnrJC0lSSX",
-          "carTechnicalLayer": "UH_-cODxngEpkR1Lg4OPSX",
-          "carColorLayer": "O8f4TOaByWXRfzUlbQD0W1",
-          "_hash": "Ttl_AuLVnq1v19X6VBwSaf"
+          "carGeneralLayer": "kH-QEPGsLDi2FK_aAfx44A",
+          "carTechnicalLayer": "WjBi1Azqw3ox-weHUxxGi0",
+          "carColorLayer": "RJowkFwRO7H4Lyn79ZceyC",
+          "_hash": "BMshKPzbDXg9OMqDtwoNCO"
         },
-        "_hash": "gWFPcI3_PfEtEC_ZlqdBfB"
+        "_hash": "gXWtd6tQLmZAcVM99Fic5U"
       },
       {
         "sliceIdsTable": "carSliceId",
         "sliceIdsRow": "bRu3UyUhLn_eUfyY6tHdT2",
         "layers": {
-          "carGeneralLayer": "F9ywtrm8LAVJZucUwZtC7k",
-          "carTechnicalLayer": "IHgyngUiVoVz_oPTytzybd",
-          "carColorLayer": "oH_umPCVs7pvuj7LMOTpYC",
-          "_hash": "mGlkXOKFxxUVwtkcmrbeJy"
+          "carGeneralLayer": "2I2tFovGZugWNiH4mN3lTQ",
+          "carTechnicalLayer": "MMOCy6B25kHCWsaGIEDoqC",
+          "carColorLayer": "sTAigy8nayUIBTrlVmGU3j",
+          "_hash": "-701QOApu9jsEu_7iwKV-I"
         },
-        "_hash": "87-bRhOXhmjExKVX8hjXLg"
+        "_hash": "XJSU0hw7_QFRmSWYhzhzrJ"
       }
     ],
-    "_hash": "ORP2i1qv_RboxgMVX7klFF"
+    "_hash": "q-ufgAPmAnByTsMYw89Yzc"
   },
   "wheelSliceId": {
-    "_tableCfg": "cEQ5opF8Aer4QYeB53bkUf",
+    "_tableCfg": "7P5BllAlgkGxXmu8WbeIqi",
     "_type": "sliceIds",
     "_data": [
       {
@@ -720,7 +726,7 @@
         "_hash": "JPP7A-skpEe1KuDS11mtBH"
       }
     ],
-    "_hash": "OXuF5Ue8ntPgsTEIMHFOUY"
+    "_hash": "T_JEXiOb7A2ebj16wSyBYP"
   },
   "wheelBrand": {
     "_tableCfg": "ptvTcf77Kjult2RFlE0EaH",
@@ -806,7 +812,7 @@
     "_hash": "4YoTh9vwOhlMToJLNfBkQz"
   },
   "siteSliceId": {
-    "_tableCfg": "7km61iyq2BFnZz2a9Gh3ZU",
+    "_tableCfg": "w4A5ZhCSi249R-kJ4d1OYj",
     "_type": "sliceIds",
     "_data": [
       {
@@ -818,7 +824,7 @@
         "_hash": "b8QlmpS2kT0_oti-0-6JTI"
       }
     ],
-    "_hash": "n1DviV_kre9vE3VyP8lQ5S"
+    "_hash": "_oJ3I4Q7uxa01CydxTnmvt"
   },
   "siteGeneral": {
     "_tableCfg": "4ricJTQmnW17WX7OhMHwkD",
@@ -855,6 +861,7 @@
     "_data": [
       {
         "key": "carSliceId",
+        "type": "sliceIds",
         "columns": [
           {
             "key": "_hash",
@@ -888,7 +895,7 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "vwkMMovjx_aZb_2o0R_rlT"
+        "_hash": "BzT08ZUgQeyH05iw6zkRn5"
       },
       {
         "key": "carGeneral",
@@ -1291,6 +1298,7 @@
       },
       {
         "key": "wheelSliceId",
+        "type": "sliceIds",
         "columns": [
           {
             "key": "_hash",
@@ -1324,7 +1332,7 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "cEQ5opF8Aer4QYeB53bkUf"
+        "_hash": "7P5BllAlgkGxXmu8WbeIqi"
       },
       {
         "key": "wheelBrand",
@@ -1531,6 +1539,7 @@
       },
       {
         "key": "siteSliceId",
+        "type": "sliceIds",
         "columns": [
           {
             "key": "_hash",
@@ -1564,7 +1573,7 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "7km61iyq2BFnZz2a9Gh3ZU"
+        "_hash": "w4A5ZhCSi249R-kJ4d1OYj"
       },
       {
         "key": "siteGeneral",

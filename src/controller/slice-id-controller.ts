@@ -134,11 +134,56 @@ export class SliceIdController<N extends string, C extends SliceId[]>
     }
   }
 
+  async resolveBaseSliceIds(sliceIds: SliceIds): Promise<{
+    add: SliceId[];
+  }> {
+    const add = new Set<SliceId>();
+    const remove = new Set<SliceId>();
+
+    if (!!sliceIds.base) {
+      const baseSliceIds = await this.get(sliceIds.base);
+
+      if (!baseSliceIds[this._tableKey]?._data?.[0]) {
+        throw new Error(`Base sliceIds ${sliceIds.base} does not exist.`);
+      }
+      if (baseSliceIds[this._tableKey]._data.length > 1) {
+        throw new Error(
+          `Base sliceIds ${sliceIds.base} has more than one entry.`,
+        );
+      }
+
+      const baseSliceId = baseSliceIds[this._tableKey]._data[0] as SliceIds;
+      const resolvedBaseSliceIds = await this.resolveBaseSliceIds(baseSliceId);
+
+      for (const sliceId of resolvedBaseSliceIds.add) {
+        add.add(sliceId);
+      }
+    }
+
+    for (const sliceId of sliceIds.add) {
+      add.add(sliceId);
+    }
+
+    if (!!sliceIds.remove)
+      for (const sliceId of sliceIds.remove) {
+        remove.add(sliceId);
+      }
+
+    // Remove sliceIds that are both in add and remove
+    for (const sliceId of remove.values()) {
+      if (add.has(sliceId)) {
+        add.delete(sliceId);
+      }
+    }
+
+    return { add: Array.from(add) };
+  }
+
   async getChildRefs(): Promise<Array<{ tableKey: TableKey; ref: Ref }>> {
     return [];
   }
 
-  filterRow(row: Json, _: string, value: JsonValue): boolean {
+  async filterRow(row: Json, _: string, value: JsonValue): Promise<boolean> {
     const sliceIds = row as SliceIds;
     const sliceId = value as SliceId;
 

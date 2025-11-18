@@ -9,6 +9,7 @@ import { Json, merge } from '@rljson/json';
 import {
   CakesTable,
   ColumnCfg,
+  ComponentRef,
   ComponentsTable,
   Insert,
   InsertHistoryRow,
@@ -21,7 +22,6 @@ import {
   Route,
   RouteSegment,
   SliceId,
-  SliceIds,
   TableKey,
   validateInsert,
 } from '@rljson/rljson';
@@ -34,6 +34,7 @@ import {
   ControllerRunFn,
   createController,
 } from './controller/controller.ts';
+import { LayerController } from './controller/layer-controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRows } from './join/join.ts';
 import {
@@ -113,7 +114,7 @@ export class Db {
   async _get(
     route: Route,
     where: string | Json,
-    controllers: Record<string, Controller<any, any>>,
+    controllers: Record<string, Controller<any, any, any>>,
     filter?: Array<{
       tableKey: TableKey;
       columnKey?: string;
@@ -323,15 +324,37 @@ export class Db {
       );
     }
 
-    //Get Layers
+    //Get Layers & sliceIds
+    const mergedSliceIds: Set<SliceId> = new Set();
+    const mergedCompRefs: Map<TableKey, Map<SliceId, ComponentRef>> = new Map();
     const layers: Map<string, Layer> = new Map();
     for (const layerKey of Object.keys(cake.layers)) {
       if (!data[layerKey]) continue;
 
+      const mergedLayerCompRefs: Map<SliceId, ComponentRef> = new Map();
       const layersTable = data[layerKey] as LayersTable;
       const layer = layersTable._data.find(
         (l) => l._hash === cake.layers[layerKey],
       );
+
+      const layerController = (await createController(
+        'layers',
+        this.core,
+        layerKey,
+      )) as LayerController<any, any>;
+
+      //Resolve Base Layers, get SliceIds and ComponentRefs
+      const resolvedLayer = await layerController.resolveBaseLayer(layer!);
+
+      //Merge base SliceIds
+      for (const sliceId of resolvedLayer.sliceIds) {
+        mergedSliceIds.add(sliceId as SliceId);
+      }
+      //Merge base ComponentRefs
+      for (const [sliceId, compRef] of Object.entries(resolvedLayer.add)) {
+        mergedLayerCompRefs.set(sliceId as SliceId, compRef);
+      }
+      mergedCompRefs.set(layerKey, mergedLayerCompRefs);
 
       // We can expect that the layer exists because it
       // passed get validation from _getDataForColumnSelection
@@ -343,23 +366,6 @@ export class Db {
     for (const [tableKey, table] of Object.entries(data)) {
       if (table._type !== 'components') continue;
       components.set(tableKey, table as ComponentsTable<Json>);
-    }
-
-    //Merge Layers Slice Ids,
-    const mergedSliceIds: Set<SliceId> = new Set();
-    for (const layer of layers.values()) {
-      const sliceIdsTable = layer.sliceIdsTable;
-      const sliceIdsTableRow = layer.sliceIdsTableRow;
-      const {
-        [sliceIdsTable]: { _data: sliceIds },
-      } = await this.core.readRows(sliceIdsTable, { _hash: sliceIdsTableRow });
-
-      //Merge Slice Ids
-      for (const sid of sliceIds as SliceIds[]) {
-        for (const s of sid.add) {
-          mergedSliceIds.add(s as SliceId);
-        }
-      }
     }
 
     // Build ColumnCfgs and Infos for Layer referenced Components
@@ -389,8 +395,9 @@ export class Db {
 
       for (const [layerKey, layer] of layers.entries()) {
         const layerRef = layer._hash;
+        const layerCompRefs = mergedCompRefs.get(layerKey)!;
         const componentKey = layer.componentsTable;
-        const componentRef = layer.add[sliceId];
+        const componentRef = layerCompRefs.get(sliceId);
         const componentsTable = data[componentKey] as ComponentsTable<Json>;
         const rowComponentProperties = componentsTable._data.find(
           (r) => r._hash === componentRef,
@@ -667,7 +674,7 @@ export class Db {
   private async _insert(
     insert: Insert<any>,
     route: Route,
-    runFns: Record<string, ControllerRunFn<any>>,
+    runFns: Record<string, ControllerRunFn<any, any>>,
     options?: { skipNotification?: boolean; skipHistory?: boolean },
   ): Promise<InsertHistoryRow<any>[]> {
     let results: InsertHistoryRow<any>[];
@@ -823,21 +830,22 @@ export class Db {
   // ...........................................................................
   /**
    * Resolves an Insert by returning the run functions of all controllers involved in the Insert's route
-   * @param Insert - The Insert to resolve
+   * @param insert - The Insert to resolve
    * @returns A record of controller run functions, keyed by table name
    * @throws {Error} If the route is not valid or if any controller cannot be created
    */
   private async _resolveInsert(
-    Insert: Insert<any>,
-  ): Promise<Record<string, ControllerRunFn<any>>> {
+    insert: Insert<any>,
+  ): Promise<Record<string, ControllerRunFn<any, any>>> {
     // Get Controllers and their Run Functions
     const controllers = await this._indexedControllers(
-      Route.fromFlat(Insert.route),
+      Route.fromFlat(insert.route),
     );
 
     // Add Controllers for unrelated component references
     const referencedComponentTableKeys: Set<string> = new Set();
-    traverse(Insert.value, ({ key, parent }) => {
+
+    traverse({ ...insert.value }, ({ key, parent }) => {
       if (key == '_tableKey')
         referencedComponentTableKeys.add(parent![key] as string);
     });
@@ -845,7 +853,7 @@ export class Db {
       controllers[tableKey] ??= await this.getController(tableKey);
     }
 
-    const runFns: Record<string, ControllerRunFn<any>> = {};
+    const runFns: Record<string, ControllerRunFn<any, any>> = {};
     for (const tableKey of Object.keys(controllers)) {
       runFns[tableKey] = controllers[tableKey].insert.bind(
         controllers[tableKey],
@@ -897,9 +905,9 @@ export class Db {
   // ...........................................................................
   private async _indexedControllers(
     route: Route,
-  ): Promise<Record<string, Controller<any, any>>> {
+  ): Promise<Record<string, Controller<any, any, any>>> {
     // Create Controllers
-    const controllers: Record<string, Controller<any, any>> = {};
+    const controllers: Record<string, Controller<any, any, any>> = {};
     const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
     for (let i = 0; i < isolatedRoute.segments.length; i++) {
       const segment = isolatedRoute.segments[i];

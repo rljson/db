@@ -4,7 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { hip } from '@rljson/hash';
+import { hip, hsh, rmhsh } from '@rljson/hash';
 import { Json, JsonH, JsonValueH } from '@rljson/json';
 import {
   CakesTable,
@@ -13,6 +13,7 @@ import {
   createCakeTableCfg,
   createLayerTableCfg,
   createSliceIdsTableCfg,
+  Layer,
   LayersTable,
   Rljson,
   SliceIdsTable,
@@ -66,6 +67,23 @@ export interface CarTechnical extends JsonH {
   gears: number;
   carDimensionsRef: string;
 }
+
+const chainLayers = (layers: Layer[]): Layer[] => {
+  const chainedLayers: Layer[] = [];
+  for (let i = 0; i < layers.length; i++) {
+    const newLayer = { ...rmhsh(layers[i]) };
+    if (i == 0) {
+      chainedLayers.push(hsh<Layer>(newLayer));
+      continue;
+    }
+
+    if (chainedLayers[i - 1]._hash) {
+      newLayer.base = chainedLayers[i - 1]._hash as string;
+    }
+    chainedLayers.push(hsh<Layer>(newLayer));
+  }
+  return chainedLayers;
+};
 
 export const carsExample = (): CarsExample => {
   //CarSliceId
@@ -655,50 +673,52 @@ export const carsExample = (): CarsExample => {
     createLayerTableCfg('carGeneralLayer'),
   ) as TableCfg;
 
+  const carGeneralLayerData: Array<Layer> = [
+    {
+      add: {
+        VIN1: carGeneral._data[0]._hash,
+        VIN2: carGeneral._data[1]._hash,
+        VIN3: carGeneral._data[2]._hash,
+        VIN4: carGeneral._data[3]._hash,
+        VIN5: carGeneral._data[4]._hash,
+        VIN6: carGeneral._data[5]._hash,
+        VIN7: carGeneral._data[6]._hash,
+        VIN8: carGeneral._data[7]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'carSliceId',
+      sliceIdsTableRow: carSliceId._data[0]._hash as string,
+      componentsTable: 'carGeneral',
+      _hash: '',
+    } as Layer,
+    {
+      add: {
+        VIN9: carGeneral._data[8]._hash,
+        VIN10: carGeneral._data[9]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'carSliceId',
+      sliceIdsTableRow: carSliceId._data[1]._hash as string,
+      componentsTable: 'carGeneral',
+      _hash: '',
+    },
+    {
+      add: {
+        VIN11: carGeneral._data[10]._hash,
+        VIN12: carGeneral._data[11]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'carSliceId',
+      sliceIdsTableRow: carSliceId._data[2]._hash as string,
+      componentsTable: 'carGeneral',
+      _hash: '',
+    },
+  ].map((layer) => hsh<Layer>(layer as Layer));
+
   const carGeneralLayer = hip<any>({
     _tableCfg: carGeneralLayerTableCfg._hash,
     _type: 'layers',
-    _data: [
-      {
-        add: {
-          VIN1: carGeneral._data[0]._hash,
-          VIN2: carGeneral._data[1]._hash,
-          VIN3: carGeneral._data[2]._hash,
-          VIN4: carGeneral._data[3]._hash,
-          VIN5: carGeneral._data[4]._hash,
-          VIN6: carGeneral._data[5]._hash,
-          VIN7: carGeneral._data[6]._hash,
-          VIN8: carGeneral._data[7]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[0]._hash,
-        componentsTable: 'carGeneral',
-        _hash: '',
-      },
-      {
-        add: {
-          VIN9: carGeneral._data[8]._hash,
-          VIN10: carGeneral._data[9]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[1]._hash,
-        componentsTable: 'carGeneral',
-        _hash: '',
-      },
-      {
-        add: {
-          VIN11: carGeneral._data[10]._hash,
-          VIN12: carGeneral._data[11]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[2]._hash,
-        componentsTable: 'carGeneral',
-        _hash: '',
-      },
-    ],
+    _data: chainLayers(carGeneralLayerData),
     _hash: '',
   }) as LayersTable;
 
@@ -706,50 +726,52 @@ export const carsExample = (): CarsExample => {
     createLayerTableCfg('carTechnicalLayer'),
   ) as TableCfg;
 
+  const carTechnicalLayerData: Array<Layer> = [
+    {
+      add: {
+        VIN1: carTechnical._data[0]._hash,
+        VIN2: carTechnical._data[1]._hash,
+        VIN3: carTechnical._data[2]._hash,
+        VIN4: carTechnical._data[2]._hash,
+        VIN5: carTechnical._data[4]._hash,
+        VIN6: carTechnical._data[5]._hash,
+        VIN7: carTechnical._data[6]._hash,
+        VIN8: carTechnical._data[2]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'carSliceId',
+      sliceIdsTableRow: carSliceId._data[0]._hash,
+      componentsTable: 'carTechnical',
+      _hash: '',
+    } as Layer,
+    {
+      add: {
+        VIN9: carTechnical._data[7]._hash,
+        VIN10: carTechnical._data[8]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'carSliceId',
+      sliceIdsTableRow: carSliceId._data[1]._hash,
+      componentsTable: 'carTechnical',
+      _hash: '',
+    } as Layer,
+    {
+      add: {
+        VIN11: carTechnical._data[9]._hash,
+        VIN12: carTechnical._data[10]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'carSliceId',
+      sliceIdsTableRow: carSliceId._data[2]._hash,
+      componentsTable: 'carTechnical',
+      _hash: '',
+    } as Layer,
+  ].map((layer) => hsh<Layer>(layer as Layer));
+
   const carTechnicalLayer = hip<any>({
     _tableCfg: carTechnicalLayerTableCfg._hash,
     _type: 'layers',
-    _data: [
-      {
-        add: {
-          VIN1: carTechnical._data[0]._hash,
-          VIN2: carTechnical._data[1]._hash,
-          VIN3: carTechnical._data[2]._hash,
-          VIN4: carTechnical._data[2]._hash,
-          VIN5: carTechnical._data[4]._hash,
-          VIN6: carTechnical._data[5]._hash,
-          VIN7: carTechnical._data[6]._hash,
-          VIN8: carTechnical._data[2]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[0]._hash,
-        componentsTable: 'carTechnical',
-        _hash: '',
-      },
-      {
-        add: {
-          VIN9: carTechnical._data[7]._hash,
-          VIN10: carTechnical._data[8]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[1]._hash,
-        componentsTable: 'carTechnical',
-        _hash: '',
-      },
-      {
-        add: {
-          VIN11: carTechnical._data[9]._hash,
-          VIN12: carTechnical._data[10]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[2]._hash,
-        componentsTable: 'carTechnical',
-        _hash: '',
-      },
-    ],
+    _data: chainLayers(carTechnicalLayerData),
     _hash: '',
   }) as LayersTable;
 
@@ -757,50 +779,52 @@ export const carsExample = (): CarsExample => {
     createLayerTableCfg('carColorLayer'),
   ) as TableCfg;
 
+  const carColorLayerData: Array<Layer> = [
+    {
+      add: {
+        VIN1: carColor._data[0]._hash,
+        VIN2: carColor._data[1]._hash,
+        VIN3: carColor._data[2]._hash,
+        VIN4: carColor._data[3]._hash,
+        VIN5: carColor._data[4]._hash,
+        VIN6: carColor._data[5]._hash,
+        VIN7: carColor._data[6]._hash,
+        VIN8: carColor._data[7]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'carSliceId',
+      sliceIdsTableRow: carSliceId._data[0]._hash,
+      componentsTable: 'carColor',
+      _hash: '',
+    } as Layer,
+    {
+      add: {
+        VIN9: carColor._data[3]._hash,
+        VIN10: carColor._data[3]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'carSliceId',
+      sliceIdsTableRow: carSliceId._data[1]._hash,
+      componentsTable: 'carColor',
+      _hash: '',
+    } as Layer,
+    {
+      add: {
+        VIN11: carColor._data[7]._hash,
+        VIN12: carColor._data[4]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'carSliceId',
+      sliceIdsTableRow: carSliceId._data[2]._hash,
+      componentsTable: 'carColor',
+      _hash: '',
+    } as Layer,
+  ].map((layer) => hsh<Layer>(layer as Layer));
+
   const carColorLayer = hip<any>({
     _tableCfg: carColorLayerTableCfg._hash,
     _type: 'layers',
-    _data: [
-      {
-        add: {
-          VIN1: carColor._data[0]._hash,
-          VIN2: carColor._data[1]._hash,
-          VIN3: carColor._data[2]._hash,
-          VIN4: carColor._data[3]._hash,
-          VIN5: carColor._data[4]._hash,
-          VIN6: carColor._data[5]._hash,
-          VIN7: carColor._data[6]._hash,
-          VIN8: carColor._data[7]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[0]._hash,
-        componentsTable: 'carColor',
-        _hash: '',
-      },
-      {
-        add: {
-          VIN9: carColor._data[3]._hash,
-          VIN10: carColor._data[3]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[1]._hash,
-        componentsTable: 'carColor',
-        _hash: '',
-      },
-      {
-        add: {
-          VIN11: carColor._data[7]._hash,
-          VIN12: carColor._data[4]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: carSliceId._data[2]._hash,
-        componentsTable: 'carColor',
-        _hash: '',
-      },
-    ],
+    _data: chainLayers(carColorLayerData),
     _hash: '',
   }) as LayersTable;
 

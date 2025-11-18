@@ -2,7 +2,7 @@
 // Copyright (c) 2025 Rljson
 //
 // Use of this source code is governed by terms that can be
-import { hsh } from '@rljson/hash';
+import { hsh, rmhsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
@@ -15,6 +15,7 @@ import {
   Ref,
   Rljson,
   SliceId,
+  SliceIds,
   SliceIdsRef,
   TableKey,
   timeId,
@@ -24,6 +25,7 @@ import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
 import { Controller, ControllerRefs } from './controller.ts';
+import { SliceIdController } from './slice-id-controller.ts';
 
 export interface LayerControllerRefs extends Partial<Layer> {
   base?: LayerRef;
@@ -172,6 +174,122 @@ export class LayerController<N extends string, C extends Record<string, string>>
     }
   }
 
+  async resolveBaseLayer(layer: Layer): Promise<{
+    add: Record<string, string>;
+    sliceIds: SliceId[];
+  }> {
+    const add = new Map<string, string>();
+    const sliceIds: Set<SliceId> = new Set<SliceId>();
+
+    if (!!layer.base) {
+      // Get base layer first
+      const baseLayer = await this.get(layer.base);
+
+      if (!baseLayer[this._tableKey]?._data?.[0]) {
+        throw new Error(`Base layer ${layer.base} does not exist.`);
+      }
+      if (baseLayer[this._tableKey]._data.length > 1) {
+        throw new Error(
+          `Base layer ${layer.base} resolving not possible. Not unique.`,
+        );
+      }
+
+      // Get base layer chained layers recursively
+      const baseLayerData = rmhsh(baseLayer[this._tableKey]._data[0]) as Layer;
+      const baseLayerResolved = await this.resolveBaseLayer(baseLayerData);
+
+      // Merge base layer's add components
+      for (const [sliceId, compRef] of Object.entries(baseLayerResolved.add)) {
+        if (sliceId.startsWith('_')) continue;
+
+        add.set(sliceId, compRef);
+      }
+
+      // Merge base layer's sliceIds
+      for (const sliceId of baseLayerResolved.sliceIds) {
+        sliceIds.add(sliceId);
+      }
+
+      // Get sliceIds from base layer's sliceIds
+      const baseLayerSliceIdsTable = baseLayerData.sliceIdsTable;
+      const baseLayerSliceIdsRow = baseLayerData.sliceIdsTableRow;
+
+      // Get sliceIds from base layer's sliceIds table
+      const {
+        [baseLayerSliceIdsTable]: { _data: baseLayerSliceIds },
+      } = await this._core.readRow(
+        baseLayerSliceIdsTable,
+        baseLayerSliceIdsRow,
+      );
+
+      // Resolve base layer sliceIds recursively
+      for (const sIds of baseLayerSliceIds as SliceIds[]) {
+        //Resolve base SliceIds
+        const sliceIdController = new SliceIdController(
+          this._core,
+          baseLayerSliceIdsTable,
+        );
+        const resolvedSliceIds = await sliceIdController.resolveBaseSliceIds(
+          sIds,
+        );
+
+        // Merge resolved sliceIds
+        for (const sId of resolvedSliceIds.add) {
+          if (sId.startsWith('_')) continue;
+
+          sliceIds.add(sId);
+        }
+      }
+    }
+
+    // Get sliceIds from current layer's sliceIds table
+    const {
+      [layer.sliceIdsTable]: { _data: layerSliceIds },
+    } = await this._core.readRow(layer.sliceIdsTable, layer.sliceIdsTableRow);
+
+    if (!layerSliceIds || layerSliceIds.length === 0) {
+      throw new Error(
+        `Layer sliceIds ${layer.sliceIdsTableRow} does not exist.`,
+      );
+    }
+    if (layerSliceIds.length > 1) {
+      throw new Error(
+        `Layer sliceIds ${layer.sliceIdsTableRow} has more than one entry.`,
+      );
+    }
+
+    const layerSliceId = layerSliceIds[0] as SliceIds;
+
+    for (const sId of layerSliceId.add) {
+      if (sId.startsWith('_')) continue;
+
+      sliceIds.add(sId);
+    }
+
+    if (!!layerSliceId.remove)
+      for (const sId of Object.keys(layerSliceId.remove)) {
+        if (sliceIds.has(sId)) {
+          sliceIds.delete(sId);
+        }
+      }
+
+    for (const [sliceId, compRef] of Object.entries(layer.add)) {
+      if (sliceId.startsWith('_')) continue;
+
+      add.set(sliceId, compRef);
+    }
+
+    // Remove sliceIds that are both in add and remove
+    if (!!layer.remove)
+      for (const sliceId of Object.keys(layer.remove)) {
+        if (add.has(sliceId)) {
+          add.delete(sliceId);
+        }
+      }
+
+    return { add: Object.fromEntries(add), sliceIds: Array.from(sliceIds) };
+  }
+
   async getChildRefs(
     where: string | Json,
     filter?: Json,
@@ -179,11 +297,11 @@ export class LayerController<N extends string, C extends Record<string, string>>
     const { [this._tableKey]: table } = await this.get(where, filter);
     const childRefs: Array<{ tableKey: TableKey; ref: Ref }> = [];
 
-    //TODO: Implement layer sorted loop by timeId of InsertHistory
     for (const row of table._data) {
       const layer = row as Layer;
+      const resolvedLayer = await this.resolveBaseLayer(layer);
 
-      for (const [sliceId, compRef] of Object.entries(layer.add)) {
+      for (const [sliceId, compRef] of Object.entries(resolvedLayer.add)) {
         if (sliceId.startsWith('_')) continue;
 
         childRefs.push({
@@ -191,21 +309,17 @@ export class LayerController<N extends string, C extends Record<string, string>>
           ref: compRef,
         });
       }
-
-      // TODO: CONTINUE HERE
-      // USE BASE PROPERTY
-      // const baseChildRefs = await this.getBaseChildRefs(layer._hash as string);
-      // debugger;
     }
 
     return childRefs;
   }
 
-  filterRow(row: Json, _: string, value: JsonValue): boolean {
+  async filterRow(row: Json, _: string, value: JsonValue): Promise<boolean> {
     const layer = row as Layer;
     const compRef = value as ComponentRef;
+    const resolvedLayer = await this.resolveBaseLayer(layer);
 
-    for (const componentRef of Object.values(layer.add)) {
+    for (const componentRef of Object.values(resolvedLayer.add)) {
       if (componentRef === compRef) {
         return true;
       }

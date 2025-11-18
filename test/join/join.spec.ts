@@ -16,12 +16,11 @@ import { ColumnSelection } from '../../src/join/selection/column-selection';
 import { SetValue } from '../../src/join/set-value/set-value';
 import { RowSort } from '../../src/join/sort/row-sort';
 
-
 describe('Join', () => {
   let db: Db;
 
   const cakeKey = 'carCake';
-  const cakeRef = carsExample().carCake._data[0]._hash as string;
+  const cakeRef = carsExample().carCake._data[2]._hash as string;
 
   const columnSelection: ColumnSelection =
     ColumnSelection.exampleCarsColumnSelection();
@@ -241,8 +240,17 @@ describe('Join', () => {
         new Set(selected.rows.flatMap((r) => r)),
       );
 
-      expect(selectedResult.length).toBe(4);
-      expect(selectedResult).toEqual(['Volkswagen', 'Audi', 'BMW', 'Tesla']);
+      expect(selectedResult.length).toBe(8);
+      expect(selectedResult).toEqual([
+        'Volkswagen',
+        'Audi',
+        'BMW',
+        'Tesla',
+        'Ford',
+        'Chevrolet',
+        'Nissan',
+        'Hyundai',
+      ]);
     });
   });
 
@@ -262,6 +270,10 @@ describe('Join', () => {
         'Volkswagen',
         'Tesla',
         'Tesla',
+        'Nissan',
+        'Hyundai',
+        'Ford',
+        'Chevrolet',
         'BMW',
         'BMW',
         'Audi',
@@ -297,7 +309,7 @@ describe('Join', () => {
         {},
       );
 
-      expect(writtenData['carGeneral']._data.length).toBe(8);
+      expect(writtenData['carGeneral']._data.length).toBe(12);
       const writtenDataSet = new Set(
         writtenData['carGeneral']._data.map((d: any) => d['brand']),
       );

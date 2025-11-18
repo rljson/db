@@ -44,7 +44,11 @@ export abstract class BaseController<T extends TableType, C extends JsonValue>
   ): Promise<Array<{ tableKey: TableKey; columnKey?: string; ref: Ref }>>;
 
   // ...........................................................................
-  abstract filterRow(row: Json, key: string, value: JsonValue): boolean;
+  abstract filterRow(
+    row: Json,
+    key: string,
+    value: JsonValue,
+  ): Promise<boolean>;
 
   // ...........................................................................
   /**

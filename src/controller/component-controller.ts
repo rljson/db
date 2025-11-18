@@ -256,7 +256,7 @@ export class ComponentController<
         const column = Object.keys(refWhere)[0];
         const refValue = refWhere[column]!;
         for (const row of tableData as Json[]) {
-          if (this.filterRow(row, column, refValue)) {
+          if (await this.filterRow(row, column, refValue)) {
             consolidatedRows.set((row as any)._hash, row);
           }
         }
@@ -507,7 +507,7 @@ export class ComponentController<
     }
   }
 
-  filterRow(row: Json, key: string, value: JsonValue): boolean {
+  async filterRow(row: Json, key: string, value: JsonValue): Promise<boolean> {
     for (const [propertyKey, propertyValue] of Object.entries(row)) {
       if (propertyKey === key && equals(propertyValue, value)) {
         return true;

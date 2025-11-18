@@ -63,7 +63,7 @@ export interface Controller<
     where: string | Json,
     filter?: Json,
   ): Promise<Array<{ tableKey: TableKey; columnKey?: string; ref: Ref }>>;
-  filterRow(row: Json, key: string, value: JsonValue): boolean;
+  filterRow(row: Json, key: string, value: JsonValue): Promise<boolean>;
 }
 
 // ...........................................................................

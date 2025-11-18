@@ -197,7 +197,7 @@ export class CakeController<N extends string, C extends Record<string, string>>
     }
   }
 
-  filterRow(row: Json, key: string, value: JsonValue): boolean {
+  async filterRow(row: Json, key: string, value: JsonValue): Promise<boolean> {
     const cake = row as Cake;
     for (const [layerKey, layerRef] of Object.entries(cake.layers)) {
       if (layerKey === key && layerRef === value) {
