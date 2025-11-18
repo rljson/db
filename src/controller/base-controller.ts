@@ -6,6 +6,7 @@
 
 import { equals, Json, JsonValue } from '@rljson/json';
 import {
+  ContentType,
   InsertHistoryRow,
   Ref,
   Rljson,
@@ -21,6 +22,8 @@ import { Controller, ControllerRefs } from './controller.ts';
 export abstract class BaseController<T extends TableType, C extends JsonValue>
   implements Controller<any, any, any>
 {
+  protected _contentType?: ContentType;
+
   constructor(
     protected readonly _core: Core,
     protected readonly _tableKey: TableKey,
@@ -119,5 +122,14 @@ export abstract class BaseController<T extends TableType, C extends JsonValue>
       ...filter,
     } as { [column: string]: JsonValue });
     return rows;
+  }
+
+  // ...........................................................................
+  /**
+   * Gets the content type of the controller.
+   * @returns The content type managed by the controller.
+   */
+  contentType(): ContentType {
+    return this._contentType ?? 'components';
   }
 }

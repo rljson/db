@@ -324,6 +324,38 @@ describe('Db', () => {
         'Route  is not valid.',
       );
     });
+    it('get sliceId of chained sliceIds definition', async () => {
+      const cakeKey = 'carCake';
+      const sliceIds = ['VIN1', 'VIN2'];
+      const route = `/${cakeKey}(${sliceIds.join(',')})`;
+
+      const {
+        [cakeKey]: { _data: results },
+      } = await db.get(Route.fromFlat(route), {});
+
+      expect(results.length).toBe(3);
+
+      expect(results.map((r) => r._hash).sort()).toEqual(
+        carsExample()
+          .carCake._data.map((c) => c._hash)
+          .sort(),
+      );
+    });
+    it('get sliceId of single sliceIds definition', async () => {
+      const cakeKey = 'carCake';
+      const sliceIds = ['VIN11'];
+      const route = `/${cakeKey}(${sliceIds.join(',')})`;
+
+      const {
+        [cakeKey]: { _data: results },
+      } = await db.get(Route.fromFlat(route), {});
+
+      expect(results.length).toBe(1);
+
+      expect(results.map((r) => r._hash)).toEqual([
+        carsExample().carCake._data[2]._hash,
+      ]);
+    });
     it('get component by ref', async () => {
       const route = '/carGeneral';
       const ref = carsExample().carGeneral._data[0]._hash ?? '';

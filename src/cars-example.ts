@@ -16,6 +16,7 @@ import {
   Layer,
   LayersTable,
   Rljson,
+  SliceIds,
   SliceIdsTable,
   TableCfg,
   TablesCfgTable,
@@ -85,6 +86,22 @@ const chainLayers = (layers: Layer[]): Layer[] => {
   return chainedLayers;
 };
 
+const chainSliceIds = (sliceIds: SliceIds[]): SliceIds[] => {
+  const chainedSliceIds: SliceIds[] = [];
+  for (let i = 0; i < sliceIds.length; i++) {
+    const newSliceIds = { ...rmhsh(sliceIds[i]) };
+    if (i == 0) {
+      chainedSliceIds.push(hsh<SliceIds>(newSliceIds));
+      continue;
+    }
+    if (chainedSliceIds[i - 1]._hash) {
+      newSliceIds.base = chainedSliceIds[i - 1]._hash as string;
+    }
+    chainedSliceIds.push(hsh<SliceIds>(newSliceIds));
+  }
+  return chainedSliceIds;
+};
+
 export const carsExample = (): CarsExample => {
   //CarSliceId
   //................................................................
@@ -92,23 +109,25 @@ export const carsExample = (): CarsExample => {
     createSliceIdsTableCfg('carSliceId'),
   ) as TableCfg;
 
+  const carSliceIdData: Array<SliceIds> = [
+    {
+      add: ['VIN1', 'VIN2', 'VIN3', 'VIN4', 'VIN5', 'VIN6', 'VIN7', 'VIN8'],
+      _hash: '',
+    } as SliceIds,
+    {
+      add: ['VIN9', 'VIN10'],
+      _hash: '',
+    } as SliceIds,
+    {
+      add: ['VIN11', 'VIN12'],
+      _hash: '',
+    } as SliceIds,
+  ].map((sliceIds) => hsh<SliceIds>(sliceIds as SliceIds));
+
   const carSliceId = hip<any>({
     _tableCfg: carSliceIdTableCfg._hash,
     _type: 'sliceIds',
-    _data: [
-      {
-        add: ['VIN1', 'VIN2', 'VIN3', 'VIN4', 'VIN5', 'VIN6', 'VIN7', 'VIN8'],
-        _hash: '',
-      },
-      {
-        add: ['VIN9', 'VIN10'],
-        _hash: '',
-      },
-      {
-        add: ['VIN11', 'VIN12'],
-        _hash: '',
-      },
-    ],
+    _data: chainSliceIds(carSliceIdData),
     _hash: '',
   }) as SliceIdsTable;
 

@@ -7,6 +7,7 @@
 import { Io } from '@rljson/io';
 import { Json, merge } from '@rljson/json';
 import {
+  Cake,
   CakesTable,
   ColumnCfg,
   ComponentRef,
@@ -22,6 +23,7 @@ import {
   Route,
   RouteSegment,
   SliceId,
+  SliceIds,
   TableKey,
   validateInsert,
 } from '@rljson/rljson';
@@ -35,6 +37,7 @@ import {
   createController,
 } from './controller/controller.ts';
 import { LayerController } from './controller/layer-controller.ts';
+import { SliceIdController } from './controller/slice-id-controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRows } from './join/join.ts';
 import {
@@ -120,11 +123,14 @@ export class Db {
       columnKey?: string;
       ref: Ref;
     }>,
+    sliceIds?: SliceId[],
   ): Promise<Rljson> {
     const nodeTableKey = route.top.tableKey;
     const nodeRoute = route;
     const nodeRouteRef = await this._getReferenceOfRouteSegment(nodeRoute.top);
     const nodeController = controllers[nodeTableKey];
+
+    const nodeSliceIds = sliceIds ?? nodeRoute.top.sliceIds;
 
     let nodeWhere = typeof where === 'object' ? { ...where } : where;
 
@@ -154,19 +160,48 @@ export class Db {
       [nodeTableKey]: { _data: nodeRows, _type: nodeType, _hash: nodeHash },
     } = await nodeController.get(nodeWhere);
 
-    // Filter Node Rows by given filter
     const nodeRowsFiltered: Json[] = [];
-    if (filter && filter.length > 0) {
-      for (const f of filter) {
-        if (f.tableKey !== nodeTableKey) continue;
-        for (const nodeRow of nodeRows) {
+    for (const nodeRow of nodeRows) {
+      const filterActive = filter && filter.length > 0;
+      const sliceIdActive = nodeSliceIds && nodeSliceIds.length > 0;
+
+      if (!filterActive && !sliceIdActive) {
+        nodeRowsFiltered.push(nodeRow);
+        continue;
+      }
+
+      // Apply Filters
+      let filterResult = false;
+      if (filterActive) {
+        for (const f of filter) {
+          if (f.tableKey !== nodeTableKey) continue;
           if (nodeRow._hash === f.ref) {
-            nodeRowsFiltered.push(nodeRow);
+            filterResult = true;
           }
         }
+      } else {
+        filterResult = true;
       }
-    } else {
-      nodeRowsFiltered.push(...(nodeRows as Json[]));
+
+      // Apply SliceIds
+      let sliceIdResult = false;
+      if (sliceIdActive) {
+        if (nodeType === 'cakes') {
+          const cake = nodeRow as Cake;
+          const cakeSliceIds = await this._resolveSliceIds(
+            cake.sliceIdsTable,
+            cake.sliceIdsRow,
+          );
+          const intersect = nodeSliceIds.filter((sId) =>
+            cakeSliceIds.includes(sId),
+          );
+          if (intersect.length > 0) sliceIdResult = true;
+        }
+      } else {
+        sliceIdResult = true;
+      }
+
+      if (filterResult && sliceIdResult) nodeRowsFiltered.push(nodeRow);
     }
 
     // Construct Node w/ only filtered rows
@@ -213,6 +248,7 @@ export class Db {
         childrenWhere,
         controllers,
         childrenRefs,
+        nodeSliceIds,
       );
 
       // No Children found for where + route => skip
@@ -606,6 +642,33 @@ export class Db {
     }
 
     return { columnCfgs, columnInfos, objectMap };
+  }
+
+  // ...........................................................................
+  private async _resolveSliceIds(
+    sliceIdTable: string,
+    sliceIdRow: string,
+  ): Promise<SliceId[]> {
+    const sliceIdController: SliceIdController<any, any> =
+      new SliceIdController(this.core, sliceIdTable);
+    sliceIdController.init();
+
+    const resolvedSliceIds: Set<SliceId> = new Set();
+
+    const {
+      [sliceIdTable]: { _data: sliceIds },
+    } = await sliceIdController.get(sliceIdRow);
+
+    for (const sliceId of sliceIds) {
+      const baseSliceIds = await sliceIdController.resolveBaseSliceIds(
+        sliceId as SliceIds,
+      );
+      for (const sId of baseSliceIds.add) {
+        resolvedSliceIds.add(sId);
+      }
+    }
+
+    return Array.from(resolvedSliceIds);
   }
 
   // ...........................................................................

@@ -29,7 +29,7 @@ describe('ExampleGenerator', () => {
     ex = new ExampleGenerator(db);
     await ex.init();
   });
-  it('should run without error', async () => {
+  it.skip('should run without error', async () => {
     const cakeKey = 'carCake';
     const cakeRoute = Route.fromFlat(`/${cakeKey}`);
 

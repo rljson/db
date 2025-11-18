@@ -55,6 +55,7 @@ export class ComponentController<
     private _refs?: ControllerRefs,
   ) {
     super(_core, _tableKey);
+    this._contentType = 'components';
   }
 
   async init() {

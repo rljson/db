@@ -53,6 +53,7 @@ export class CakeController<N extends string, C extends Record<string, string>>
     private _refs?: CakeControllerRefs,
   ) {
     super(_core, _tableKey);
+    this._contentType = 'cakes';
   }
 
   private _baseLayers: { [layerTable: string]: string } = {};

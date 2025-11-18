@@ -44,6 +44,7 @@ export class LayerController<N extends string, C extends Record<string, string>>
     private _refs?: LayerControllerRefs,
   ) {
     super(_core, _tableKey);
+    this._contentType = 'layers';
   }
 
   async init() {

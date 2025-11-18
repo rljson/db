@@ -37,6 +37,7 @@ export class SliceIdController<N extends string, C extends SliceId[]>
     private _refs?: SliceIdControllerRefs,
   ) {
     super(_core, _tableKey);
+    this._contentType = 'sliceIds';
   }
 
   async init() {
