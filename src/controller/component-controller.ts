@@ -6,13 +6,13 @@ import { hsh } from '@rljson/hash';
 import { equals, Json, JsonValue, merge } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
+  CakeReference,
   ColumnCfg,
   ComponentsTable,
   ContentType,
   InsertHistoryRow,
   Ref,
   Rljson,
-  TableCfg,
   TableKey,
   timeId,
 } from '@rljson/rljson';
@@ -35,8 +35,6 @@ export class ComponentController<
   extends BaseController<ComponentsTable<T>, C>
   implements Controller<ComponentsTable<T>, C, N>
 {
-  private _tableCfg: TableCfg | null = null;
-
   private _allowedContentTypes: ContentType[] = [
     'components',
     'edits',
@@ -73,7 +71,9 @@ export class ComponentController<
       throw new Error(`Table ${this._tableKey} is not of type components.`);
     }
 
+    //Get TableCfg
     this._tableCfg = await this._core.tableCfg(this._tableKey);
+
     this._resolvedColumns = await this._resolveReferenceColumns({
       base: this._tableCfg.columns,
     });
@@ -184,23 +184,45 @@ export class ComponentController<
 
       for (const row of table._data) {
         const refValue = (row as any)[propertyKey];
+
+        //Plain hashes given, reference table from columnCfg
         if (typeof refValue === 'string') {
           childRefs.set(`${childRefTableKey}|${propertyKey}|${refValue}`, {
             tableKey: childRefTableKey,
             columnKey: propertyKey,
             ref: refValue,
-          });
+          } as ControllerChildProperty);
           continue;
         }
+
         /* v8 ignore if -- @preserve */
         if (Array.isArray(refValue)) {
           for (const refItem of refValue) {
+            //Plain hashes given, reference table from columnCfg
             if (typeof refItem === 'string') {
               childRefs.set(`${childRefTableKey}|${propertyKey}|${refItem}`, {
                 tableKey: childRefTableKey,
                 columnKey: propertyKey,
                 ref: refItem,
-              });
+              } as ControllerChildProperty);
+              continue;
+            }
+
+            //CakeRef: Object with ref and sliceIds given
+            if (typeof refItem === 'object' && refItem !== null) {
+              const cakeReference = refItem as CakeReference;
+              childRefs.set(
+                `${childRefTableKey}|${propertyKey}|${
+                  cakeReference.ref
+                }|${cakeReference.sliceIds?.join(',')}`,
+                {
+                  tableKey: childRefTableKey,
+                  columnKey: propertyKey,
+                  ref: cakeReference.ref,
+                  sliceIds: cakeReference.sliceIds,
+                } as ControllerChildProperty,
+              );
+              continue;
             }
           }
           continue;

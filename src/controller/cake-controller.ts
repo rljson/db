@@ -77,6 +77,9 @@ export class CakeController<N extends string, C extends Record<string, string>>
       throw new Error(`Table ${this._tableKey} is not of type cakes.`);
     }
 
+    //Get TableCfg
+    this._tableCfg = await this._core.tableCfg(this._tableKey);
+
     // Validate refs or try to read them from the first row of the table
     if (this._refs && this._refs.base && this._refs.base.length > 0) {
       // Validate base cake exists

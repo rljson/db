@@ -777,6 +777,34 @@ describe('Db', () => {
       expect(result.carGeneral._data[0].brand).toBe('Volkswagen');
       expect(result.carGeneral._data[1].brand).toBe('Volkswagen');
     });
+
+    it('get related sliceIds by component/cake reference', async () => {
+      const cakeKey = 'seriesCake';
+      const cakeRef = staticExample().seriesCake._data[2]._hash ?? '';
+
+      const route = `/${cakeKey}@${cakeRef}/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+
+      const result = await db.get(Route.fromFlat(route), {});
+
+      expect(result).toBeDefined();
+      expect(result['carGeneral']._data.length).toBe(
+        staticExample().carGeneral._data.length,
+      );
+    });
+
+    it('get single related sliceIds by component/cake reference', async () => {
+      const cakeKey = 'seriesCake';
+      const cakeRef = staticExample().seriesCake._data[2]._hash ?? '';
+      const sliceIds = ['Serie7'];
+
+      const route = `/${cakeKey}(${sliceIds.join(
+        ',',
+      )})@${cakeRef}/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+
+      const result = await db.get(Route.fromFlat(route), {});
+
+      expect(result).toBeDefined();
+    });
   });
   describe('insert', () => {
     it('throws on invalid Insert', async () => {

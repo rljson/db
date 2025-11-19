@@ -156,6 +156,7 @@ export class Db {
     const {
       [nodeTableKey]: { _data: nodeRows, _type: nodeType, _hash: nodeHash },
     } = await nodeController.get(nodeWhere);
+    const nodeColumnCfgs = nodeController.tableCfg().columns;
 
     const nodeRowsFiltered: Json[] = [];
     for (const nodeRow of nodeRows) {
@@ -210,11 +211,12 @@ export class Db {
             if (layerMatchesSliceIds.length > 0) sliceIdResult = true;
             break;
           case 'components':
-            if (filterProperty && filterProperty.sliceId) {
-              const componentSliceId = filterProperty.sliceId;
-              const componentMatchesSliceId =
-                nodeSliceIds.includes(componentSliceId);
-              if (componentMatchesSliceId) sliceIdResult = true;
+            if (filterProperty && filterProperty.sliceIds) {
+              const componentSliceIds = filterProperty.sliceIds;
+              const componentMatchesSliceIds = nodeSliceIds.filter((sId) =>
+                componentSliceIds.includes(sId),
+              );
+              if (componentMatchesSliceIds.length > 0) sliceIdResult = true;
             }
             break;
           default:
@@ -267,12 +269,37 @@ export class Db {
         (nodeRow as any)._hash,
       );
 
+      // If cake is referenced, we have to collect all sliceIds from
+      // childrenRefs and switch to them
+      const childrenRefTypes = new Set<string>();
+      const childrenRefSliceIds = new Set<SliceId>();
+
+      for (const cr of childrenRefs) {
+        if (cr.columnKey && cr.sliceIds && cr.sliceIds.length > 0) {
+          for (const sId of cr.sliceIds) {
+            childrenRefSliceIds.add(sId);
+          }
+          childrenRefTypes.add(
+            nodeColumnCfgs.find((c) => c.key === cr.columnKey)?.ref?.type ?? '',
+          );
+        }
+      }
+
+      if (childrenRefTypes.size > 1) {
+        throw new Error(
+          `Db._get: Multiple reference types found for children of table ${nodeTableKey}.`,
+        );
+      }
+
+      const cakeIsReferenced =
+        childrenRefTypes.size === 1 && [...childrenRefTypes][0] === 'cakes';
+
       const rowChildren = await this._get(
         childrenRoute,
         childrenWhere,
         controllers,
         childrenRefs,
-        nodeSliceIds,
+        cakeIsReferenced ? [...childrenRefSliceIds] : nodeSliceIds,
       );
 
       // No Children found for where + route => skip

@@ -10,6 +10,7 @@ import {
   InsertHistoryRow,
   Ref,
   Rljson,
+  TableCfg,
   TableKey,
   TableType,
 } from '@rljson/rljson';
@@ -27,6 +28,7 @@ export abstract class BaseController<T extends TableType, C extends JsonValue>
   implements Controller<T, C, string>
 {
   protected _contentType?: ContentType;
+  protected _tableCfg?: TableCfg;
 
   constructor(
     protected readonly _core: Core,
@@ -135,5 +137,19 @@ export abstract class BaseController<T extends TableType, C extends JsonValue>
    */
   contentType(): ContentType {
     return this._contentType ?? 'components';
+  }
+
+  // ...........................................................................
+  /**
+   * Gets the table configuration of the controller.
+   * @returns The table configuration managed by the controller.
+   */
+  tableCfg(): TableCfg {
+    if (!this._tableCfg) {
+      throw new Error(
+        `TableCfg for controller ${this._tableKey} is not initialized.`,
+      );
+    }
+    return this._tableCfg;
   }
 }

@@ -12,6 +12,7 @@ import {
   Ref,
   Rljson,
   SliceId,
+  TableCfg,
   TableKey,
   TableType,
 } from '@rljson/rljson';
@@ -41,7 +42,7 @@ export type ControllerChildProperty = {
   tableKey: TableKey;
   columnKey?: string;
   ref: Ref;
-  sliceId?: SliceId;
+  sliceIds?: SliceId[];
 };
 
 // ...........................................................................
@@ -74,6 +75,7 @@ export interface Controller<
   ): Promise<ControllerChildProperty[]>;
   filterRow(row: Json, key: string, value: JsonValue): Promise<boolean>;
   contentType(): ContentType;
+  tableCfg(): TableCfg;
 }
 
 // ...........................................................................

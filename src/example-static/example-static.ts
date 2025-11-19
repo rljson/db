@@ -7,6 +7,7 @@
 import { hip, hsh, rmhsh } from '@rljson/hash';
 import { Json, JsonH, JsonValueH } from '@rljson/json';
 import {
+  CakeReference,
   CakesTable,
   ColumnCfg,
   ComponentsTable,
@@ -16,6 +17,7 @@ import {
   Layer,
   LayersTable,
   Rljson,
+  SliceId,
   SliceIds,
   SliceIdsTable,
   TableCfg,
@@ -97,6 +99,10 @@ const chainSliceIds = (sliceIds: SliceIds[]): SliceIds[] => {
 };
 
 export const staticExample = (): StaticExample => {
+  //................................................................
+  //Car Data Tables
+  //................................................................
+
   //CarSliceId
   //................................................................
   const carSliceIdTableCfg = hip<TableCfg>(
@@ -879,6 +885,397 @@ export const staticExample = (): StaticExample => {
     ],
   }) as CakesTable;
 
+  //................................................................
+  //Series Data Tables
+  //................................................................
+
+  //SeriesSliceId
+  //................................................................
+
+  const seriesSliceIdTableCfg = hip<TableCfg>(
+    createSliceIdsTableCfg('seriesSliceId'),
+  ) as TableCfg;
+
+  const seriesSliceIdData: Array<SliceIds> = [
+    {
+      add: ['Serie0', 'Serie1', 'Serie2', 'Serie3'],
+      _hash: '',
+    } as SliceIds,
+    {
+      add: ['Serie4', 'Serie5', 'Serie6', 'Serie7'],
+      _hash: '',
+    } as SliceIds,
+    {
+      add: ['Serie8', 'Serie9', 'Serie10', 'Serie11'],
+      _hash: '',
+    } as SliceIds,
+  ].map((sliceIds) => hsh<SliceIds>(sliceIds as SliceIds));
+
+  const seriesSliceId = hip<any>({
+    _tableCfg: seriesSliceIdTableCfg._hash,
+    _type: 'sliceIds',
+    _data: chainSliceIds(seriesSliceIdData),
+    _hash: '',
+  }) as SliceIdsTable;
+
+  //SeriesGeneral
+  //................................................................
+  const seriesGeneralTableCfg = hip<TableCfg>({
+    key: 'seriesGeneral',
+    type: 'components',
+    columns: [
+      { key: '_hash', type: 'string', titleShort: 'Hash', titleLong: 'Hash' },
+      { key: 'name', type: 'string', titleShort: 'Name', titleLong: 'Name' },
+    ] as ColumnCfg[],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  } as TableCfg);
+
+  const seriesGeneral = hip<ComponentsTable<Json>>({
+    _tableCfg: seriesGeneralTableCfg._hash as string,
+    _type: 'components',
+    _data: [
+      {
+        name: 'Polo',
+        _hash: '',
+      },
+      {
+        name: 'Golf',
+        _hash: '',
+      },
+      {
+        name: 'Q4',
+        _hash: '',
+      },
+      {
+        name: 'Q6',
+        _hash: '',
+      },
+      {
+        name: 'i4',
+        _hash: '',
+      },
+      {
+        name: '3',
+        _hash: '',
+      },
+      {
+        name: 'Model 3',
+        _hash: '',
+      },
+      {
+        name: 'Model Y',
+        _hash: '',
+      },
+      {
+        name: 'Mustang',
+        _hash: '',
+      },
+      {
+        name: 'Bolt',
+        _hash: '',
+      },
+      {
+        name: 'Leaf',
+        _hash: '',
+      },
+      {
+        name: 'Kona',
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  }) as ComponentsTable<Json>;
+
+  //................................................................
+  //SeriesCars
+
+  const seriesCarsTableCfg = hip<TableCfg>({
+    key: 'seriesCars',
+    type: 'components',
+    columns: [
+      { key: '_hash', type: 'string', titleShort: 'Hash', titleLong: 'Hash' },
+      {
+        key: 'cars',
+        type: 'jsonArray',
+        titleShort: 'Cars',
+        titleLong: 'Cars References',
+        ref: {
+          tableKey: 'carCake',
+          type: 'cakes',
+        },
+      } as ColumnCfg,
+    ] as ColumnCfg[],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  } as TableCfg);
+
+  const seriesCars = hip<
+    ComponentsTable<{ _hash: string; cars: CakeReference[] }>
+  >({
+    _tableCfg: seriesCarsTableCfg._hash as string,
+    _type: 'components',
+    _data: [
+      {
+        cars: [
+          {
+            ref: carCake._data[2]._hash as string,
+            sliceIds: ['VIN1'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[2]._hash as string,
+            sliceIds: ['VIN2'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[0]._hash as string,
+            sliceIds: ['VIN3'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[0]._hash as string,
+            sliceIds: ['VIN4'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[1]._hash as string,
+            sliceIds: ['VIN5'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[1]._hash as string,
+            sliceIds: ['VIN6'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[2]._hash as string,
+            sliceIds: ['VIN7'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[2]._hash as string,
+            sliceIds: ['VIN8'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[2]._hash as string,
+            sliceIds: ['VIN9'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[2]._hash as string,
+            sliceIds: ['VIN10'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[2]._hash as string,
+            sliceIds: ['VIN11'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        cars: [
+          {
+            ref: carCake._data[2]._hash as string,
+            sliceIds: ['VIN12'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  });
+
+  //SeriesLayers and SeriesCake
+  //................................................................
+
+  const seriesGeneralLayerTableCfg = hip<TableCfg>(
+    createLayerTableCfg('seriesGeneralLayer'),
+  ) as TableCfg;
+
+  const seriesGeneralLayerData: Array<Layer> = [
+    {
+      add: {
+        Serie0: seriesGeneral._data[0]._hash,
+        Serie1: seriesGeneral._data[1]._hash,
+        Serie2: seriesGeneral._data[2]._hash,
+        Serie3: seriesGeneral._data[3]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'seriesSliceId',
+      sliceIdsTableRow: seriesSliceId._data[0]._hash as string,
+      componentsTable: 'seriesGeneral',
+      _hash: '',
+    } as Layer,
+    {
+      add: {
+        Serie4: seriesGeneral._data[4]._hash,
+        Serie5: seriesGeneral._data[5]._hash,
+        Serie6: seriesGeneral._data[6]._hash,
+        Serie7: seriesGeneral._data[7]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'seriesSliceId',
+      sliceIdsTableRow: seriesSliceId._data[1]._hash as string,
+      componentsTable: 'seriesGeneral',
+      _hash: '',
+    },
+    {
+      add: {
+        Serie8: seriesGeneral._data[8]._hash,
+        Serie9: seriesGeneral._data[9]._hash,
+        Serie10: seriesGeneral._data[10]._hash,
+        Serie11: seriesGeneral._data[11]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'seriesSliceId',
+      sliceIdsTableRow: seriesSliceId._data[2]._hash as string,
+      componentsTable: 'seriesGeneral',
+      _hash: '',
+    },
+  ].map((layer) => hsh<Layer>(layer as Layer));
+
+  const seriesGeneralLayer = hip<any>({
+    _tableCfg: seriesGeneralLayerTableCfg._hash,
+    _type: 'layers',
+    _data: chainLayers(seriesGeneralLayerData),
+    _hash: '',
+  }) as LayersTable;
+
+  const seriesCarsLayerTableCfg = hip<TableCfg>(
+    createLayerTableCfg('seriesCarsLayer'),
+  ) as TableCfg;
+
+  const seriesCarsLayerData: Array<Layer> = [
+    {
+      add: {
+        Serie0: seriesCars._data[0]._hash,
+        Serie1: seriesCars._data[1]._hash,
+        Serie2: seriesCars._data[2]._hash,
+        Serie3: seriesCars._data[3]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'seriesSliceId',
+      sliceIdsTableRow: seriesSliceId._data[0]._hash,
+      componentsTable: 'seriesCars',
+      _hash: '',
+    } as Layer,
+    {
+      add: {
+        Serie4: seriesCars._data[4]._hash,
+        Serie5: seriesCars._data[5]._hash,
+        Serie6: seriesCars._data[6]._hash,
+        Serie7: seriesCars._data[7]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'seriesSliceId',
+      sliceIdsTableRow: seriesSliceId._data[1]._hash,
+      componentsTable: 'seriesCars',
+      _hash: '',
+    } as Layer,
+    {
+      add: {
+        Serie8: seriesCars._data[8]._hash,
+        Serie9: seriesCars._data[9]._hash,
+        Serie10: seriesCars._data[10]._hash,
+        Serie11: seriesCars._data[11]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'seriesSliceId',
+      sliceIdsTableRow: seriesSliceId._data[2]._hash,
+      componentsTable: 'seriesCars',
+      _hash: '',
+    } as Layer,
+  ].map((layer) => hsh<Layer>(layer as Layer));
+
+  const seriesCarsLayer = hip<any>({
+    _tableCfg: seriesCarsLayerTableCfg._hash,
+    _type: 'layers',
+    _data: chainLayers(seriesCarsLayerData),
+  });
+
+  const seriesCakeTableCfg = hip<TableCfg>(
+    createCakeTableCfg('seriesCake'),
+  ) as TableCfg;
+
+  const seriesCake = hip<any>({
+    _tableCfg: seriesCakeTableCfg._hash,
+    _type: 'cakes',
+    _data: [
+      {
+        sliceIdsTable: 'seriesSliceId',
+        sliceIdsRow: seriesSliceId._data[0]._hash,
+        layers: {
+          seriesGeneralLayer: seriesGeneralLayer._data[0]._hash,
+          seriesCarsLayer: seriesCarsLayer._data[0]._hash,
+        },
+      },
+      {
+        sliceIdsTable: 'seriesSliceId',
+        sliceIdsRow: seriesSliceId._data[1]._hash,
+        layers: {
+          seriesGeneralLayer: seriesGeneralLayer._data[1]._hash,
+          seriesCarsLayer: seriesCarsLayer._data[1]._hash,
+        },
+      },
+      {
+        sliceIdsTable: 'seriesSliceId',
+        sliceIdsRow: seriesSliceId._data[2]._hash,
+        layers: {
+          seriesGeneralLayer: seriesGeneralLayer._data[2]._hash,
+          seriesCarsLayer: seriesCarsLayer._data[2]._hash,
+        },
+      },
+    ],
+  }) as CakesTable;
+
+  //................................................................
+  //TablesCfg
+  //................................................................
   const tableCfgs = {
     _data: [
       carSliceIdTableCfg,
@@ -890,6 +1287,12 @@ export const staticExample = (): StaticExample => {
       carTechnicalLayerTableCfg,
       carColorLayerTableCfg,
       carCakeTableCfg,
+      seriesSliceIdTableCfg,
+      seriesGeneralTableCfg,
+      seriesCarsTableCfg,
+      seriesGeneralLayerTableCfg,
+      seriesCarsLayerTableCfg,
+      seriesCakeTableCfg,
     ],
   } as TablesCfgTable;
 
@@ -903,6 +1306,12 @@ export const staticExample = (): StaticExample => {
     carTechnicalLayer,
     carColorLayer,
     carCake,
+    seriesSliceId,
+    seriesGeneral,
+    seriesCars,
+    seriesGeneralLayer,
+    seriesCarsLayer,
+    seriesCake,
     tableCfgs,
   };
 
