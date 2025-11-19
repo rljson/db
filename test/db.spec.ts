@@ -387,6 +387,42 @@ describe('Db', () => {
       expect(layers.length).toBe(1);
       expect(components.length).toBe(1);
     });
+    it('get sliceId w/ ref of cake/layer/component', async () => {
+      const cakeKey = 'carCake';
+      const cakeRef = carsExample().carCake._data[2]._hash ?? '';
+      const sliceIds = ['VIN11'];
+      const route = `/${cakeKey}(${sliceIds.join(
+        ',',
+      )})@${cakeRef}/carGeneralLayer/carGeneral`;
+
+      const result = await db.get(Route.fromFlat(route), {});
+
+      const cakes = result[cakeKey]._data;
+      const layers = result['carGeneralLayer']._data;
+      const components = result['carGeneral']._data;
+
+      expect(cakes.length).toBe(1);
+      expect(layers.length).toBe(1);
+      expect(components.length).toBe(1);
+    });
+    it('get empty for sliceId w/ unmatching ref of cake/layer/component', async () => {
+      const cakeKey = 'carCake';
+      const cakeRef = carsExample().carCake._data[0]._hash ?? '';
+      const sliceIds = ['VIN12'];
+      const route = `/${cakeKey}(${sliceIds.join(
+        ',',
+      )})@${cakeRef}/carGeneralLayer/carGeneral`;
+
+      const result = await db.get(Route.fromFlat(route), {});
+
+      const cakes = result[cakeKey];
+      const layers = result['carGeneralLayer'];
+      const components = result['carGeneral'];
+
+      expect(!cakes || cakes._data.length == 0).toBe(true);
+      expect(!layers).toBe(true);
+      expect(!components).toBe(true);
+    });
     it('get component by ref', async () => {
       const route = '/carGeneral';
       const ref = carsExample().carGeneral._data[0]._hash ?? '';
