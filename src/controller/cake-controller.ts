@@ -22,6 +22,7 @@ import { Core } from '../core.ts';
 import { BaseController } from './base-controller.ts';
 import {
   Controller,
+  ControllerChildProperty,
   ControllerCommands,
   ControllerRefs,
 } from './controller.ts';
@@ -108,13 +109,13 @@ export class CakeController<N extends string, C extends Record<string, string>>
   async getChildRefs(
     where: string | Json,
     filter?: Json,
-  ): Promise<Array<{ tableKey: TableKey; ref: Ref }>> {
+  ): Promise<ControllerChildProperty[]> {
     /* v8 ignore next -- @preserve */
     if (!this._table) {
       throw new Error(`Controller not initialized.`);
     }
 
-    const childRefs: Array<{ tableKey: TableKey; ref: Ref }> = [];
+    const childRefs: ControllerChildProperty[] = [];
     const { [this._tableKey]: table } = await this.get(where, filter);
 
     const cakes = table._data as Cake[];

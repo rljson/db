@@ -17,7 +17,11 @@ import {
 import { Core } from '../core.ts';
 
 import { CakeControllerCommands } from './cake-controller.ts';
-import { Controller, ControllerRefs } from './controller.ts';
+import {
+  Controller,
+  ControllerChildProperty,
+  ControllerRefs,
+} from './controller.ts';
 
 export abstract class BaseController<T extends TableType, C extends JsonValue>
   implements Controller<any, any, any>
@@ -44,7 +48,7 @@ export abstract class BaseController<T extends TableType, C extends JsonValue>
   abstract getChildRefs(
     where: string | Json,
     filter?: Json,
-  ): Promise<Array<{ tableKey: TableKey; columnKey?: string; ref: Ref }>>;
+  ): Promise<ControllerChildProperty[]>;
 
   // ...........................................................................
   abstract filterRow(

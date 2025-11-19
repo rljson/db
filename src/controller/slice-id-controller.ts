@@ -21,7 +21,11 @@ import {
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
-import { Controller, ControllerRefs } from './controller.ts';
+import {
+  Controller,
+  ControllerChildProperty,
+  ControllerRefs,
+} from './controller.ts';
 
 export interface SliceIdControllerRefs extends Partial<SliceIds> {
   base?: SliceIdsRef;
@@ -180,7 +184,7 @@ export class SliceIdController<N extends string, C extends SliceId[]>
     return { add: Array.from(add) };
   }
 
-  async getChildRefs(): Promise<Array<{ tableKey: TableKey; ref: Ref }>> {
+  async getChildRefs(): Promise<ControllerChildProperty[]> {
     return [];
   }
 

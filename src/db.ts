@@ -32,6 +32,7 @@ import { traverse } from 'object-traversal';
 
 import {
   Controller,
+  ControllerChildProperty,
   ControllerRefs,
   ControllerRunFn,
   createController,
@@ -118,11 +119,7 @@ export class Db {
     route: Route,
     where: string | Json,
     controllers: Record<string, Controller<any, any, any>>,
-    filter?: Array<{
-      tableKey: TableKey;
-      columnKey?: string;
-      ref: Ref;
-    }>,
+    filter?: ControllerChildProperty[],
     sliceIds?: SliceId[],
   ): Promise<Rljson> {
     const nodeTableKey = route.top.tableKey;
@@ -172,10 +169,12 @@ export class Db {
 
       // Apply Filters
       let filterResult = false;
+      let filterProperty: ControllerChildProperty | undefined;
       if (filterActive) {
         for (const f of filter) {
           if (f.tableKey !== nodeTableKey) continue;
           if (nodeRow._hash === f.ref) {
+            filterProperty = f;
             filterResult = true;
           }
         }
@@ -186,16 +185,41 @@ export class Db {
       // Apply SliceIds
       let sliceIdResult = false;
       if (sliceIdActive) {
-        if (nodeType === 'cakes') {
-          const cake = nodeRow as Cake;
-          const cakeSliceIds = await this._resolveSliceIds(
-            cake.sliceIdsTable,
-            cake.sliceIdsRow,
-          );
-          const intersect = nodeSliceIds.filter((sId) =>
-            cakeSliceIds.includes(sId),
-          );
-          if (intersect.length > 0) sliceIdResult = true;
+        switch (nodeType) {
+          case 'cakes':
+            const cake = nodeRow as Cake;
+            const cakeSliceIds = await this._resolveSliceIds(
+              cake.sliceIdsTable,
+              cake.sliceIdsRow,
+            );
+            const cakeMatchesSliceIds = nodeSliceIds.filter((sId) =>
+              cakeSliceIds.includes(sId),
+            );
+            if (cakeMatchesSliceIds.length > 0) sliceIdResult = true;
+            break;
+
+          case 'layers':
+            const layer = nodeRow as Layer;
+            const layerSliceIds = await this._resolveSliceIds(
+              layer.sliceIdsTable,
+              layer.sliceIdsTableRow,
+            );
+            const layerMatchesSliceIds = nodeSliceIds.filter((sId) =>
+              layerSliceIds.includes(sId),
+            );
+            if (layerMatchesSliceIds.length > 0) sliceIdResult = true;
+            break;
+          case 'components':
+            if (filterProperty && filterProperty.sliceId) {
+              const componentSliceId = filterProperty.sliceId;
+              const componentMatchesSliceId =
+                nodeSliceIds.includes(componentSliceId);
+              if (componentMatchesSliceId) sliceIdResult = true;
+            }
+            break;
+          default:
+            sliceIdResult = true;
+            break;
         }
       } else {
         sliceIdResult = true;

@@ -324,7 +324,7 @@ describe('Db', () => {
         'Route  is not valid.',
       );
     });
-    it('get sliceId of chained sliceIds definition', async () => {
+    it('get sliceId of cake w/ chained sliceIds definition', async () => {
       const cakeKey = 'carCake';
       const sliceIds = ['VIN1', 'VIN2'];
       const route = `/${cakeKey}(${sliceIds.join(',')})`;
@@ -341,7 +341,7 @@ describe('Db', () => {
           .sort(),
       );
     });
-    it('get sliceId of single sliceIds definition', async () => {
+    it('get sliceId of cake w/ single sliceIds definition', async () => {
       const cakeKey = 'carCake';
       const sliceIds = ['VIN11'];
       const route = `/${cakeKey}(${sliceIds.join(',')})`;
@@ -355,6 +355,37 @@ describe('Db', () => {
       expect(results.map((r) => r._hash)).toEqual([
         carsExample().carCake._data[2]._hash,
       ]);
+    });
+    it('get sliceId of layer/component', async () => {
+      const layerKey = 'carGeneralLayer';
+      const componentKey = 'carGeneral';
+      const sliceIds = ['VIN11'];
+      const route = `/${layerKey}(${sliceIds.join(',')})/${componentKey}`;
+
+      const result = await db.get(Route.fromFlat(route), {});
+
+      const layers = result[layerKey]._data;
+      const components = result[componentKey]._data;
+
+      expect(layers.length).toBe(1);
+      expect(components.length).toBe(1);
+    });
+    it('get sliceId of cake/layer/component', async () => {
+      const cakeKey = 'carCake';
+      const sliceIds = ['VIN11'];
+      const route = `/${cakeKey}(${sliceIds.join(
+        ',',
+      )})/carGeneralLayer/carGeneral`;
+
+      const result = await db.get(Route.fromFlat(route), {});
+
+      const cakes = result[cakeKey]._data;
+      const layers = result['carGeneralLayer']._data;
+      const components = result['carGeneral']._data;
+
+      expect(cakes.length).toBe(1);
+      expect(layers.length).toBe(1);
+      expect(components.length).toBe(1);
     });
     it('get component by ref', async () => {
       const route = '/carGeneral';

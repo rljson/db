@@ -11,6 +11,7 @@ import {
   InsertHistoryRow,
   Ref,
   Rljson,
+  SliceId,
   TableKey,
   TableType,
 } from '@rljson/rljson';
@@ -35,6 +36,13 @@ export type ControllerRunFn<N extends string, C extends JsonValue> = (
   origin?: Ref,
   refs?: ControllerRefs,
 ) => Promise<InsertHistoryRow<N>[]>;
+
+export type ControllerChildProperty = {
+  tableKey: TableKey;
+  columnKey?: string;
+  ref: Ref;
+  sliceId?: SliceId;
+};
 
 // ...........................................................................
 /**
@@ -62,7 +70,7 @@ export interface Controller<
   getChildRefs(
     where: string | Json,
     filter?: Json,
-  ): Promise<Array<{ tableKey: TableKey; columnKey?: string; ref: Ref }>>;
+  ): Promise<ControllerChildProperty[]>;
   filterRow(row: Json, key: string, value: JsonValue): Promise<boolean>;
   contentType(): ContentType;
 }

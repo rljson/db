@@ -22,6 +22,7 @@ import { Core } from '../core.ts';
 import { BaseController } from './base-controller.ts';
 import {
   Controller,
+  ControllerChildProperty,
   ControllerCommands,
   ControllerRefs,
 } from './controller.ts';
@@ -168,19 +169,12 @@ export class ComponentController<
   async getChildRefs(
     where: string | Json,
     filter?: Json,
-  ): Promise<Array<{ tableKey: TableKey; columnKey?: string; ref: Ref }>> {
+  ): Promise<ControllerChildProperty[]> {
     const { [this._tableKey]: table } = await this.get(where, filter);
     const { columns } = await this._core.tableCfg(this._tableKey);
 
     //Unique child refs
-    const childRefs: Map<
-      string,
-      {
-        tableKey: TableKey;
-        columnKey?: string;
-        ref: Ref;
-      }
-    > = new Map();
+    const childRefs: Map<string, ControllerChildProperty> = new Map();
 
     for (const colCfg of columns) {
       if (!colCfg.ref || colCfg.ref === undefined) continue;

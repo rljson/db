@@ -24,7 +24,11 @@ import {
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
-import { Controller, ControllerRefs } from './controller.ts';
+import {
+  Controller,
+  ControllerChildProperty,
+  ControllerRefs,
+} from './controller.ts';
 import { SliceIdController } from './slice-id-controller.ts';
 
 export interface LayerControllerRefs extends Partial<Layer> {
@@ -294,20 +298,21 @@ export class LayerController<N extends string, C extends Record<string, string>>
   async getChildRefs(
     where: string | Json,
     filter?: Json,
-  ): Promise<Array<{ tableKey: TableKey; ref: Ref }>> {
+  ): Promise<ControllerChildProperty[]> {
     const { [this._tableKey]: table } = await this.get(where, filter);
-    const childRefs: Array<{ tableKey: TableKey; ref: Ref }> = [];
+    const childRefs: ControllerChildProperty[] = [];
 
     for (const row of table._data) {
       const layer = row as Layer;
       const resolvedLayer = await this.resolveBaseLayer(layer);
 
-      for (const [sliceId, compRef] of Object.entries(resolvedLayer.add)) {
+      for (const [sliceId, ref] of Object.entries(resolvedLayer.add)) {
         if (sliceId.startsWith('_')) continue;
 
         childRefs.push({
           tableKey: layer.componentsTable,
-          ref: compRef,
+          ref,
+          sliceId,
         });
       }
     }
