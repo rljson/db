@@ -19,7 +19,6 @@ import {
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { carsExample } from '../../src/cars-example';
 import { Db } from '../../src/db';
 import { exampleEditColumnSelection } from '../../src/edit/edit';
 import {
@@ -31,12 +30,13 @@ import {
   exampleEditSetValueReferenced,
 } from '../../src/edit/edit-action';
 import { MultiEditProcessor } from '../../src/edit/multi-edit-processor';
+import { staticExample } from '../../src/example-static/example-static';
 
 describe('MultiEditProcessor', () => {
   let db: Db;
 
   const cakeKey = 'carCake';
-  const cakeRef = carsExample().carCake._data[0]._hash as string;
+  const cakeRef = staticExample().carCake._data[0]._hash as string;
 
   beforeEach(async () => {
     //Init io
@@ -48,7 +48,7 @@ describe('MultiEditProcessor', () => {
     db = new Db(io);
 
     //Create Tables for TableCfgs in carsExample
-    for (const tableCfg of carsExample().tableCfgs._data) {
+    for (const tableCfg of staticExample().tableCfgs._data) {
       await db.core.createTableWithInsertHistory(tableCfg);
     }
 
@@ -58,7 +58,7 @@ describe('MultiEditProcessor', () => {
     await db.core.createTable(createEditHistoryTableCfg(cakeKey));
 
     //Import Data
-    await db.core.import(carsExample());
+    await db.core.import(staticExample());
   });
 
   describe('Constructor', () => {

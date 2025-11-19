@@ -19,8 +19,11 @@ import {
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
+import {
+  CarGeneral,
+  staticExample,
+} from '../src/example-static/example-static';
 import {
   ColumnInfo,
   ColumnSelection,
@@ -39,12 +42,12 @@ describe('Db', () => {
     db = new Db(io);
 
     //Create Tables for TableCfgs in carsExample
-    for (const tableCfg of carsExample().tableCfgs._data) {
+    for (const tableCfg of staticExample().tableCfgs._data) {
       await db.core.createTableWithInsertHistory(tableCfg);
     }
 
     //Import Data
-    await db.core.import(carsExample());
+    await db.core.import(staticExample());
   });
 
   describe('core', () => {
@@ -336,7 +339,7 @@ describe('Db', () => {
       expect(results.length).toBe(3);
 
       expect(results.map((r) => r._hash).sort()).toEqual(
-        carsExample()
+        staticExample()
           .carCake._data.map((c) => c._hash)
           .sort(),
       );
@@ -353,7 +356,7 @@ describe('Db', () => {
       expect(results.length).toBe(1);
 
       expect(results.map((r) => r._hash)).toEqual([
-        carsExample().carCake._data[2]._hash,
+        staticExample().carCake._data[2]._hash,
       ]);
     });
     it('get sliceId of layer/component', async () => {
@@ -389,7 +392,7 @@ describe('Db', () => {
     });
     it('get sliceId w/ ref of cake/layer/component', async () => {
       const cakeKey = 'carCake';
-      const cakeRef = carsExample().carCake._data[2]._hash ?? '';
+      const cakeRef = staticExample().carCake._data[2]._hash ?? '';
       const sliceIds = ['VIN11'];
       const route = `/${cakeKey}(${sliceIds.join(
         ',',
@@ -407,7 +410,7 @@ describe('Db', () => {
     });
     it('get empty for sliceId w/ unmatching ref of cake/layer/component', async () => {
       const cakeKey = 'carCake';
-      const cakeRef = carsExample().carCake._data[0]._hash ?? '';
+      const cakeRef = staticExample().carCake._data[0]._hash ?? '';
       const sliceIds = ['VIN12'];
       const route = `/${cakeKey}(${sliceIds.join(
         ',',
@@ -425,7 +428,7 @@ describe('Db', () => {
     });
     it('get component by ref', async () => {
       const route = '/carGeneral';
-      const ref = carsExample().carGeneral._data[0]._hash ?? '';
+      const ref = staticExample().carGeneral._data[0]._hash ?? '';
 
       const result = await db.get(Route.fromFlat(route), ref);
       expect(result).toBeDefined();
@@ -457,7 +460,7 @@ describe('Db', () => {
       const propertyKey = 'brand';
       const route = `${componentKey}/${propertyKey}`;
 
-      const ref = carsExample().carGeneral._data[0]._hash ?? '';
+      const ref = staticExample().carGeneral._data[0]._hash ?? '';
 
       const result = await db.get(Route.fromFlat(route), ref);
 
@@ -466,15 +469,15 @@ describe('Db', () => {
       expect(result[componentKey]._data.length).toBe(1);
       expect(result[componentKey]._data[0]).toEqual({
         _hash: ref,
-        [propertyKey]: carsExample().carGeneral._data[0][propertyKey],
+        [propertyKey]: staticExample().carGeneral._data[0][propertyKey],
       });
       expect(result[componentKey]._data[0][propertyKey]).toBe(
-        carsExample().carGeneral._data[0][propertyKey],
+        staticExample().carGeneral._data[0][propertyKey],
       );
     });
     it('get component by where', async () => {
       const route = '/carGeneral';
-      const where = rmhsh(carsExample().carGeneral._data[0]) as {
+      const where = rmhsh(staticExample().carGeneral._data[0]) as {
         [column: string]: JsonValue;
       };
 
@@ -483,7 +486,7 @@ describe('Db', () => {
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
       expect(result.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
     });
     it('get components by where', async () => {
@@ -500,7 +503,7 @@ describe('Db', () => {
     it('get layer by ref', async () => {
       const route = '/carGeneralLayer';
       const ref =
-        (carsExample().carGeneralLayer._data[0]._hash as string) ?? '';
+        (staticExample().carGeneralLayer._data[0]._hash as string) ?? '';
 
       const result = await db.get(Route.fromFlat(route), ref);
       expect(result).toBeDefined();
@@ -510,7 +513,7 @@ describe('Db', () => {
     });
     it('get cake by route ref', async () => {
       const route = '/carCake';
-      const ref = (carsExample().carCake._data[0]._hash as string) ?? '';
+      const ref = (staticExample().carCake._data[0]._hash as string) ?? '';
 
       const result = await db.get(Route.fromFlat(`${route}@${ref}`), {});
       expect(result).toBeDefined();
@@ -520,7 +523,7 @@ describe('Db', () => {
     });
     it('get cake/layer by route ref', async () => {
       const cakeRoute = '/carCake';
-      const cakeRef = (carsExample().carCake._data[0]._hash as string) ?? '';
+      const cakeRef = (staticExample().carCake._data[0]._hash as string) ?? '';
 
       const result = await db.get(
         Route.fromFlat(`${cakeRoute}@${cakeRef}/carGeneralLayer`),
@@ -534,7 +537,7 @@ describe('Db', () => {
     it('get nested layer/component by where', async () => {
       const route = '/carGeneralLayer/carGeneral';
       const where = {
-        carGeneral: rmhsh(carsExample().carGeneral._data[0]) as {
+        carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
           [column: string]: JsonValue;
         },
       };
@@ -544,14 +547,14 @@ describe('Db', () => {
       expect(result.carGeneralLayer).toBeDefined();
       expect(result.carGeneralLayer._data.length).toBe(3); //3 layers because they are chained
       expect(result.carGeneralLayer._data.map((l) => l._hash).sort()).toEqual(
-        carsExample()
+        staticExample()
           .carGeneralLayer._data.map((l) => l._hash)
           .sort(),
       );
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
       expect(result.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
     });
     it('get nested layer/component by where w/ revision', async () => {
@@ -560,8 +563,8 @@ describe('Db', () => {
         route: '/carGeneralLayer',
         command: 'add',
         value: {
-          VIN1: carsExample().carGeneral._data[1]._hash || '',
-          VIN2: carsExample().carGeneral._data[0]._hash || '',
+          VIN1: staticExample().carGeneral._data[1]._hash || '',
+          VIN2: staticExample().carGeneral._data[0]._hash || '',
           _hash: '',
         } as Json,
         origin: 'H45H',
@@ -575,13 +578,14 @@ describe('Db', () => {
       const addedLayerInsertHistory = addedLayerInsertHistorys[0];
       //Search for first carGeneral
       const where = {
-        carGeneral: rmhsh(carsExample().carGeneral._data[0]) as {
+        carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
           [column: string]: JsonValue;
         },
       };
 
       //GET Result via first layer revision
-      const layerRevHash1 = carsExample().carGeneralLayer._data[0]._hash ?? '';
+      const layerRevHash1 =
+        staticExample().carGeneralLayer._data[0]._hash ?? '';
       const route1 = `/carGeneralLayer@${layerRevHash1}/carGeneral`;
 
       //GET Result via second layer revision
@@ -598,13 +602,13 @@ describe('Db', () => {
       expect(result1.carGeneral).toBeDefined();
       expect(result1.carGeneral._data.length).toBe(1);
       expect(result1.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
 
       expect(result2.carGeneral).toBeDefined();
       expect(result2.carGeneral._data.length).toBe(1);
       expect(result2.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
 
       expect(result1.carGeneralLayer).toBeDefined();
@@ -619,7 +623,7 @@ describe('Db', () => {
       const route = '/carTechnical/carDimensions';
       const where = {
         carDimensions: {
-          ...(rmhsh(carsExample().carDimensions._data[0]) as {
+          ...(rmhsh(staticExample().carDimensions._data[0]) as {
             [column: string]: JsonValue;
           }),
           ...{ _through: 'dimensions' },
@@ -631,12 +635,12 @@ describe('Db', () => {
       expect(result.carTechnical).toBeDefined();
       expect(result.carTechnical._data.length).toBe(1);
       expect(result.carTechnical._data[0]._hash).toBe(
-        carsExample().carTechnical._data[0]._hash,
+        staticExample().carTechnical._data[0]._hash,
       );
       expect(result.carDimensions).toBeDefined();
       expect(result.carDimensions._data.length).toBe(1);
       expect(result.carDimensions._data[0]._hash).toBe(
-        carsExample().carDimensions._data[0]._hash,
+        staticExample().carDimensions._data[0]._hash,
       );
     });
     it('get any nested cake/layer/component', async () => {
@@ -647,24 +651,24 @@ describe('Db', () => {
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
       expect(result.carCake._data.length).toBe(
-        carsExample().carCake._data.length,
+        staticExample().carCake._data.length,
       );
 
       expect(result.carGeneralLayer).toBeDefined();
       expect(result.carGeneralLayer._data.length).toBe(
-        carsExample().carGeneralLayer._data.length,
+        staticExample().carGeneralLayer._data.length,
       );
 
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(
-        carsExample().carGeneral._data.length,
+        staticExample().carGeneral._data.length,
       );
     });
     it('get nested cake/layer/component by where', async () => {
       const route = '/carCake/carGeneralLayer/carGeneral';
       const where = {
         carGeneralLayer: {
-          carGeneral: rmhsh(carsExample().carGeneral._data[0]) as {
+          carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
             [column: string]: JsonValue;
           },
         },
@@ -675,32 +679,32 @@ describe('Db', () => {
       expect(result.carCake).toBeDefined();
       expect(result.carCake._data.length).toBe(3); //3 cakes because layers are chained
       expect(result.carCake._data[0]._hash).toBe(
-        carsExample().carCake._data[0]._hash,
+        staticExample().carCake._data[0]._hash,
       );
       expect(result.carGeneralLayer).toBeDefined();
       expect(result.carGeneralLayer._data.length).toBe(3);
       expect(result.carGeneralLayer._data.map((l) => l._hash).sort()).toEqual(
-        carsExample()
+        staticExample()
           .carGeneralLayer._data.map((l) => l._hash)
           .sort(),
       );
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
       expect(result.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
     });
     it('get nested cake/layer/component by hash w/ route revision hash', async () => {
-      const cakeRevisionHash = carsExample().carCake._data[0]._hash ?? '';
+      const cakeRevisionHash = staticExample().carCake._data[0]._hash ?? '';
       const layerRevisionHash =
-        carsExample().carGeneralLayer._data[0]._hash ?? '';
+        staticExample().carGeneralLayer._data[0]._hash ?? '';
 
       const route = `/carCake@${cakeRevisionHash}/carGeneralLayer@${layerRevisionHash}/carGeneral`;
 
       const where = {
         carGeneralLayer: {
           carGeneral: {
-            _hash: carsExample().carGeneral._data[0]._hash ?? '',
+            _hash: staticExample().carGeneral._data[0]._hash ?? '',
           },
         },
       };
@@ -718,7 +722,7 @@ describe('Db', () => {
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
       expect(result.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
     });
     it('get nested cake/layer/component by hash w/ route revision TimeId', async () => {
@@ -728,8 +732,8 @@ describe('Db', () => {
         command: 'add',
         value: {
           carGeneralLayer: {
-            VIN1: carsExample().carGeneral._data[1]._hash || '',
-            VIN2: carsExample().carGeneral._data[0]._hash || '',
+            VIN1: staticExample().carGeneral._data[1]._hash || '',
+            VIN2: staticExample().carGeneral._data[0]._hash || '',
             _hash: '',
           },
         } as Json,
@@ -820,7 +824,7 @@ describe('Db', () => {
           _type: 'insertHistory',
           _data: [
             {
-              carGeneralRef: carsExample().carGeneral._data[0]._hash ?? '',
+              carGeneralRef: staticExample().carGeneral._data[0]._hash ?? '',
               timeId: previousTimeId,
               route: '/carGeneral',
             } as InsertHistoryRow<'CarGeneral'>,
@@ -830,7 +834,7 @@ describe('Db', () => {
 
       //Create Insert with predecessor ref in route
       //by hash
-      const previousHash = carsExample().carGeneral._data[0]._hash ?? '';
+      const previousHash = staticExample().carGeneral._data[0]._hash ?? '';
       const route = ['/carGeneral', previousHash].join('@');
       const Insert: Insert<CarGeneral> = {
         route,
@@ -864,7 +868,7 @@ describe('Db', () => {
           _type: 'insertHistory',
           _data: [
             {
-              carGeneralRef: carsExample().carGeneral._data[0]._hash ?? '',
+              carGeneralRef: staticExample().carGeneral._data[0]._hash ?? '',
               timeId: previousTimeId,
               route: '/carGeneral',
             } as InsertHistoryRow<'CarGeneral'>,
@@ -904,8 +908,8 @@ describe('Db', () => {
         route: '/carGeneralLayer',
         command: 'add',
         value: {
-          VIN1: carsExample().carGeneral._data[1]._hash || '',
-          VIN2: carsExample().carGeneral._data[0]._hash || '',
+          VIN1: staticExample().carGeneral._data[1]._hash || '',
+          VIN2: staticExample().carGeneral._data[0]._hash || '',
           _hash: '',
         } as Json,
         origin: 'H45H',
@@ -921,7 +925,7 @@ describe('Db', () => {
     });
 
     it('insert on cake route', async () => {
-      const carCake = carsExample().carCake._data[0];
+      const carCake = staticExample().carCake._data[0];
       const Insert: Insert<Record<string, LayerRef>> = {
         route: '/carCake',
         command: 'add',
@@ -1329,7 +1333,7 @@ describe('Db', () => {
   });
   describe('join', () => {
     const cakeKey = 'carCake';
-    const cakeRef = carsExample().carCake._data[2]._hash as string;
+    const cakeRef = staticExample().carCake._data[2]._hash as string;
 
     it('should be defined', () => {
       expect(db.join).toBeDefined();
@@ -1351,7 +1355,9 @@ describe('Db', () => {
       const result = await db.join(columnSelection, cakeKey, cakeRef);
 
       // Build expected data for validation
-      const exampleData = carsExample().carGeneral._data.map((c) => [c.brand]);
+      const exampleData = staticExample().carGeneral._data.map((c) => [
+        c.brand,
+      ]);
 
       expect(result.rows).toEqual(exampleData);
     });
@@ -1375,12 +1381,12 @@ describe('Db', () => {
 
       // Get slice IDs from carSliceIds layer
       const carSliceIds = (
-        carsExample().carSliceId as SliceIdsTable
+        staticExample().carSliceId as SliceIdsTable
       )._data.flatMap((d) => d.add);
 
       // Get technical layer values to map slice IDs to component refs
       const carTechnicalLayerValues = (
-        carsExample().carTechnicalLayer as LayersTable
+        staticExample().carTechnicalLayer as LayersTable
       )._data.flatMap((l) =>
         Object.entries(l.add).map(([sliceId, compRef]) => ({
           sliceId,
@@ -1396,7 +1402,7 @@ describe('Db', () => {
         );
         if (layerEntry) {
           const compRef = layerEntry.compRef;
-          const comp = carsExample().carTechnical._data.find(
+          const comp = staticExample().carTechnical._data.find(
             (c) => c._hash === compRef,
           );
           if (comp && comp.repairedByWorkshop !== undefined) {
@@ -1440,12 +1446,12 @@ describe('Db', () => {
       const exampleData = [];
       // Get slice IDs from carSliceIds layer
       const carSliceIds = (
-        carsExample().carSliceId as SliceIdsTable
+        staticExample().carSliceId as SliceIdsTable
       )._data.flatMap((d) => d.add);
 
       // Get general layer values to map slice IDs to general component refs
       const carGeneralLayerValues = (
-        carsExample().carGeneralLayer as LayersTable
+        staticExample().carGeneralLayer as LayersTable
       )._data.flatMap((l) =>
         Object.entries(l.add).map(([sliceId, compRef]) => ({
           sliceId,
@@ -1455,7 +1461,7 @@ describe('Db', () => {
 
       // Get technical layer values to map slice IDs to technical component refs
       const carTechnicalLayerValues = (
-        carsExample().carTechnicalLayer as LayersTable
+        staticExample().carTechnicalLayer as LayersTable
       )._data.flatMap((l) =>
         Object.entries(l.add).map(([sliceId, compRef]) => ({
           sliceId,
@@ -1472,7 +1478,7 @@ describe('Db', () => {
         let isElectricValue: boolean | null = null;
         if (generalLayerEntry) {
           const generalCompRef = generalLayerEntry.compRef;
-          const generalComp = carsExample().carGeneral._data.find(
+          const generalComp = staticExample().carGeneral._data.find(
             (c) => c._hash === generalCompRef,
           );
           if (generalComp && generalComp.isElectric !== undefined) {
@@ -1487,7 +1493,7 @@ describe('Db', () => {
         let transmissionValue: string | null = null;
         if (technicalLayerEntry) {
           const technicalCompRef = technicalLayerEntry.compRef;
-          const technicalComp = carsExample().carTechnical._data.find(
+          const technicalComp = staticExample().carTechnical._data.find(
             (c) => c._hash === technicalCompRef,
           );
           if (technicalComp && technicalComp.transmission !== undefined) {

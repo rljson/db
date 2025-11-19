@@ -27,7 +27,7 @@ import {
 //Branches
 //Sites
 
-export interface CarsExample extends Rljson {
+export interface StaticExample extends Rljson {
   carSliceId: SliceIdsTable;
   carGeneral: ComponentsTable<CarGeneral>;
   carTechnical: ComponentsTable<Json>;
@@ -102,7 +102,7 @@ const chainSliceIds = (sliceIds: SliceIds[]): SliceIds[] => {
   return chainedSliceIds;
 };
 
-export const carsExample = (): CarsExample => {
+export const staticExample = (): StaticExample => {
   //CarSliceId
   //................................................................
   const carSliceIdTableCfg = hip<TableCfg>(
