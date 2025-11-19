@@ -48,6 +48,7 @@ export type ControllerChildProperty = {
 /**
  * Generic interface for a controller that manages a specific table in the database.
  * @template T The type of the table being managed.
+ * @template C The type of the Insert.
  * @template N The name of the table being managed.
  * @property {ControllerRunFn<N>} insert - Function to execute a command on the table.
  * @property {() => Promise<void>} init - Initializes the controller.
@@ -90,8 +91,8 @@ export const createController = async (
   core: Core,
   tableKey: TableKey,
   refs?: ControllerRefs,
-): Promise<Controller<any, string, any>> => {
-  let ctrl: Controller<any, any, string>;
+): Promise<Controller<TableType, any, string>> => {
+  let ctrl: Controller<TableType, any, string>;
   switch (type) {
     case 'layers':
       ctrl = new LayerController(core, tableKey, refs as LayerControllerRefs);

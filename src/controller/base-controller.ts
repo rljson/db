@@ -24,7 +24,7 @@ import {
 } from './controller.ts';
 
 export abstract class BaseController<T extends TableType, C extends JsonValue>
-  implements Controller<any, any, any>
+  implements Controller<T, C, string>
 {
   protected _contentType?: ContentType;
 

@@ -37,12 +37,6 @@ export interface StaticExample extends Rljson {
   carTechnicalLayer: LayersTable;
   carColorLayer: LayersTable;
   carCake: CakesTable;
-  wheelSliceId: SliceIdsTable;
-  wheelBrand: ComponentsTable<Json>;
-  wheelDimension: ComponentsTable<Json>;
-  wheelBrandLayer: LayersTable;
-  wheelDimensionLayer: LayersTable;
-  wheelCake: CakesTable;
   tableCfgs: TablesCfgTable;
 }
 
@@ -885,253 +879,6 @@ export const staticExample = (): StaticExample => {
     ],
   }) as CakesTable;
 
-  //WheelSliceId
-  //................................................................
-
-  const wheelSliceIdTableCfg = hip<TableCfg>(
-    createSliceIdsTableCfg('wheelSliceId'),
-  ) as TableCfg;
-
-  const wheelSliceId = hip<any>({
-    _tableCfg: wheelSliceIdTableCfg._hash,
-    _type: 'sliceIds',
-    _data: [
-      {
-        add: ['BOB37382', 'BOB37383'],
-        _hash: '',
-      },
-    ],
-    _hash: '',
-  }) as SliceIdsTable;
-
-  //WheelBrand
-  //................................................................
-  const wheelBrandTableCfg = hip<any>({
-    key: 'wheelBrand',
-    type: 'components',
-    columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'brand', type: 'string' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
-
-  const wheelBrand = hip<any>({
-    _tableCfg: wheelBrandTableCfg._hash,
-    _type: 'components',
-    _data: [
-      {
-        brand: 'Borbet',
-        _hash: '',
-      },
-      {
-        brand: 'Borbet',
-        _hash: '',
-      },
-    ],
-    _hash: '',
-  }) as ComponentsTable<Json>;
-
-  //WheelDimension
-  //................................................................
-
-  const wheelDimensionTableCfg = hip<any>({
-    key: 'wheelDimension',
-    type: 'components',
-    columns: [
-      { key: '_hash', type: 'string' },
-      { key: 'dimension', type: 'string' },
-    ],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  }) as TableCfg;
-
-  const wheelDimension = hip<any>({
-    _tableCfg: wheelDimensionTableCfg._hash,
-    _type: 'components',
-    _data: [
-      {
-        dimension: '185/60 R16',
-        _hash: '',
-      },
-      {
-        dimension: '195/55 R16',
-        _hash: '',
-      },
-    ],
-    _hash: '',
-  }) as ComponentsTable<Json>;
-
-  //WheelLayers and WheelCake
-  //................................................................
-
-  const wheelBrandLayerTableCfg = hip<TableCfg>(
-    createLayerTableCfg('wheelBrandLayer'),
-  ) as TableCfg;
-
-  const wheelBrandLayer = hip<any>({
-    _tableCfg: wheelBrandLayerTableCfg._hash,
-    _type: 'layers',
-    _data: [
-      {
-        add: {
-          BOB37382: wheelBrand._data[0]._hash,
-          BOB37383: wheelBrand._data[1]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'wheelSliceId',
-        sliceIdsTableRow: wheelSliceId._data[0]._hash,
-        componentsTable: 'wheelBrand',
-        _hash: '',
-      },
-    ],
-    _hash: '',
-  }) as LayersTable;
-
-  const wheelDimensionLayerTableCfg = hip<TableCfg>(
-    createLayerTableCfg('wheelDimensionLayer'),
-  ) as TableCfg;
-
-  const wheelDimensionLayer = hip<any>({
-    _tableCfg: wheelDimensionLayerTableCfg._hash,
-    _type: 'layers',
-    _data: [
-      {
-        add: {
-          BOB37382: wheelDimension._data[0]._hash,
-          BOB37383: wheelDimension._data[1]._hash,
-          _hash: '',
-        },
-        sliceIdsTable: 'wheelSliceId',
-        sliceIdsTableRow: wheelSliceId._data[0]._hash,
-        componentsTable: 'wheelDimension',
-        _hash: '',
-      },
-    ],
-    _hash: '',
-  }) as LayersTable;
-
-  const wheelCakeTableCfg = hip<TableCfg>(
-    createCakeTableCfg('wheelCake'),
-  ) as TableCfg;
-
-  const wheelCake = hip<any>({
-    _tableCfg: wheelCakeTableCfg._hash,
-    _type: 'cakes',
-    _data: [
-      {
-        sliceIdsTable: 'wheelSliceId',
-        sliceIdsRow: wheelSliceId._data[0]._hash,
-        layers: {
-          wheelBrandLayer: wheelBrandLayer._data[0]._hash,
-          wheelDimensionLayer: wheelDimensionLayer._data[0]._hash,
-        },
-      },
-    ],
-  }) as CakesTable;
-
-  //SiteSliceId
-  //................................................................
-  const siteSliceIdTableCfg = hip<TableCfg>(
-    createSliceIdsTableCfg('siteSliceId'),
-  );
-
-  const siteSliceId = hip<any>({
-    _tableCfg: siteSliceIdTableCfg._hash,
-    _type: 'sliceIds',
-    _data: [
-      {
-        add: ['Site1', 'Site2', 'Site3'],
-        _hash: '',
-      },
-    ],
-    _hash: '',
-  }) as SliceIdsTable;
-
-  //SiteGeneral
-  //................................................................
-  const siteGeneralTableCfg = hip<TableCfg>({
-    key: 'siteGeneral',
-    type: 'components',
-    columns: [
-      { key: '_hash', type: 'string', titleLong: 'Hash', titleShort: 'Hash' },
-      {
-        key: 'manager',
-        type: 'string',
-        titleLong: 'Site Manager',
-        titleShort: 'Manager',
-      },
-      {
-        key: 'street',
-        type: 'string',
-        titleLong: 'Street',
-        titleShort: 'Street',
-      },
-      {
-        key: 'houseNr',
-        type: 'number',
-        titleLong: 'House Number',
-        titleShort: 'House Number',
-      },
-      {
-        key: 'postCode',
-        type: 'number',
-        titleLong: 'Postal Code',
-        titleShort: 'Postal Code',
-      },
-      {
-        key: 'city',
-        type: 'string',
-        titleLong: 'City',
-        titleShort: 'City',
-      },
-      {
-        key: 'cars',
-        type: 'jsonArray',
-        ref: {
-          tableKey: 'carCake',
-        },
-      } as ColumnCfg,
-    ] as ColumnCfg[],
-    isHead: false,
-    isRoot: false,
-    isShared: true,
-  } as TableCfg);
-
-  const siteGeneral = hip<ComponentsTable<JsonH>>({
-    _tableCfg: siteGeneralTableCfg._hash as string,
-    _type: 'components',
-    _data: [
-      {
-        manager: 'Alice Johnson',
-        street: 'Maple Street',
-        houseNr: 12,
-        postCode: 12345,
-        city: 'Springfield',
-        _hash: '',
-      },
-      {
-        manager: 'Bob Smith',
-        street: 'Oak Avenue',
-        houseNr: 34,
-        postCode: 67890,
-        city: 'Greenville',
-        _hash: '',
-      },
-      {
-        manager: 'Carol Davis',
-        street: 'Pine Lane',
-        houseNr: 56,
-        postCode: 11223,
-        city: 'Lakeside',
-        _hash: '',
-      },
-    ],
-  }) as ComponentsTable<JsonH>;
-
   const tableCfgs = {
     _data: [
       carSliceIdTableCfg,
@@ -1143,18 +890,10 @@ export const staticExample = (): StaticExample => {
       carTechnicalLayerTableCfg,
       carColorLayerTableCfg,
       carCakeTableCfg,
-      wheelSliceIdTableCfg,
-      wheelBrandTableCfg,
-      wheelDimensionTableCfg,
-      wheelBrandLayerTableCfg,
-      wheelDimensionLayerTableCfg,
-      wheelCakeTableCfg,
-      siteSliceIdTableCfg,
-      siteGeneralTableCfg,
     ],
   } as TablesCfgTable;
 
-  const carsExample = {
+  const staticExample = {
     carSliceId,
     carGeneral,
     carDimensions,
@@ -1164,16 +903,8 @@ export const staticExample = (): StaticExample => {
     carTechnicalLayer,
     carColorLayer,
     carCake,
-    wheelSliceId,
-    wheelBrand,
-    wheelDimension,
-    wheelBrandLayer,
-    wheelDimensionLayer,
-    wheelCake,
-    siteSliceId,
-    siteGeneral,
     tableCfgs,
   };
 
-  return carsExample;
+  return staticExample;
 };

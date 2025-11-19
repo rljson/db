@@ -9,8 +9,8 @@ import { Route } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { carsExample } from '../../src/cars-example';
 import { Db } from '../../src/db';
+import { staticExample } from '../../src/example-static/example-static';
 import { RowFilter } from '../../src/join/filter/row-filter';
 import { ColumnSelection } from '../../src/join/selection/column-selection';
 import { SetValue } from '../../src/join/set-value/set-value';
@@ -20,7 +20,7 @@ describe('Join', () => {
   let db: Db;
 
   const cakeKey = 'carCake';
-  const cakeRef = carsExample().carCake._data[2]._hash as string;
+  const cakeRef = staticExample().carCake._data[2]._hash as string;
 
   const columnSelection: ColumnSelection =
     ColumnSelection.exampleCarsColumnSelection();
@@ -35,12 +35,12 @@ describe('Join', () => {
     db = new Db(io);
 
     //Create Tables for TableCfgs in carsExample
-    for (const tableCfg of carsExample().tableCfgs._data) {
+    for (const tableCfg of staticExample().tableCfgs._data) {
       await db.core.createTableWithInsertHistory(tableCfg);
     }
 
     //Import Data
-    await db.core.import(carsExample());
+    await db.core.import(staticExample());
   });
 
   describe('Constructor', () => {
@@ -79,7 +79,7 @@ describe('Join', () => {
       const rowCount = join.rowCount;
 
       const sliceIds = new Set(
-        carsExample().carSliceId._data.flatMap((s) => s.add),
+        staticExample().carSliceId._data.flatMap((s) => s.add),
       );
 
       expect(rowCount).toBe(sliceIds.size);
@@ -99,7 +99,7 @@ describe('Join', () => {
       const data = join.data;
 
       const sliceIds = new Set(
-        carsExample().carSliceId._data.flatMap((s) => s.add),
+        staticExample().carSliceId._data.flatMap((s) => s.add),
       );
 
       expect(Object.keys(data).length).toBe(sliceIds.size);
@@ -142,7 +142,7 @@ describe('Join', () => {
       const rows = join.rows;
 
       const sliceIds = new Set(
-        carsExample().carSliceId._data.flatMap((s) => s.add),
+        staticExample().carSliceId._data.flatMap((s) => s.add),
       );
 
       expect(rows.length).toBe(sliceIds.size);
