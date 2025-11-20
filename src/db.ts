@@ -46,6 +46,7 @@ import {
   ColumnSelection,
 } from './join/selection/column-selection.ts';
 import { Notify } from './notify.ts';
+import { makeUnique } from './tools/make-unique.ts';
 
 /**
  * Access Rljson data
@@ -127,7 +128,7 @@ export class Db {
     const nodeRouteRef = await this._getReferenceOfRouteSegment(nodeRoute.top);
     const nodeController = controllers[nodeTableKey];
 
-    const nodeSliceIds = sliceIds ?? nodeRoute.top.sliceIds;
+    const nodeSliceIds = nodeRoute.top.sliceIds ?? sliceIds;
 
     let nodeWhere = typeof where === 'object' ? { ...where } : where;
 
@@ -348,7 +349,9 @@ export class Db {
     }
 
     // Merge Children Data
-    const nodeChildren = merge(...(nodeChildrenArray as Rljson[]));
+    const nodeChildren = makeUnique(
+      merge(...(nodeChildrenArray as Rljson[])) as Rljson,
+    );
 
     // Return Node with matched Children
     const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());

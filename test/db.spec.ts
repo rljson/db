@@ -778,7 +778,7 @@ describe('Db', () => {
       expect(result.carGeneral._data[1].brand).toBe('Volkswagen');
     });
 
-    it('get related sliceIds by component/cake reference', async () => {
+    it('get related cakes by component/cake sliceId reference', async () => {
       const cakeKey = 'seriesCake';
       const cakeRef = staticExample().seriesCake._data[2]._hash ?? '';
 
@@ -786,13 +786,30 @@ describe('Db', () => {
 
       const result = await db.get(Route.fromFlat(route), {});
 
-      expect(result).toBeDefined();
-      expect(result['carGeneral']._data.length).toBe(
+      const seriesCakes = result[cakeKey]._data;
+      expect(seriesCakes.length).toBe(1);
+
+      const seriesCarsLayers = result['seriesCarsLayer']._data;
+      expect(seriesCarsLayers.length).toBe(1);
+
+      const seriesCars = result['seriesCars']._data;
+      expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
+
+      const carCakes = result['carCake']._data;
+      expect(carCakes.length).toBe(staticExample().carCake._data.length);
+
+      const carGeneralLayers = result['carGeneralLayer']._data;
+      expect(carGeneralLayers.length).toBe(
+        staticExample().carGeneralLayer._data.length,
+      );
+
+      const carGeneralComponents = result['carGeneral']._data;
+      expect(carGeneralComponents.length).toBe(
         staticExample().carGeneral._data.length,
       );
     });
 
-    it('get single related sliceIds by component/cake reference', async () => {
+    it('get single related component/cake by sliceId reference by explicit sliceId', async () => {
       const cakeKey = 'seriesCake';
       const cakeRef = staticExample().seriesCake._data[2]._hash ?? '';
       const sliceIds = ['Serie7'];
@@ -803,7 +820,209 @@ describe('Db', () => {
 
       const result = await db.get(Route.fromFlat(route), {});
 
-      expect(result).toBeDefined();
+      const seriesCakes = result[cakeKey]._data;
+      expect(seriesCakes.length).toBe(1);
+
+      const seriesCarsLayers = result['seriesCarsLayer']._data;
+      expect(seriesCarsLayers.length).toBe(1);
+      expect(seriesCarsLayers.map((l) => l._hash)).toEqual([
+        staticExample().seriesCarsLayer._data[2]._hash,
+      ]);
+
+      const seriesCars = result['seriesCars']._data;
+      expect(seriesCars.length).toBe(1);
+      expect(seriesCars.map((c) => c._hash)).toEqual([
+        staticExample().seriesCars._data[7]._hash,
+      ]);
+
+      const carCakes = result['carCake']._data;
+      expect(carCakes.length).toBe(1);
+      expect(carCakes.map((c) => c._hash)).toEqual([
+        staticExample().carCake._data[2]._hash,
+      ]);
+
+      const carGeneralLayers = result['carGeneralLayer']._data;
+      expect(carGeneralLayers.length).toBe(1);
+      expect(carGeneralLayers.map((l) => l._hash)).toEqual([
+        staticExample().carGeneralLayer._data[2]._hash,
+      ]);
+
+      const carGeneralComponents = result['carGeneral']._data;
+      expect(carGeneralComponents.length).toBe(1);
+      expect(carGeneralComponents.map((c) => c._hash)).toEqual([
+        staticExample().carGeneral._data[7]._hash,
+      ]);
+    });
+
+    it('get related cakes by component/cake sliceId reference', async () => {
+      const cakeKey = 'catalogCake';
+      const cakeRef = staticExample().catalogCake._data[0]._hash ?? '';
+
+      const route = `/${cakeKey}@${cakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+
+      const result = await db.get(Route.fromFlat(route), {});
+
+      //Single starting point cake
+      const catalogCakes = result[cakeKey]._data;
+      expect(catalogCakes.length).toBe(1);
+
+      //Single catalogSeries layer related to starting cake
+      const catalogSeriesLayers = result['catalogSeriesLayer']._data;
+      expect(catalogSeriesLayers.length).toBe(1);
+      expect(catalogSeriesLayers.map((l) => l._hash)).toEqual([
+        staticExample().catalogSeriesLayer._data[0]._hash,
+      ]);
+
+      //All catalogSeries, due to layer is linking any of them
+      const catalogSeries = result['catalogSeries']._data;
+      expect(catalogSeries.length).toBe(
+        staticExample().catalogSeries._data.length,
+      );
+
+      //All seriesCakes, due to catalogSeries are linking any of them
+      const seriesCakes = result['seriesCake']._data;
+      expect(seriesCakes.length).toBe(staticExample().seriesCake._data.length);
+      expect(seriesCakes.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .seriesCake._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All seriesCarsLayers, due to seriesCakes are linking any of them
+      const seriesCarsLayers = result['seriesCarsLayer']._data;
+      expect(seriesCarsLayers.length).toBe(
+        staticExample().seriesCarsLayer._data.length,
+      );
+      expect(seriesCarsLayers.map((l) => l._hash).sort()).toEqual(
+        staticExample()
+          .seriesCarsLayer._data.map((l) => l._hash)
+          .sort(),
+      );
+
+      //All seriesCars, due to seriesCarsLayers are linking any of them
+      const seriesCars = result['seriesCars']._data;
+      expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
+      expect(seriesCars.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .seriesCars._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All carCakes, due to seriesCars are linking any of them
+      const carCakes = result['carCake']._data;
+      expect(carCakes.length).toBe(staticExample().carCake._data.length);
+      expect(carCakes.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .carCake._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All carGeneralLayers, due to carCakes are linking any of them
+      const carGeneralLayers = result['carGeneralLayer']._data;
+      expect(carGeneralLayers.length).toBe(
+        staticExample().carGeneralLayer._data.length,
+      );
+      expect(carGeneralLayers.map((l) => l._hash).sort()).toEqual(
+        staticExample()
+          .carGeneralLayer._data.map((l) => l._hash)
+          .sort(),
+      );
+
+      //All carGeneralComponents, due to carGeneralLayers are linking any of them
+      const carGeneralComponents = result['carGeneral']._data;
+      expect(carGeneralComponents.length).toBe(
+        staticExample().carGeneral._data.length,
+      );
+      expect(carGeneralComponents.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .carGeneral._data.map((c) => c._hash)
+          .sort(),
+      );
+    });
+    it('get related cakes by component/cake sliceId reference, filter on deeper sliceId', async () => {
+      const cakeKey = 'catalogCake';
+      const cakeRef = staticExample().catalogCake._data[0]._hash ?? '';
+      const filterSliceIds = ['VIN4', 'VIN8'];
+
+      const route = `/${cakeKey}@${cakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake(${filterSliceIds.join(
+        ',',
+      )})/carGeneralLayer/carGeneral/brand`;
+
+      const result = await db.get(Route.fromFlat(route), {});
+
+      //Single starting point cake
+      const catalogCakes = result[cakeKey]._data;
+      expect(catalogCakes.length).toBe(1);
+
+      //Single catalogSeries layer related to starting cake
+      const catalogSeriesLayers = result['catalogSeriesLayer']._data;
+      expect(catalogSeriesLayers.length).toBe(1);
+      expect(catalogSeriesLayers.map((l) => l._hash)).toEqual([
+        staticExample().catalogSeriesLayer._data[0]._hash,
+      ]);
+
+      //All catalogSeries, due to layer is linking any of them
+      const catalogSeries = result['catalogSeries']._data;
+      expect(catalogSeries.length).toBe(
+        staticExample().catalogSeries._data.length,
+      );
+
+      //All seriesCakes, due to catalogSeries are linking any of them
+      const seriesCakes = result['seriesCake']._data;
+      expect(seriesCakes.length).toBe(staticExample().seriesCake._data.length);
+      expect(seriesCakes.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .seriesCake._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All seriesCarsLayers, due to seriesCakes are linking any of them
+      const seriesCarsLayers = result['seriesCarsLayer']._data;
+      expect(seriesCarsLayers.length).toBe(
+        staticExample().seriesCarsLayer._data.length,
+      );
+      expect(seriesCarsLayers.map((l) => l._hash).sort()).toEqual(
+        staticExample()
+          .seriesCarsLayer._data.map((l) => l._hash)
+          .sort(),
+      );
+
+      //All seriesCars, due to seriesCarsLayers are linking any of them
+      const seriesCars = result['seriesCars']._data;
+      expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
+      expect(seriesCars.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .seriesCars._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All carCakes, due to seriesCars are linking any of them
+      const carCakes = result['carCake']._data;
+      expect(carCakes.length).toBe(staticExample().carCake._data.length);
+      expect(carCakes.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .carCake._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All carGeneralLayers, due to carCakes are linking any of them
+      const carGeneralLayers = result['carGeneralLayer']._data;
+      expect(carGeneralLayers.length).toBe(
+        staticExample().carGeneralLayer._data.length,
+      );
+      expect(carGeneralLayers.map((l) => l._hash).sort()).toEqual(
+        staticExample()
+          .carGeneralLayer._data.map((l) => l._hash)
+          .sort(),
+      );
+
+      //All carGeneralComponents, due to carGeneralLayers are linking any of them
+      const carGeneralComponents = result['carGeneral']._data;
+      expect(carGeneralComponents.length).toBe(2);
+      expect(carGeneralComponents.map((c) => c._hash)).toEqual([
+        staticExample().carGeneral._data[3]._hash,
+        staticExample().carGeneral._data[7]._hash,
+      ]);
     });
   });
   describe('insert', () => {

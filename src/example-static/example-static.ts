@@ -39,6 +39,16 @@ export interface StaticExample extends Rljson {
   carTechnicalLayer: LayersTable;
   carColorLayer: LayersTable;
   carCake: CakesTable;
+  seriesSliceId: SliceIdsTable;
+  seriesGeneral: ComponentsTable<Json>;
+  seriesCars: ComponentsTable<Json>;
+  seriesGeneralLayer: LayersTable;
+  seriesCarsLayer: LayersTable;
+  seriesCake: CakesTable;
+  catalogSliceId: SliceIdsTable;
+  catalogSeries: ComponentsTable<Json>;
+  catalogSeriesLayer: LayersTable;
+  catalogCake: CakesTable;
   tableCfgs: TablesCfgTable;
 }
 
@@ -1274,6 +1284,131 @@ export const staticExample = (): StaticExample => {
   }) as CakesTable;
 
   //................................................................
+  //Series Data Tables
+  //................................................................
+
+  //SeriesSliceId
+  //................................................................
+
+  const catalogSliceIdTableCfg = hip<TableCfg>(
+    createSliceIdsTableCfg('catalogSliceId'),
+  ) as TableCfg;
+
+  const catalogSliceIdData: Array<SliceIds> = [
+    {
+      add: ['Catalog0', 'Catalog1'],
+      _hash: '',
+    } as SliceIds,
+  ].map((sliceIds) => hsh<SliceIds>(sliceIds as SliceIds));
+
+  const catalogSliceId = hip<any>({
+    _tableCfg: catalogSliceIdTableCfg._hash,
+    _type: 'sliceIds',
+    _data: chainSliceIds(catalogSliceIdData),
+    _hash: '',
+  }) as SliceIdsTable;
+
+  //CatalogSeries
+  //................................................................
+  const catalogSeriesTableCfg = hip<TableCfg>({
+    key: 'catalogSeries',
+    type: 'components',
+    columns: [
+      { key: '_hash', type: 'string', titleShort: 'Hash', titleLong: 'Hash' },
+      {
+        key: 'series',
+        type: 'jsonArray',
+        titleShort: 'Series',
+        titleLong: 'Series References',
+        ref: {
+          tableKey: 'seriesCake',
+          type: 'cakes',
+        },
+      } as ColumnCfg,
+    ] as ColumnCfg[],
+    isHead: false,
+    isRoot: false,
+    isShared: true,
+  } as TableCfg);
+
+  const catalogSeries = hip<
+    ComponentsTable<{ _hash: string; series: CakeReference[] }>
+  >({
+    _tableCfg: catalogSeriesTableCfg._hash as string,
+    _type: 'components',
+    _data: [
+      {
+        series: [
+          {
+            ref: seriesCake._data[0]._hash as string,
+            sliceIds: ['Serie0', 'Serie1', 'Serie2', 'Serie3'] as SliceId[],
+          },
+          {
+            ref: seriesCake._data[1]._hash as string,
+            sliceIds: ['Serie4', 'Serie5', 'Serie6', 'Serie7'] as SliceId[],
+          },
+        ],
+        _hash: '',
+      },
+      {
+        series: [
+          {
+            ref: seriesCake._data[2]._hash as string,
+          },
+        ],
+        _hash: '',
+      },
+    ],
+    _hash: '',
+  });
+
+  //CatalogLayers and CatalogCake
+  //................................................................
+
+  const catalogSeriesLayerTableCfg = hip<TableCfg>(
+    createLayerTableCfg('catalogSeriesLayer'),
+  ) as TableCfg;
+
+  const catalogSeriesLayerData: Array<Layer> = [
+    {
+      add: {
+        Catalog0: catalogSeries._data[0]._hash,
+        Catalog1: catalogSeries._data[1]._hash,
+        _hash: '',
+      },
+      sliceIdsTable: 'catalogSliceId',
+      sliceIdsTableRow: catalogSliceId._data[0]._hash as string,
+      componentsTable: 'catalogSeries',
+      _hash: '',
+    } as Layer,
+  ].map((layer) => hsh<Layer>(layer as Layer));
+
+  const catalogSeriesLayer = hip<any>({
+    _tableCfg: catalogSeriesLayerTableCfg._hash,
+    _type: 'layers',
+    _data: chainLayers(catalogSeriesLayerData),
+    _hash: '',
+  }) as LayersTable;
+
+  const catalogCakeTableCfg = hip<TableCfg>(
+    createCakeTableCfg('catalogCake'),
+  ) as TableCfg;
+
+  const catalogCake = hip<any>({
+    _tableCfg: catalogCakeTableCfg._hash,
+    _type: 'cakes',
+    _data: [
+      {
+        sliceIdsTable: 'catalogSliceId',
+        sliceIdsRow: catalogSliceId._data[0]._hash,
+        layers: {
+          catalogSeriesLayer: catalogSeriesLayer._data[0]._hash,
+        },
+      },
+    ],
+  }) as CakesTable;
+
+  //................................................................
   //TablesCfg
   //................................................................
   const tableCfgs = {
@@ -1293,6 +1428,10 @@ export const staticExample = (): StaticExample => {
       seriesGeneralLayerTableCfg,
       seriesCarsLayerTableCfg,
       seriesCakeTableCfg,
+      catalogSliceIdTableCfg,
+      catalogSeriesTableCfg,
+      catalogSeriesLayerTableCfg,
+      catalogCakeTableCfg,
     ],
   } as TablesCfgTable;
 
@@ -1312,6 +1451,10 @@ export const staticExample = (): StaticExample => {
     seriesGeneralLayer,
     seriesCarsLayer,
     seriesCake,
+    catalogSliceId,
+    catalogSeries,
+    catalogSeriesLayer,
+    catalogCake,
     tableCfgs,
   };
 
