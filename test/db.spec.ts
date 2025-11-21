@@ -654,10 +654,7 @@ describe('Db', () => {
       const route = '/carCake/carGeneralLayer/carGeneral';
       const where = {};
 
-      const { rljson: result, obj } = await db.get(
-        Route.fromFlat(route),
-        where,
-      );
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
       expect(result.carCake._data.length).toBe(

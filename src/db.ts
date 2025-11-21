@@ -274,7 +274,6 @@ export class Db {
     const childrenThroughProperty = (childrenWhere as any)?._through;
 
     const nodeChildrenArray = [];
-    const nodeChildrenObjs: Json[] = [];
 
     const nodeRowsMatchingChildrenRefs = new Map<
       string,
