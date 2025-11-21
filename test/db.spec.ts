@@ -261,7 +261,7 @@ describe('Db', () => {
   describe('isolatePropertyFromComponents(rljson, propertyKey)', () => {
     it('returns rljson with isolated property for given propertyKey', async () => {
       const propertyKey = 'brand';
-      const rljson = await db.get(Route.fromFlat('/carGeneral'), {});
+      const { rljson } = await db.get(Route.fromFlat('/carGeneral'), {});
 
       const isolated = await db.isolatePropertyFromComponents(
         rljson,
@@ -333,7 +333,9 @@ describe('Db', () => {
       const route = `/${cakeKey}(${sliceIds.join(',')})`;
 
       const {
-        [cakeKey]: { _data: results },
+        rljson: {
+          [cakeKey]: { _data: results },
+        },
       } = await db.get(Route.fromFlat(route), {});
 
       expect(results.length).toBe(3);
@@ -350,7 +352,9 @@ describe('Db', () => {
       const route = `/${cakeKey}(${sliceIds.join(',')})`;
 
       const {
-        [cakeKey]: { _data: results },
+        rljson: {
+          [cakeKey]: { _data: results },
+        },
       } = await db.get(Route.fromFlat(route), {});
 
       expect(results.length).toBe(1);
@@ -365,7 +369,7 @@ describe('Db', () => {
       const sliceIds = ['VIN11'];
       const route = `/${layerKey}(${sliceIds.join(',')})/${componentKey}`;
 
-      const result = await db.get(Route.fromFlat(route), {});
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
 
       const layers = result[layerKey]._data;
       const components = result[componentKey]._data;
@@ -380,7 +384,7 @@ describe('Db', () => {
         ',',
       )})/carGeneralLayer/carGeneral`;
 
-      const result = await db.get(Route.fromFlat(route), {});
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
 
       const cakes = result[cakeKey]._data;
       const layers = result['carGeneralLayer']._data;
@@ -398,7 +402,7 @@ describe('Db', () => {
         ',',
       )})@${cakeRef}/carGeneralLayer/carGeneral`;
 
-      const result = await db.get(Route.fromFlat(route), {});
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
 
       const cakes = result[cakeKey]._data;
       const layers = result['carGeneralLayer']._data;
@@ -416,7 +420,7 @@ describe('Db', () => {
         ',',
       )})@${cakeRef}/carGeneralLayer/carGeneral`;
 
-      const result = await db.get(Route.fromFlat(route), {});
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
 
       const cakes = result[cakeKey];
       const layers = result['carGeneralLayer'];
@@ -430,7 +434,7 @@ describe('Db', () => {
       const route = '/carGeneral';
       const ref = staticExample().carGeneral._data[0]._hash ?? '';
 
-      const result = await db.get(Route.fromFlat(route), ref);
+      const { rljson: result } = await db.get(Route.fromFlat(route), ref);
       expect(result).toBeDefined();
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
@@ -444,13 +448,13 @@ describe('Db', () => {
         },
       };
 
-      const firstGet = await db.get(Route.fromFlat(route), where);
+      const { rljson: firstGet } = await db.get(Route.fromFlat(route), where);
 
       const cache = db.cache;
       expect(cache.size).toBe(1);
-      expect(firstGet).toBe(Array.from(cache.values())[0]);
+      expect(firstGet).toBe(Array.from(cache.values()).map((v) => v.rljson)[0]);
 
-      const secondGet = await db.get(Route.fromFlat(route), where);
+      const { rljson: secondGet } = await db.get(Route.fromFlat(route), where);
       expect(secondGet).toEqual(firstGet);
       expect(cache.size).toBe(1);
     });
@@ -462,7 +466,7 @@ describe('Db', () => {
 
       const ref = staticExample().carGeneral._data[0]._hash ?? '';
 
-      const result = await db.get(Route.fromFlat(route), ref);
+      const { rljson: result } = await db.get(Route.fromFlat(route), ref);
 
       expect(result).toBeDefined();
       expect(result[componentKey]).toBeDefined();
@@ -481,7 +485,7 @@ describe('Db', () => {
         [column: string]: JsonValue;
       };
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
@@ -493,7 +497,7 @@ describe('Db', () => {
       const route = '/carGeneral';
       const where = { brand: 'Volkswagen' } as Partial<CarGeneral>;
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(2); //2 Volkswagens in example data
@@ -505,7 +509,7 @@ describe('Db', () => {
       const ref =
         (staticExample().carGeneralLayer._data[0]._hash as string) ?? '';
 
-      const result = await db.get(Route.fromFlat(route), ref);
+      const { rljson: result } = await db.get(Route.fromFlat(route), ref);
       expect(result).toBeDefined();
       expect(result.carGeneralLayer).toBeDefined();
       expect(result.carGeneralLayer._data.length).toBe(1);
@@ -515,7 +519,10 @@ describe('Db', () => {
       const route = '/carCake';
       const ref = (staticExample().carCake._data[0]._hash as string) ?? '';
 
-      const result = await db.get(Route.fromFlat(`${route}@${ref}`), {});
+      const { rljson: result } = await db.get(
+        Route.fromFlat(`${route}@${ref}`),
+        {},
+      );
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
       expect(result.carCake._data.length).toBe(1);
@@ -525,7 +532,7 @@ describe('Db', () => {
       const cakeRoute = '/carCake';
       const cakeRef = (staticExample().carCake._data[0]._hash as string) ?? '';
 
-      const result = await db.get(
+      const { rljson: result } = await db.get(
         Route.fromFlat(`${cakeRoute}@${cakeRef}/carGeneralLayer`),
         {},
       );
@@ -542,7 +549,7 @@ describe('Db', () => {
         },
       };
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carGeneralLayer).toBeDefined();
       expect(result.carGeneralLayer._data.length).toBe(3); //3 layers because they are chained
@@ -592,9 +599,9 @@ describe('Db', () => {
       const layerRevHash2 = addedLayerInsertHistory.carGeneralLayerRef ?? '';
       const route2 = `/carGeneralLayer@${layerRevHash2}/carGeneral`;
 
-      const result1 = await db.get(Route.fromFlat(route1), where);
+      const { rljson: result1 } = await db.get(Route.fromFlat(route1), where);
 
-      const result2 = await db.get(Route.fromFlat(route2), where);
+      const { rljson: result2 } = await db.get(Route.fromFlat(route2), where);
 
       expect(result1).toBeDefined();
       expect(result2).toBeDefined();
@@ -630,7 +637,7 @@ describe('Db', () => {
         },
       };
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carTechnical).toBeDefined();
       expect(result.carTechnical._data.length).toBe(1);
@@ -647,7 +654,10 @@ describe('Db', () => {
       const route = '/carCake/carGeneralLayer/carGeneral';
       const where = {};
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result, obj } = await db.get(
+        Route.fromFlat(route),
+        where,
+      );
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
       expect(result.carCake._data.length).toBe(
@@ -674,7 +684,7 @@ describe('Db', () => {
         },
       };
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
       expect(result.carCake._data.length).toBe(3); //3 cakes because layers are chained
@@ -708,7 +718,7 @@ describe('Db', () => {
           },
         },
       };
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
 
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
@@ -760,7 +770,7 @@ describe('Db', () => {
         },
       };
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
 
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
@@ -784,7 +794,7 @@ describe('Db', () => {
 
       const route = `/${cakeKey}@${cakeRef}/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
 
-      const result = await db.get(Route.fromFlat(route), {});
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
 
       const seriesCakes = result[cakeKey]._data;
       expect(seriesCakes.length).toBe(1);
@@ -818,7 +828,7 @@ describe('Db', () => {
         ',',
       )})@${cakeRef}/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
 
-      const result = await db.get(Route.fromFlat(route), {});
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
 
       const seriesCakes = result[cakeKey]._data;
       expect(seriesCakes.length).toBe(1);
@@ -860,7 +870,7 @@ describe('Db', () => {
 
       const route = `/${cakeKey}@${cakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
 
-      const result = await db.get(Route.fromFlat(route), {});
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
 
       //Single starting point cake
       const catalogCakes = result[cakeKey]._data;
@@ -948,7 +958,7 @@ describe('Db', () => {
         ',',
       )})/carGeneralLayer/carGeneral/brand`;
 
-      const result = await db.get(Route.fromFlat(route), {});
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
 
       //Single starting point cake
       const catalogCakes = result[cakeKey]._data;

@@ -5,7 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import { Io } from '@rljson/io';
-import { Json, merge } from '@rljson/json';
+import { Json, JsonValue, merge } from '@rljson/json';
 import {
   Cake,
   CakesTable,
@@ -48,6 +48,11 @@ import {
 import { Notify } from './notify.ts';
 import { makeUnique } from './tools/make-unique.ts';
 
+export type DbGetResult = {
+  rljson: Rljson;
+  obj: JsonValue;
+};
+
 /**
  * Access Rljson data
  */
@@ -71,7 +76,7 @@ export class Db {
    */
   readonly notify: Notify;
 
-  private _cache: Map<string, Rljson> = new Map();
+  private _cache: Map<string, DbGetResult> = new Map();
 
   // ...........................................................................
   /**
@@ -81,7 +86,7 @@ export class Db {
    * @returns An array of Rljson objects matching the route and filter
    * @throws {Error} If the route is not valid or if any controller cannot be created
    */
-  async get(route: Route, where: string | Json): Promise<Rljson> {
+  async get(route: Route, where: string | Json): Promise<DbGetResult> {
     // Validate Route
     if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
 
@@ -122,7 +127,7 @@ export class Db {
     controllers: Record<string, Controller<any, any, any>>,
     filter?: ControllerChildProperty[],
     sliceIds?: SliceId[],
-  ): Promise<Rljson> {
+  ): Promise<DbGetResult> {
     const nodeTableKey = route.top.tableKey;
     const nodeRoute = route;
     const nodeRouteRef = await this._getReferenceOfRouteSegment(nodeRoute.top);
@@ -243,9 +248,19 @@ export class Db {
     // Return if is root node (deepest level, base case)
     if (route.isRoot) {
       if (route.hasPropertyKey) {
-        return this.isolatePropertyFromComponents(node, route.propertyKey!);
+        const isolatedNode = this.isolatePropertyFromComponents(
+          node,
+          route.propertyKey!,
+        );
+        return {
+          rljson: isolatedNode,
+          obj: { [nodeTableKey]: isolatedNode[nodeTableKey] },
+        };
       }
-      return node;
+      return {
+        rljson: node,
+        obj: { [nodeTableKey]: node[nodeTableKey] },
+      };
     }
 
     // Fetch Children Data
@@ -259,11 +274,17 @@ export class Db {
     const childrenThroughProperty = (childrenWhere as any)?._through;
 
     const nodeChildrenArray = [];
-    const nodeRowsMatchingChildrenRefs = new Map<string, Json>();
+    const nodeChildrenObjs: Json[] = [];
+
+    const nodeRowsMatchingChildrenRefs = new Map<
+      string,
+      { row: Json; obj: Json }
+    >();
 
     // Iterate over Node Rows to get Children
     for (let i = 0; i < nodeRowsFiltered.length; i++) {
       const nodeRow = nodeRowsFiltered[i];
+      const nodeRowObj = { ...{}, ...nodeRow } as Json;
 
       // Child References of this Node Row = Filter for Children
       const childrenRefs = await nodeController.getChildRefs(
@@ -272,7 +293,7 @@ export class Db {
 
       // If cake is referenced, we have to collect all sliceIds from
       // childrenRefs and switch to them
-      const childrenRefTypes = new Set<string>();
+      const childrenRefTypes = new Map<string, string>();
       const childrenRefSliceIds = new Set<SliceId>();
 
       for (const cr of childrenRefs) {
@@ -280,9 +301,16 @@ export class Db {
           for (const sId of cr.sliceIds) {
             childrenRefSliceIds.add(sId);
           }
-          childrenRefTypes.add(
-            nodeColumnCfgs.find((c) => c.key === cr.columnKey)?.ref?.type ?? '',
+          const childrenRefColumnCfg = nodeColumnCfgs.find(
+            (c) => c.key === cr.columnKey,
           );
+
+          if (childrenRefColumnCfg) {
+            childrenRefTypes.set(
+              childrenRefColumnCfg.key,
+              childrenRefColumnCfg.ref?.type ?? '',
+            );
+          }
         }
       }
 
@@ -293,27 +321,34 @@ export class Db {
       }
 
       const cakeIsReferenced =
-        childrenRefTypes.size === 1 && [...childrenRefTypes][0] === 'cakes';
+        childrenRefTypes.size === 1 &&
+        [...childrenRefTypes.values()][0] === 'cakes';
 
-      const rowChildren = await this._get(
-        childrenRoute,
-        childrenWhere,
-        controllers,
-        childrenRefs,
-        cakeIsReferenced ? [...childrenRefSliceIds] : nodeSliceIds,
-      );
+      const { rljson: rowChildrenRljson, obj: rowChildrenObj } =
+        await this._get(
+          childrenRoute,
+          childrenWhere,
+          controllers,
+          childrenRefs,
+          cakeIsReferenced ? [...childrenRefSliceIds] : nodeSliceIds,
+        );
+
+      if (cakeIsReferenced) {
+        const refKey = [...childrenRefTypes.keys()][0] as string;
+        nodeRowObj[refKey] = rowChildrenObj;
+      }
 
       // No Children found for where + route => skip
-      if (rowChildren[childrenTableKey]._data.length === 0) continue;
+      if (rowChildrenRljson[childrenTableKey]._data.length === 0) continue;
 
-      nodeChildrenArray.push(rowChildren);
+      nodeChildrenArray.push(rowChildrenRljson);
 
       // We have to check which Node Rows have Children matching the filter,
       // if get is used with _through to filter against referenced component values
       if (childrenThroughProperty) {
-        const resolvedChildrenHashes = rowChildren[childrenTableKey]._data.map(
-          (rc) => rc._hash as string,
-        );
+        const resolvedChildrenHashes = rowChildrenRljson[
+          childrenTableKey
+        ]._data.map((rc) => rc._hash as string);
         for (const nr of nodeRowsFiltered) {
           {
             const throughHashesInRowCouldBeArray = (nr as any)[
@@ -327,23 +362,76 @@ export class Db {
 
             for (const th of throughHashesInRow) {
               if (resolvedChildrenHashes.includes(th)) {
-                nodeRowsMatchingChildrenRefs.set((nr as any)._hash, nr);
+                nodeRowsMatchingChildrenRefs.set((nr as any)._hash, {
+                  row: nodeRow,
+                  obj: nodeRowObj,
+                });
               }
             }
           }
         }
       } else {
-        const resolvedChildrenHashes = rowChildren[childrenTableKey]._data.map(
-          (rc) => rc._hash as string,
-        );
-        const childrenRefsOfRow = childrenRefs
-          .map((cr) => (cr.tableKey == childrenTableKey ? cr.ref : null))
-          .filter((cr) => !!cr);
+        const resolvedChildren = rowChildrenRljson[childrenTableKey]
+          ._data as Json[];
 
-        for (const ch of resolvedChildrenHashes) {
-          if (childrenRefsOfRow.includes(ch)) {
-            nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, nodeRow);
-          }
+        const childrenRefsOfRow = childrenRefs.filter(
+          (cr) => cr.tableKey == childrenTableKey,
+        );
+
+        const matchingChildrenRefs = childrenRefsOfRow.filter(
+          (cr) => !!resolvedChildren.find((ch) => cr.ref === ch._hash),
+        );
+
+        // If Layer, construct layer objects with sliceIds relations
+        if (nodeType === 'layers') {
+          const components = (
+            (rowChildrenObj as any)[childrenTableKey]! as ComponentsTable<Json>
+          )._data;
+
+          const layer = components
+            .map((comp) => {
+              const sliceIds = matchingChildrenRefs.find(
+                (cr) => cr.ref === comp._hash,
+              )?.sliceIds;
+
+              if (!sliceIds || sliceIds.length === 0) {
+                throw new Error(
+                  `Db._get: No sliceIds found for component ${
+                    comp._hash
+                  } of layer ${(nodeRow as any)._hash}.`,
+                );
+              }
+              if (sliceIds.length > 1) {
+                throw new Error(
+                  `Db._get: Multiple sliceIds found for component ${
+                    comp._hash
+                  } of layer ${(nodeRow as any)._hash}.`,
+                );
+              }
+
+              const sliceId = sliceIds[0];
+              return { [sliceId]: comp };
+            })
+            .reduce((acc, curr) => ({ ...acc, ...curr }), {});
+
+          nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+            row: nodeRow,
+            obj: { ...nodeRowObj, add: layer },
+          });
+        } else if (nodeType === 'cakes') {
+          nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+            row: nodeRow,
+            obj: { ...nodeRowObj, layers: rowChildrenObj },
+          });
+        } else if (nodeType === 'components') {
+          nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+            row: nodeRow,
+            obj: { ...nodeRowObj },
+          });
+        } else {
+          throw new Error(
+            `Db._get: Unsupported node type ${nodeType} for getting children.`,
+          );
         }
       }
     }
@@ -355,17 +443,27 @@ export class Db {
 
     // Return Node with matched Children
     const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());
+
     return {
-      ...node,
-      ...{
+      rljson: {
+        ...node,
+        ...{
+          [nodeTableKey]: {
+            _data: matchedNodeRows.map((mr) => mr.row),
+            _type: nodeType,
+            _hash: nodeHash,
+          },
+        },
+        ...nodeChildren,
+      } as Rljson,
+      obj: {
         [nodeTableKey]: {
-          _data: matchedNodeRows,
-          _type: nodeType,
+          _data: matchedNodeRows.map((mr) => mr.obj),
           _hash: nodeHash,
+          _type: nodeType,
         },
       },
-      ...nodeChildren,
-    } as Rljson;
+    };
   }
 
   // ...........................................................................
@@ -749,7 +847,10 @@ export class Db {
     const data: Rljson = {};
     for (const compRouteFlat of uniqueComponentRoutes) {
       const uniqueComponentRoute = Route.fromFlat(compRouteFlat);
-      const componentData = await this.get(uniqueComponentRoute, {});
+      const { rljson: componentData } = await this.get(
+        uniqueComponentRoute,
+        {},
+      );
 
       Object.assign(data, componentData);
     }

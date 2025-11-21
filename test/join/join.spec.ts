@@ -302,7 +302,7 @@ describe('Join', () => {
       const inserted = inserteds[0];
 
       const writtenCakeRef = inserted['carCakeRef'] as string;
-      const writtenData = await db.get(
+      const { rljson: writtenData } = await db.get(
         Route.fromFlat(
           `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/brand`,
         ),

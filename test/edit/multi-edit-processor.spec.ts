@@ -300,7 +300,7 @@ describe('MultiEditProcessor', () => {
         expect(insertResults.length).toBe(1);
 
         const writtenCakeRef = insertResults[0][`${cakeKey}Ref`] as string;
-        const writtenData = await db.get(
+        const { rljson: writtenData } = await db.get(
           Route.fromFlat(
             `/${cakeKey}@${writtenCakeRef}/carTechnicalLayer/carTechnical/carDimensions/length`,
           ),
@@ -479,7 +479,9 @@ describe('MultiEditProcessor', () => {
 
         const writtenCakeRef = insertResults[0][`${cakeKey}Ref`] as string;
         const {
-          carGeneral: { _data: writtenCarGeneral },
+          rljson: {
+            carGeneral: { _data: writtenCarGeneral },
+          },
         } = await db.get(
           Route.fromFlat(
             `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/serviceIntervals`,
