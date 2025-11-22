@@ -342,8 +342,7 @@ export class Db {
 
       nodeChildrenArray.push(rowChildrenRljson);
 
-      // We have to check which Node Rows have Children matching the filter,
-      // if get is used with _through to filter against referenced component values
+      // Add Children as ThroughProperty value to Object representation
       if (childrenThroughProperty) {
         const resolvedChildrenHashes = rowChildrenRljson[
           childrenTableKey
@@ -361,77 +360,78 @@ export class Db {
 
             for (const th of throughHashesInRow) {
               if (resolvedChildrenHashes.includes(th)) {
-                nodeRowsMatchingChildrenRefs.set((nr as any)._hash, {
-                  row: nodeRow,
-                  obj: nodeRowObj,
-                });
+                //Add Child as ThroughProperty value
+                nodeRowObj[childrenThroughProperty] = {
+                  ...(rowChildrenObj as any)[childrenTableKey],
+                  ...{ _tableKey: childrenTableKey },
+                };
               }
             }
           }
         }
+      }
+
+      const resolvedChildren = rowChildrenRljson[childrenTableKey]
+        ._data as Json[];
+
+      const childrenRefsOfRow = childrenRefs.filter(
+        (cr) => cr.tableKey == childrenTableKey,
+      );
+
+      const matchingChildrenRefs = childrenRefsOfRow.filter(
+        (cr) => !!resolvedChildren.find((ch) => cr.ref === ch._hash),
+      );
+
+      // If Layer, construct layer objects with sliceIds relations
+      if (nodeType === 'layers') {
+        const components = (
+          (rowChildrenObj as any)[childrenTableKey]! as ComponentsTable<Json>
+        )._data;
+
+        const layer = components
+          .map((comp) => {
+            const sliceIds = matchingChildrenRefs.find(
+              (cr) => cr.ref === comp._hash,
+            )?.sliceIds;
+
+            if (!sliceIds || sliceIds.length === 0) {
+              throw new Error(
+                `Db._get: No sliceIds found for component ${
+                  comp._hash
+                } of layer ${(nodeRow as any)._hash}.`,
+              );
+            }
+            if (sliceIds.length > 1) {
+              throw new Error(
+                `Db._get: Multiple sliceIds found for component ${
+                  comp._hash
+                } of layer ${(nodeRow as any)._hash}.`,
+              );
+            }
+
+            const sliceId = sliceIds[0];
+            return { [sliceId]: comp };
+          })
+          .reduce((acc, curr) => ({ ...acc, ...curr }), {});
+
+        nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+          row: nodeRow,
+          obj: { ...nodeRowObj, add: layer },
+        });
+      } else if (nodeType === 'cakes') {
+        nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+          row: nodeRow,
+          obj: { ...nodeRowObj, layers: rowChildrenObj },
+        });
+      } else if (nodeType === 'components') {
+        nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+          row: nodeRow,
+          obj: { ...nodeRowObj },
+        });
       } else {
-        const resolvedChildren = rowChildrenRljson[childrenTableKey]
-          ._data as Json[];
-
-        const childrenRefsOfRow = childrenRefs.filter(
-          (cr) => cr.tableKey == childrenTableKey,
+        throw new Error(
+          `Db._get: Unsupported node type ${nodeType} for getting children.`,
         );
-
-        const matchingChildrenRefs = childrenRefsOfRow.filter(
-          (cr) => !!resolvedChildren.find((ch) => cr.ref === ch._hash),
-        );
-
-        // If Layer, construct layer objects with sliceIds relations
-        if (nodeType === 'layers') {
-          const components = (
-            (rowChildrenObj as any)[childrenTableKey]! as ComponentsTable<Json>
-          )._data;
-
-          const layer = components
-            .map((comp) => {
-              const sliceIds = matchingChildrenRefs.find(
-                (cr) => cr.ref === comp._hash,
-              )?.sliceIds;
-
-              if (!sliceIds || sliceIds.length === 0) {
-                throw new Error(
-                  `Db._get: No sliceIds found for component ${
-                    comp._hash
-                  } of layer ${(nodeRow as any)._hash}.`,
-                );
-              }
-              if (sliceIds.length > 1) {
-                throw new Error(
-                  `Db._get: Multiple sliceIds found for component ${
-                    comp._hash
-                  } of layer ${(nodeRow as any)._hash}.`,
-                );
-              }
-
-              const sliceId = sliceIds[0];
-              return { [sliceId]: comp };
-            })
-            .reduce((acc, curr) => ({ ...acc, ...curr }), {});
-
-          nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
-            row: nodeRow,
-            obj: { ...nodeRowObj, add: layer },
-          });
-        } else if (nodeType === 'cakes') {
-          nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
-            row: nodeRow,
-            obj: { ...nodeRowObj, layers: rowChildrenObj },
-          });
-        } else if (nodeType === 'components') {
-          nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
-            row: nodeRow,
-            obj: { ...nodeRowObj },
-          });
-        } else {
-          throw new Error(
-            `Db._get: Unsupported node type ${nodeType} for getting children.`,
-          );
-        }
       }
     }
 
@@ -448,18 +448,26 @@ export class Db {
         ...node,
         ...{
           [nodeTableKey]: {
-            _data: matchedNodeRows.map((mr) => mr.row),
-            _type: nodeType,
-            _hash: nodeHash,
+            ...{
+              _data: matchedNodeRows.map((mr) => mr.row),
+              _type: nodeType,
+            },
+            ...{
+              ...(nodeHash ? { _hash: nodeHash } : {}),
+            },
           },
         },
         ...nodeChildren,
       } as Rljson,
       obj: {
         [nodeTableKey]: {
-          _data: matchedNodeRows.map((mr) => mr.obj),
-          _hash: nodeHash,
-          _type: nodeType,
+          ...{
+            _data: matchedNodeRows.map((mr) => mr.obj),
+            _type: nodeType,
+          },
+          ...{
+            ...(nodeHash ? { _hash: nodeHash } : {}),
+          },
         },
       },
     };

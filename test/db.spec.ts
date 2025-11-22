@@ -638,6 +638,9 @@ describe('Db', () => {
       };
 
       const { rljson: result } = await db.get(Route.fromFlat(route), where);
+
+      debugger;
+
       expect(result).toBeDefined();
       expect(result.carTechnical).toBeDefined();
       expect(result.carTechnical._data.length).toBe(1);
