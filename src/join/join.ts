@@ -26,6 +26,7 @@ export type JoinProcess = {
 export interface JoinColumn<T extends ContentType> {
   route: Route;
   value: T | null;
+  shadow: T | null;
   insert: T | null;
 }
 
@@ -651,6 +652,7 @@ export class Join {
         mergedRow.push({
           route: baseCol.route,
           value: baseCol.value,
+          shadow: baseCol.shadow,
           insert: insertCol.insert,
         });
       } else {

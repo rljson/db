@@ -10,21 +10,19 @@ import {
   Cake,
   CakesTable,
   ColumnCfg,
-  ComponentRef,
   ComponentsTable,
   Insert,
   InsertHistoryRow,
   InsertHistoryTimeId,
   isTimeId,
   Layer,
-  LayersTable,
   Ref,
   Rljson,
   Route,
   RouteSegment,
   SliceId,
   SliceIds,
-  TableKey,
+  TableType,
   validateInsert,
 } from '@rljson/rljson';
 
@@ -37,10 +35,9 @@ import {
   ControllerRunFn,
   createController,
 } from './controller/controller.ts';
-import { LayerController } from './controller/layer-controller.ts';
 import { SliceIdController } from './controller/slice-id-controller.ts';
 import { Core } from './core.ts';
-import { Join, JoinColumn, JoinRows } from './join/join.ts';
+import { Join, JoinColumn, JoinRow, JoinRows } from './join/join.ts';
 import {
   ColumnInfo,
   ColumnSelection,
@@ -48,9 +45,15 @@ import {
 import { Notify } from './notify.ts';
 import { makeUnique } from './tools/make-unique.ts';
 
+export type DbRouteValueAndShadow = {
+  route: Route;
+  value: JsonValue | JsonValue[] | null;
+  shadow: JsonValue | JsonValue[] | null;
+};
+
 export type DbGetResult = {
   rljson: Rljson;
-  obj: JsonValue;
+  obj: Json;
 };
 
 /**
@@ -83,17 +86,26 @@ export class Db {
    * Get data from a route with optional filtering
    * @param route - The route to get data from
    * @param where - Optional filter to apply to the data
+   * @param filter - Optional filter to apply to child entries in related tables
+   * @param sliceIds - Optional slice IDs to filter the data
    * @returns An array of Rljson objects matching the route and filter
    * @throws {Error} If the route is not valid or if any controller cannot be created
    */
-  async get(route: Route, where: string | Json): Promise<DbGetResult> {
+  async get(
+    route: Route,
+    where: string | Json,
+    filter?: ControllerChildProperty[],
+    sliceIds?: SliceId[],
+  ): Promise<DbGetResult> {
     // Validate Route
     if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
 
     //Isolate Property Key
     const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
 
-    const cacheHash = `${isolatedRoute.flat}|${JSON.stringify(where)}`;
+    const cacheHash = `${isolatedRoute.flat}|${JSON.stringify(
+      where,
+    )}|${JSON.stringify(filter)}|${JSON.stringify(sliceIds)}`;
     const isCached = this._cache.has(cacheHash);
     if (isCached) {
       return this._cache.get(cacheHash)!;
@@ -102,7 +114,13 @@ export class Db {
       const controllers = await this._indexedControllers(isolatedRoute);
 
       // Fetch Data
-      const data = await this._get(isolatedRoute, where, controllers);
+      const data = await this._get(
+        isolatedRoute,
+        where,
+        controllers,
+        filter,
+        sliceIds,
+      );
 
       // Cache Data
       this._cache.set(cacheHash, data);
@@ -119,6 +137,7 @@ export class Db {
    * @param where - The recursive filtering key/value pairs to apply to the data
    * @param controllers - The controllers to use for fetching data
    * @param filter - Optional filter to apply to the data at the current route segment
+   * @param sliceIds - Optional slice IDs to filter the data at the current route segment
    * @returns - An Rljson object matching the route and filters
    */
   async _get(
@@ -410,7 +429,11 @@ export class Db {
             }
 
             const sliceId = sliceIds[0];
-            return { [sliceId]: comp };
+            return {
+              [sliceId]: {
+                [childrenTableKey]: { ...comp, ...{ _type: 'components' } },
+              },
+            };
           })
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -507,154 +530,76 @@ export class Db {
     cakeKey: string,
     cakeRef: Ref,
   ): Promise<Join> {
-    //Fetch Data for ColumnSelection
-    const data = await this._getBaseDataForColumnSelection(columnSelection);
+    const {
+      obj: { [cakeKey]: cakesTable },
+    } = await this.get(Route.fromFlat(`${cakeKey}@${cakeRef}`), {});
 
-    //Get Cake
-    const cakesTable = data[cakeKey] as CakesTable;
-    const cake = cakesTable._data.find((c) => c._hash === cakeRef);
-    if (!cake) {
+    const cakes = (cakesTable as CakesTable)._data;
+
+    if (cakes.length === 0) {
       throw new Error(
         `Db.join: Cake with ref "${cakeRef}" not found in cake table "${cakeKey}".`,
       );
     }
-
-    //Get Layers & sliceIds
-    const mergedSliceIds: Set<SliceId> = new Set();
-    const mergedCompRefs: Map<TableKey, Map<SliceId, ComponentRef>> = new Map();
-    const layers: Map<string, Layer> = new Map();
-    for (const layerKey of Object.keys(cake.layers)) {
-      if (!data[layerKey]) continue;
-
-      const mergedLayerCompRefs: Map<SliceId, ComponentRef> = new Map();
-      const layersTable = data[layerKey] as LayersTable;
-      const layer = layersTable._data.find(
-        (l) => l._hash === cake.layers[layerKey],
+    if (cakes.length > 1) {
+      throw new Error(
+        `Db.join: Multiple cakes with ref "${cakeRef}" found in cake table "${cakeKey}".`,
       );
-
-      const layerController = (await createController(
-        'layers',
-        this.core,
-        layerKey,
-      )) as LayerController<any, any>;
-
-      //Resolve Base Layers, get SliceIds and ComponentRefs
-      const resolvedLayer = await layerController.resolveBaseLayer(layer!);
-
-      //Merge base SliceIds
-      for (const sliceId of resolvedLayer.sliceIds) {
-        mergedSliceIds.add(sliceId as SliceId);
-      }
-      //Merge base ComponentRefs
-      for (const [sliceId, compRef] of Object.entries(resolvedLayer.add)) {
-        mergedLayerCompRefs.set(sliceId as SliceId, compRef);
-      }
-      mergedCompRefs.set(layerKey, mergedLayerCompRefs);
-
-      // We can expect that the layer exists because it
-      // passed get validation from _getDataForColumnSelection
-      layers.set(layerKey, layer!);
     }
+    const cake = cakes[0] as Cake;
 
-    //Get Components
-    const components: Map<string, ComponentsTable<Json>> = new Map();
-    for (const [tableKey, table] of Object.entries(data)) {
-      if (table._type !== 'components') continue;
-      components.set(tableKey, table as ComponentsTable<Json>);
-    }
+    const sliceIds = await this._resolveSliceIds(
+      (cake as Cake).sliceIdsTable,
+      (cake as Cake).sliceIdsRow,
+    );
+    const rows: JoinRows = {};
+    for (const sliceId of sliceIds) {
+      const row: JoinRow = [];
 
-    // Build ColumnCfgs and Infos for Layer referenced Components
-    const columnCfgs: Map<string, ColumnCfg[]> = new Map();
-    const columnInfos: Map<string, ColumnInfo[]> = new Map();
-    let objectMap: Json = {};
-    for (const [layerKey, layer] of layers.entries()) {
-      const componentKey = layer.componentsTable;
-      const componentResolved = await this._resolveComponent(
-        `${cakeKey}/${layerKey}/`,
-        componentKey,
-      );
+      for (const columnInfo of columnSelection.columns) {
+        const columnRoute = Route.fromFlat(
+          columnInfo.route,
+        ).toRouteWithProperty();
 
-      objectMap = { ...objectMap, ...componentResolved.objectMap };
-
-      columnInfos.set(componentKey, componentResolved.columnInfos);
-
-      columnCfgs.set(componentKey, componentResolved.columnCfgs);
-    }
-
-    //Join Rows to SliceIds
-    const rowMap: Map<SliceId, JoinColumn<any>[]> = new Map();
-    const joinColumnInfos: Map<string, ColumnInfo> = new Map();
-
-    for (const sliceId of mergedSliceIds) {
-      const sliceIdRow: JoinColumn<any>[] = [];
-
-      for (const [layerKey, layer] of layers.entries()) {
-        const layerRef = layer._hash;
-        const layerCompRefs = mergedCompRefs.get(layerKey)!;
-        const componentKey = layer.componentsTable;
-        const componentRef = layerCompRefs.get(sliceId);
-        const componentsTable = data[componentKey] as ComponentsTable<Json>;
-        const rowComponentProperties = componentsTable._data.find(
-          (r) => r._hash === componentRef,
-        )!;
-
-        const resolvedProperties = this._resolveComponentProperties(
-          rowComponentProperties,
-          objectMap,
-          data,
+        const { obj: columnRawData } = await this.get(
+          columnRoute.toRouteWithoutProperty(),
+          cakeRef,
+          undefined,
+          [sliceId],
         );
 
-        const joinColumns: JoinColumn<any>[] = [];
-        for (const [
-          resolvedPropertyKey,
-          resolvedPropertyValue,
-        ] of Object.entries(resolvedProperties)) {
-          const propertyRoute =
-            cakeKey +
-            '/' +
-            layerKey +
-            '/' +
-            componentKey +
-            '/' +
-            resolvedPropertyKey;
+        const columnRawDataParsed = await this._objectParser(
+          columnRawData,
+          columnRoute,
+        );
 
-          const propertyColumnInfo = columnInfos
-            .get(componentKey)!
-            .find((cI) => cI.route === propertyRoute);
-
-          if (!!propertyColumnInfo) {
-            const joinColumnRoute = Route.fromFlat(
-              `${cakeKey}@${cakeRef}/${layerKey}@${layerRef}/${componentKey}@${componentRef}`,
-            );
-            joinColumnRoute.propertyKey = resolvedPropertyKey;
-
-            joinColumnInfos.set(resolvedPropertyKey, {
-              ...propertyColumnInfo,
-              key: resolvedPropertyKey,
-              route: joinColumnRoute.flatWithoutRefs.slice(1),
-            });
-
-            joinColumns.push({
-              route: joinColumnRoute,
-              value: resolvedPropertyValue ?? null,
-              insert: null,
-            } as JoinColumn<any>);
-          }
+        if (
+          !columnRawDataParsed ||
+          !Array.isArray(columnRawDataParsed) ||
+          columnRawDataParsed.length === 0
+        ) {
+          throw new Error(
+            `Db.join: Column data not found for column route "${columnRoute.flat}" in cake "${cakeKey}@${cakeRef}" for sliceId "${sliceId}".`,
+          );
         }
 
-        sliceIdRow.push(...joinColumns);
+        if (columnRawDataParsed.length > 1) {
+          throw new Error(
+            `Db.join: Multiple column data entries found for column route "${columnRoute.flat}" in cake "${cakeKey}@${cakeRef}" for sliceId "${sliceId}".`,
+          );
+        }
+
+        const column: JoinColumn<any> = {
+          ...columnRawDataParsed[0],
+          ...{ insert: null },
+        };
+        row.push(column);
       }
 
-      rowMap.set(sliceId, sliceIdRow);
+      rows[sliceId] = row;
     }
 
-    //Build Result
-    const joinRows: JoinRows = {};
-    for (const [sliceId, joinColumns] of rowMap.entries()) {
-      Object.assign(joinRows, {
-        [sliceId]: joinColumns as JoinColumn<any>[],
-      });
-    }
+    debugger;
 
     // Return Join
     return new Join(
@@ -662,6 +607,124 @@ export class Db {
       new ColumnSelection(Array.from(joinColumnInfos.values())),
       objectMap,
     ).select(columnSelection);
+  }
+
+  private async _objectParser(
+    obj: Json,
+    route: Route,
+    objRoute?: Route,
+  ): Promise<DbRouteValueAndShadow | DbRouteValueAndShadow[] | null> {
+    const segmentObj = obj[route.top.tableKey] as TableType;
+    const segmentRef = Route.segmentHasRef(route.top)
+      ? await this._getReferenceOfRouteSegment(route.top)
+      : null;
+
+    if (!segmentObj) return null;
+
+    if (segmentObj._type === 'cakes') {
+      const segmentData = segmentObj._data.filter((d) =>
+        segmentRef ? d._hash === segmentRef : true,
+      );
+
+      if (route.isRoot)
+        return {
+          value: {
+            ...segmentObj,
+            ...{ _data: segmentData },
+          },
+          shadow: {
+            ...segmentObj,
+            ...{ _data: segmentData },
+          },
+          route: Route.fromFlat(
+            (objRoute ? objRoute.flat : '') + '/' + route.top.tableKey,
+          ),
+        };
+
+      const result = [];
+      for (const cake of segmentData) {
+        const resolvedRoute = Route.fromFlat(
+          (objRoute ? objRoute.flat : '') +
+            '/' +
+            (route.top.tableKey + `@${cake._hash}`),
+        );
+
+        const resolved = await this._objectParser(
+          cake.layers,
+          route.deeper(),
+          resolvedRoute,
+        );
+
+        result.push(...(Array.isArray(resolved) ? resolved! : [resolved!]));
+      }
+      return result;
+    }
+    if (segmentObj._type === 'layers') {
+      const segmentData = segmentObj._data.filter((d) =>
+        segmentRef ? d._hash === segmentRef : true,
+      );
+
+      if (route.isRoot)
+        return {
+          value: {
+            ...segmentObj,
+            ...{ _data: segmentData },
+          },
+          shadow: {
+            ...segmentObj,
+            ...{ _data: segmentData },
+          },
+          route: Route.fromFlat(
+            (objRoute ? objRoute.flat : '') + '/' + route.top.tableKey,
+          ),
+        };
+
+      const result = [];
+      for (const layer of segmentData) {
+        for (const comp of Object.values(layer.add)) {
+          const resolvedRoute = Route.fromFlat(
+            (objRoute ? objRoute.flat : '') +
+              '/' +
+              (route.top.tableKey + `@${layer._hash}`),
+          );
+
+          const resolved = await this._objectParser(
+            comp as any,
+            route.deeper(),
+            resolvedRoute,
+          );
+
+          result.push(...(Array.isArray(resolved) ? resolved! : [resolved!]));
+        }
+      }
+      return result;
+    }
+    if (segmentObj._type === 'components') {
+      if (segmentRef && segmentObj._hash !== segmentRef) return null;
+
+      if (route.isRoot) {
+        const compRoute = Route.fromFlat(
+          (objRoute ? objRoute.flat : '') + '/' + route.top.tableKey,
+        );
+        if (route.hasPropertyKey) {
+          const propertyRoute = new Route(compRoute.segments);
+          propertyRoute.propertyKey = route.propertyKey;
+
+          return {
+            value: (segmentObj as Json)[route.propertyKey!]!,
+            shadow: (segmentObj as Json)!,
+            route: propertyRoute,
+          };
+        }
+        return {
+          value: segmentObj as Json,
+          shadow: (segmentObj as Json)!,
+          route: compRoute,
+        };
+      }
+    }
+
+    return null;
   }
 
   private _resolveComponentProperties(
