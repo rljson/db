@@ -1613,7 +1613,7 @@ describe('Db', () => {
 
       // Build expected data for validation
       const exampleData = staticExample().carGeneral._data.map((c) => [
-        c.brand,
+        [c.brand],
       ]);
 
       expect(result.rows).toEqual(exampleData);

@@ -9,7 +9,6 @@ import { Json, JsonValue, merge } from '@rljson/json';
 import {
   Cake,
   CakesTable,
-  ColumnCfg,
   ComponentsTable,
   Insert,
   InsertHistoryRow,
@@ -22,7 +21,6 @@ import {
   RouteSegment,
   SliceId,
   SliceIds,
-  TableType,
   validateInsert,
 } from '@rljson/rljson';
 
@@ -38,10 +36,7 @@ import {
 import { SliceIdController } from './controller/slice-id-controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRow, JoinRows } from './join/join.ts';
-import {
-  ColumnInfo,
-  ColumnSelection,
-} from './join/selection/column-selection.ts';
+import { ColumnSelection } from './join/selection/column-selection.ts';
 import { Notify } from './notify.ts';
 import { makeUnique } from './tools/make-unique.ts';
 
@@ -53,7 +48,8 @@ export type DbRouteValueAndShadow = {
 
 export type DbGetResult = {
   rljson: Rljson;
-  obj: Json;
+  tree: Json;
+  object: DbRouteValueAndShadow | DbRouteValueAndShadow[];
 };
 
 /**
@@ -146,6 +142,7 @@ export class Db {
     controllers: Record<string, Controller<any, any, any>>,
     filter?: ControllerChildProperty[],
     sliceIds?: SliceId[],
+    routeAccumulator?: Route,
   ): Promise<DbGetResult> {
     const nodeTableKey = route.top.tableKey;
     const nodeRoute = route;
@@ -273,12 +270,31 @@ export class Db {
         );
         return {
           rljson: isolatedNode,
-          obj: { [nodeTableKey]: isolatedNode[nodeTableKey] },
+          tree: { [nodeTableKey]: isolatedNode[nodeTableKey] },
+          object: {
+            value: isolatedNode[nodeTableKey]._data.map(
+              (d) => d[route.propertyKey!],
+            ),
+            shadow: node[nodeTableKey]._data,
+            route: Route.fromFlat(
+              (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
+                (nodeHash ? `@${nodeHash}` : '') +
+                `/${route.propertyKey}`,
+            ).toRouteWithoutProperty(),
+          } as DbRouteValueAndShadow,
         };
       }
       return {
         rljson: node,
-        obj: { [nodeTableKey]: node[nodeTableKey] },
+        tree: { [nodeTableKey]: node[nodeTableKey] },
+        object: {
+          value: node[nodeTableKey]._data,
+          shadow: node[nodeTableKey]._data,
+          route: Route.fromFlat(
+            (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
+              (nodeHash ? `@${nodeHash}` : ''),
+          ),
+        } as DbRouteValueAndShadow,
       };
     }
 
@@ -296,7 +312,11 @@ export class Db {
 
     const nodeRowsMatchingChildrenRefs = new Map<
       string,
-      { row: Json; obj: Json }
+      {
+        rljsonRow: Json;
+        tree: Json;
+        object: DbRouteValueAndShadow | DbRouteValueAndShadow[];
+      }
     >();
 
     // Iterate over Node Rows to get Children
@@ -342,18 +362,27 @@ export class Db {
         childrenRefTypes.size === 1 &&
         [...childrenRefTypes.values()][0] === 'cakes';
 
-      const { rljson: rowChildrenRljson, obj: rowChildrenObj } =
-        await this._get(
-          childrenRoute,
-          childrenWhere,
-          controllers,
-          childrenRefs,
-          cakeIsReferenced ? [...childrenRefSliceIds] : nodeSliceIds,
-        );
+      const {
+        rljson: rowChildrenRljson,
+        tree: rowChildrenTree,
+        object: rowChildrenObject,
+      } = await this._get(
+        childrenRoute,
+        childrenWhere,
+        controllers,
+        childrenRefs,
+        cakeIsReferenced ? [...childrenRefSliceIds] : nodeSliceIds,
+        Route.fromFlat(
+          (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
+            (nodeHash ? `@${nodeHash}` : '') +
+            '/' +
+            childrenTableKey,
+        ),
+      );
 
       if (cakeIsReferenced) {
         const refKey = [...childrenRefTypes.keys()][0] as string;
-        nodeRowObj[refKey] = rowChildrenObj;
+        nodeRowObj[refKey] = rowChildrenTree;
       }
 
       // No Children found for where + route => skip
@@ -381,7 +410,7 @@ export class Db {
               if (resolvedChildrenHashes.includes(th)) {
                 //Add Child as ThroughProperty value
                 nodeRowObj[childrenThroughProperty] = {
-                  ...(rowChildrenObj as any)[childrenTableKey],
+                  ...(rowChildrenTree as any)[childrenTableKey],
                   ...{ _tableKey: childrenTableKey },
                 };
               }
@@ -404,7 +433,7 @@ export class Db {
       // If Layer, construct layer objects with sliceIds relations
       if (nodeType === 'layers') {
         const components = (
-          (rowChildrenObj as any)[childrenTableKey]! as ComponentsTable<Json>
+          (rowChildrenTree as any)[childrenTableKey]! as ComponentsTable<Json>
         )._data;
 
         const layer = components
@@ -438,18 +467,21 @@ export class Db {
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
         nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
-          row: nodeRow,
-          obj: { ...nodeRowObj, add: layer },
+          rljsonRow: nodeRow,
+          tree: { ...nodeRowObj, add: layer },
+          object: rowChildrenObject,
         });
       } else if (nodeType === 'cakes') {
         nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
-          row: nodeRow,
-          obj: { ...nodeRowObj, layers: rowChildrenObj },
+          rljsonRow: nodeRow,
+          tree: { ...nodeRowObj, layers: rowChildrenTree },
+          object: rowChildrenObject,
         });
       } else if (nodeType === 'components') {
         nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
-          row: nodeRow,
-          obj: { ...nodeRowObj },
+          rljsonRow: nodeRow,
+          tree: { ...nodeRowObj },
+          object: rowChildrenObject,
         });
       } else {
         throw new Error(
@@ -472,7 +504,7 @@ export class Db {
         ...{
           [nodeTableKey]: {
             ...{
-              _data: matchedNodeRows.map((mr) => mr.row),
+              _data: matchedNodeRows.map((mr) => mr.rljsonRow),
               _type: nodeType,
             },
             ...{
@@ -482,10 +514,10 @@ export class Db {
         },
         ...nodeChildren,
       } as Rljson,
-      obj: {
+      tree: {
         [nodeTableKey]: {
           ...{
-            _data: matchedNodeRows.map((mr) => mr.obj),
+            _data: matchedNodeRows.map((mr) => mr.tree),
             _type: nodeType,
           },
           ...{
@@ -493,6 +525,7 @@ export class Db {
           },
         },
       },
+      object: matchedNodeRows.map((mr) => mr.object).flat(),
     };
   }
 
@@ -531,7 +564,7 @@ export class Db {
     cakeRef: Ref,
   ): Promise<Join> {
     const {
-      obj: { [cakeKey]: cakesTable },
+      tree: { [cakeKey]: cakesTable },
     } = await this.get(Route.fromFlat(`${cakeKey}@${cakeRef}`), {});
 
     const cakes = (cakesTable as CakesTable)._data;
@@ -561,37 +594,28 @@ export class Db {
           columnInfo.route,
         ).toRouteWithProperty();
 
-        const { obj: columnRawData } = await this.get(
-          columnRoute.toRouteWithoutProperty(),
+        const { tree: columnTree, object: columnRawData } = await this.get(
+          columnRoute,
           cakeRef,
           undefined,
           [sliceId],
         );
 
-        const columnRawDataParsed = await this._objectParser(
-          columnRawData,
-          columnRoute,
-        );
+        const columnRawDataAsArray =
+          columnRawData && Array.isArray(columnRawData) ? columnRawData : [];
 
-        if (
-          !columnRawDataParsed ||
-          !Array.isArray(columnRawDataParsed) ||
-          columnRawDataParsed.length === 0
-        ) {
-          throw new Error(
-            `Db.join: Column data not found for column route "${columnRoute.flat}" in cake "${cakeKey}@${cakeRef}" for sliceId "${sliceId}".`,
-          );
-        }
-
-        if (columnRawDataParsed.length > 1) {
+        if (columnRawDataAsArray.length > 1) {
           throw new Error(
             `Db.join: Multiple column data entries found for column route "${columnRoute.flat}" in cake "${cakeKey}@${cakeRef}" for sliceId "${sliceId}".`,
           );
         }
 
         const column: JoinColumn<any> = {
-          ...columnRawDataParsed[0],
-          ...{ insert: null },
+          ...columnRawDataAsArray[0],
+          ...{
+            tree: columnTree,
+            insert: null,
+          },
         };
         row.push(column);
       }
@@ -599,271 +623,8 @@ export class Db {
       rows[sliceId] = row;
     }
 
-    debugger;
-
     // Return Join
-    return new Join(
-      joinRows,
-      new ColumnSelection(Array.from(joinColumnInfos.values())),
-      objectMap,
-    ).select(columnSelection);
-  }
-
-  private async _objectParser(
-    obj: Json,
-    route: Route,
-    objRoute?: Route,
-  ): Promise<DbRouteValueAndShadow | DbRouteValueAndShadow[] | null> {
-    const segmentObj = obj[route.top.tableKey] as TableType;
-    const segmentRef = Route.segmentHasRef(route.top)
-      ? await this._getReferenceOfRouteSegment(route.top)
-      : null;
-
-    if (!segmentObj) return null;
-
-    if (segmentObj._type === 'cakes') {
-      const segmentData = segmentObj._data.filter((d) =>
-        segmentRef ? d._hash === segmentRef : true,
-      );
-
-      if (route.isRoot)
-        return {
-          value: {
-            ...segmentObj,
-            ...{ _data: segmentData },
-          },
-          shadow: {
-            ...segmentObj,
-            ...{ _data: segmentData },
-          },
-          route: Route.fromFlat(
-            (objRoute ? objRoute.flat : '') + '/' + route.top.tableKey,
-          ),
-        };
-
-      const result = [];
-      for (const cake of segmentData) {
-        const resolvedRoute = Route.fromFlat(
-          (objRoute ? objRoute.flat : '') +
-            '/' +
-            (route.top.tableKey + `@${cake._hash}`),
-        );
-
-        const resolved = await this._objectParser(
-          cake.layers,
-          route.deeper(),
-          resolvedRoute,
-        );
-
-        result.push(...(Array.isArray(resolved) ? resolved! : [resolved!]));
-      }
-      return result;
-    }
-    if (segmentObj._type === 'layers') {
-      const segmentData = segmentObj._data.filter((d) =>
-        segmentRef ? d._hash === segmentRef : true,
-      );
-
-      if (route.isRoot)
-        return {
-          value: {
-            ...segmentObj,
-            ...{ _data: segmentData },
-          },
-          shadow: {
-            ...segmentObj,
-            ...{ _data: segmentData },
-          },
-          route: Route.fromFlat(
-            (objRoute ? objRoute.flat : '') + '/' + route.top.tableKey,
-          ),
-        };
-
-      const result = [];
-      for (const layer of segmentData) {
-        for (const comp of Object.values(layer.add)) {
-          const resolvedRoute = Route.fromFlat(
-            (objRoute ? objRoute.flat : '') +
-              '/' +
-              (route.top.tableKey + `@${layer._hash}`),
-          );
-
-          const resolved = await this._objectParser(
-            comp as any,
-            route.deeper(),
-            resolvedRoute,
-          );
-
-          result.push(...(Array.isArray(resolved) ? resolved! : [resolved!]));
-        }
-      }
-      return result;
-    }
-    if (segmentObj._type === 'components') {
-      if (segmentRef && segmentObj._hash !== segmentRef) return null;
-
-      if (route.isRoot) {
-        const compRoute = Route.fromFlat(
-          (objRoute ? objRoute.flat : '') + '/' + route.top.tableKey,
-        );
-        if (route.hasPropertyKey) {
-          const propertyRoute = new Route(compRoute.segments);
-          propertyRoute.propertyKey = route.propertyKey;
-
-          return {
-            value: (segmentObj as Json)[route.propertyKey!]!,
-            shadow: (segmentObj as Json)!,
-            route: propertyRoute,
-          };
-        }
-        return {
-          value: segmentObj as Json,
-          shadow: (segmentObj as Json)!,
-          route: compRoute,
-        };
-      }
-    }
-
-    return null;
-  }
-
-  private _resolveComponentProperties(
-    componentData: Json,
-    objectMapOrRoute: Json | string,
-    baseData: Rljson,
-  ): Json {
-    let result = {};
-
-    for (const [propertyKey, propertyObjectMap] of Object.entries(
-      objectMapOrRoute,
-    )) {
-      if (propertyKey === '_tableKey') continue;
-      if (typeof propertyObjectMap === 'object') {
-        const refs = Array.isArray(componentData[propertyKey])
-          ? (componentData[propertyKey] as Ref[])
-          : [componentData[propertyKey] as Ref];
-
-        const refTableKey = (propertyObjectMap as Json)['_tableKey'] as string;
-        const refCompTable = baseData[refTableKey] as ComponentsTable<Json>;
-
-        if (!refCompTable) continue;
-
-        const prefixedResolvedRefCompData: Record<string, Json[]> = {};
-        for (const ref of refs) {
-          const refCompData = refCompTable._data.find((r) => r._hash === ref);
-
-          if (refCompData) {
-            const resolvedRefCompData = this._resolveComponentProperties(
-              refCompData,
-              propertyObjectMap as Json,
-              baseData,
-            );
-
-            for (const [refPropKey, value] of Object.entries(
-              resolvedRefCompData,
-            )) {
-              if (
-                !prefixedResolvedRefCompData[`${refTableKey}/${refPropKey}`]
-              ) {
-                prefixedResolvedRefCompData[`${refTableKey}/${refPropKey}`] =
-                  [];
-              }
-
-              prefixedResolvedRefCompData[`${refTableKey}/${refPropKey}`].push({
-                _ref: ref,
-                _value: value,
-              });
-            }
-          }
-          result = {
-            ...result,
-            ...prefixedResolvedRefCompData,
-          };
-        }
-      }
-      result = {
-        ...result,
-        ...{ [propertyKey]: componentData[propertyKey] },
-      };
-    }
-    return result;
-  }
-
-  // ...........................................................................
-  /**
-   * Resolve a component's columns, including referenced components
-   *
-   * @param baseRoute - The base route for the component
-   * @param componentKey - The component's table key
-   * @returns - The resolved column configurations, column infos, and object map
-   */
-  private async _resolveComponent(
-    baseRoute: string,
-    componentKey: string,
-  ): Promise<{
-    columnCfgs: ColumnCfg[];
-    columnInfos: ColumnInfo[];
-    objectMap: Json;
-  }> {
-    const { columns: colCfgs } = await this.core.tableCfg(componentKey);
-
-    const objectMap: Json = {};
-    const columnCfgs: ColumnCfg[] = [];
-    const columnInfos: ColumnInfo[] = [];
-
-    for (let i = 0; i < colCfgs.length; i++) {
-      if (colCfgs[i].key === '_hash') continue;
-
-      const colCfg = colCfgs[i];
-
-      if (colCfg.ref) {
-        const columnCfgsAndInfosForRef = await this._resolveComponent(
-          baseRoute + `/${componentKey}`,
-          colCfg.ref.tableKey,
-        );
-
-        objectMap[colCfg.key] = {
-          _tableKey: colCfg.ref.tableKey,
-          ...columnCfgsAndInfosForRef.objectMap,
-        };
-
-        const columnCfgsForRef = columnCfgsAndInfosForRef.columnCfgs.map(
-          (cc) => ({
-            ...cc,
-            key: colCfg.ref!.tableKey + '/' + cc.key,
-          }),
-        );
-        const columnInfosForRef = columnCfgsAndInfosForRef.columnInfos.map(
-          (cc) => ({
-            ...cc,
-            key: colCfg.ref!.tableKey + '/' + cc.key,
-          }),
-        );
-
-        columnCfgs.push(...columnCfgsForRef);
-        columnInfos.push(...columnInfosForRef);
-      }
-
-      /* v8 ignore next -- @preserve */
-      const columnRoute = Route.fromFlat(
-        baseRoute.length > 0
-          ? `${baseRoute}/${componentKey}/${colCfg.key}`
-          : `/${componentKey}/${colCfg.key}`,
-      ).flat.slice(1);
-
-      if (!objectMap[colCfg.key]) objectMap[colCfg.key] = columnRoute;
-
-      columnCfgs.push(colCfg);
-      columnInfos.push({
-        ...colCfg,
-        alias: `${colCfg.key}`,
-        route: columnRoute,
-        titleShort: colCfg.key,
-        titleLong: colCfg.key,
-      });
-    }
-
-    return { columnCfgs, columnInfos, objectMap };
+    return new Join(rows, columnSelection);
   }
 
   // ...........................................................................
@@ -891,40 +652,6 @@ export class Db {
     }
 
     return Array.from(resolvedSliceIds);
-  }
-
-  // ...........................................................................
-  /**
-   * Fetches data for the given ColumnSelection
-   * @param columnSelection - The ColumnSelection to fetch data for
-   */
-  private async _getBaseDataForColumnSelection(
-    columnSelection: ColumnSelection,
-  ) {
-    //Make Component Routes unique
-    const uniqueComponentRoutes: Set<string> = new Set();
-    for (const colInfo of columnSelection.columns) {
-      const componentRoute = Route.fromFlat(colInfo.route);
-      const isolatedComponentRoute = await this.isolatePropertyKeyFromRoute(
-        componentRoute,
-      );
-      uniqueComponentRoutes.add(
-        isolatedComponentRoute.toRouteWithoutProperty().flat,
-      );
-    }
-
-    // Fetch Data from all controller routes
-    const data: Rljson = {};
-    for (const compRouteFlat of uniqueComponentRoutes) {
-      const uniqueComponentRoute = Route.fromFlat(compRouteFlat);
-      const { rljson: componentData } = await this.get(
-        uniqueComponentRoute,
-        {},
-      );
-
-      Object.assign(data, componentData);
-    }
-    return data;
   }
 
   // ...........................................................................
