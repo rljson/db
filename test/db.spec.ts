@@ -1613,10 +1613,10 @@ describe('Db', () => {
 
       // Build expected data for validation
       const exampleData = staticExample().carGeneral._data.map((c) => [
-        [c.brand],
+        c.brand,
       ]);
 
-      expect(result.rows).toEqual(exampleData);
+      expect(result.rows.flatMap((r) => r)).toEqual(exampleData);
     });
 
     it('should join data with missing/nulled values correctly', async () => {
@@ -1664,10 +1664,10 @@ describe('Db', () => {
           );
           if (comp && comp.repairedByWorkshop !== undefined) {
             // Value exists
-            exampleData.push([comp.repairedByWorkshop]);
+            exampleData.push([[comp.repairedByWorkshop]]);
             continue;
           }
-          exampleData.push([null]); // Value missing in component
+          exampleData.push([[]]); // Value missing in component
         }
       }
 
@@ -1698,71 +1698,21 @@ describe('Db', () => {
       const columnSelection = new ColumnSelection(columnInfos);
       const result = await db.join(columnSelection, cakeKey, cakeRef);
 
-      // Build expected data for validation
-
-      const exampleData = [];
-      // Get slice IDs from carSliceIds layer
-      const carSliceIds = (
-        staticExample().carSliceId as SliceIdsTable
-      )._data.flatMap((d) => d.add);
-
-      // Get general layer values to map slice IDs to general component refs
-      const carGeneralLayerValues = (
-        staticExample().carGeneralLayer as LayersTable
-      )._data.flatMap((l) =>
-        Object.entries(l.add).map(([sliceId, compRef]) => ({
-          sliceId,
-          compRef,
-        })),
-      );
-
-      // Get technical layer values to map slice IDs to technical component refs
-      const carTechnicalLayerValues = (
-        staticExample().carTechnicalLayer as LayersTable
-      )._data.flatMap((l) =>
-        Object.entries(l.add).map(([sliceId, compRef]) => ({
-          sliceId,
-          compRef,
-        })),
-      );
-
-      // Map slice IDs to isElectric and transmission values
-      for (const carSliceId of carSliceIds) {
-        // General Component
-        const generalLayerEntry = carGeneralLayerValues.find(
-          (l) => l.sliceId === carSliceId,
-        );
-        let isElectricValue: boolean | null = null;
-        if (generalLayerEntry) {
-          const generalCompRef = generalLayerEntry.compRef;
-          const generalComp = staticExample().carGeneral._data.find(
-            (c) => c._hash === generalCompRef,
-          );
-          if (generalComp && generalComp.isElectric !== undefined) {
-            isElectricValue = generalComp.isElectric;
-          }
-        }
-
-        // Technical Component
-        const technicalLayerEntry = carTechnicalLayerValues.find(
-          (l) => l.sliceId === carSliceId,
-        );
-        let transmissionValue: string | null = null;
-        if (technicalLayerEntry) {
-          const technicalCompRef = technicalLayerEntry.compRef;
-          const technicalComp = staticExample().carTechnical._data.find(
-            (c) => c._hash === technicalCompRef,
-          );
-          if (technicalComp && technicalComp.transmission !== undefined) {
-            transmissionValue = (technicalComp.transmission as string) ?? null;
-          }
-        }
-
-        exampleData.push([isElectricValue, transmissionValue]);
-      }
-
       // Validate joined data
-      expect(result.rows).toEqual(exampleData);
+      expect(result.rows).toEqual([
+        [[false], ['Manual']],
+        [[false], ['Automatic']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[false], ['Manual']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+      ]);
     });
 
     it('throws error if cake ref is not found', async () => {
@@ -1780,9 +1730,7 @@ describe('Db', () => {
       const columnSelection = new ColumnSelection(columnInfos);
       await expect(
         db.join(columnSelection, cakeKey, 'MISSING_CAKE_REF'),
-      ).rejects.toThrow(
-        'Db.join: Cake with ref "MISSING_CAKE_REF" not found in cake table "carCake".',
-      );
+      ).rejects.toThrow('Base cake MISSING_CAKE_REF does not exist.');
     });
   });
 });

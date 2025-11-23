@@ -5,8 +5,10 @@
 // found in the LICENSE file in the root of this package.
 
 import { Hash } from '@rljson/hash';
-import { Json, JsonValueType } from '@rljson/json';
-import { ContentType, Insert, Ref, Route, SliceId } from '@rljson/rljson';
+import { JsonValueType } from '@rljson/json';
+import { Insert, Ref, Route, SliceId } from '@rljson/rljson';
+
+import { Container, Db } from '../db.ts';
 
 import { RowFilterProcessor } from './filter/row-filter-processor.ts';
 import { RowFilter } from './filter/row-filter.ts';
@@ -23,20 +25,18 @@ export type JoinProcess = {
   columnSelection: ColumnSelection;
 };
 
-export interface JoinColumn<T extends ContentType> {
+export interface JoinColumn {
   route: Route;
-  tree: Json;
-  value: T | null;
-  shadow: T | null;
-  insert: T | null;
+  value: Container;
+  insert: Container | null;
 }
 
-export type JoinRow = JoinColumn<any>[];
+export type JoinRow = JoinColumn[];
 export type JoinRows = Record<SliceId, JoinRow>;
 
 export type JoinRowHashed = {
   rowHash: Ref;
-  columns: JoinColumn<any>[];
+  columns: JoinColumn[];
 };
 export type JoinRowsHashed = Record<SliceId, JoinRowHashed>;
 
@@ -156,7 +156,7 @@ export class Join {
     const data: JoinRowsHashed = {};
     for (let i = 0; i < this.rowCount; i++) {
       const [sliceId, row] = Object.entries(this.data)[i];
-      const selectedColumns: JoinColumn<any>[] = [];
+      const selectedColumns: JoinColumn[] = [];
       // Select only the requested columns
       for (let j = 0; j < masterColumnIndices.length; j++) {
         selectedColumns.push(row.columns[masterColumnIndices[j]]);
@@ -386,7 +386,15 @@ export class Join {
           return colInfoRoute.equalsWithoutRefs(dataColRoute);
         });
         /* v8 ignore next -- @preserve */
-        row.push(joinCol ? joinCol.insert ?? joinCol.value : null);
+        const insertValue =
+          joinCol && joinCol.insert
+            ? Db.flattenContainerValue(joinCol.insert) ?? null
+            : null;
+        const baseValue = joinCol
+          ? Db.flattenContainerValue(joinCol.value) ?? null
+          : null;
+
+        row.push(insertValue ?? baseValue);
       }
       result.push(row);
     }
@@ -410,7 +418,11 @@ export class Join {
     for (const sliceId of sliceIds) {
       const columns = rows[sliceId];
       const rowHash = Hash.default.calcHash(
-        columns.map((col) => col.insert ?? col.value) as any[],
+        columns.map(
+          (col) =>
+            col.insert?.cell.flatMap((c) => c.value) ??
+            col.value.cell.flatMap((c) => c.value),
+        ) as any[],
       );
       hashedRows[sliceId] = {
         rowHash,

@@ -40,16 +40,16 @@ import { ColumnSelection } from './join/selection/column-selection.ts';
 import { Notify } from './notify.ts';
 import { makeUnique } from './tools/make-unique.ts';
 
-export type DbRouteValueAndShadow = {
+export type Cell = {
   route: Route;
-  value: JsonValue | JsonValue[] | null;
-  shadow: JsonValue | JsonValue[] | null;
+  value: JsonValue[] | null;
+  row: JsonValue[] | null;
 };
 
-export type DbGetResult = {
+export type Container = {
   rljson: Rljson;
   tree: Json;
-  object: DbRouteValueAndShadow | DbRouteValueAndShadow[];
+  cell: Cell[];
 };
 
 /**
@@ -75,7 +75,7 @@ export class Db {
    */
   readonly notify: Notify;
 
-  private _cache: Map<string, DbGetResult> = new Map();
+  private _cache: Map<string, Container> = new Map();
 
   // ...........................................................................
   /**
@@ -92,7 +92,7 @@ export class Db {
     where: string | Json,
     filter?: ControllerChildProperty[],
     sliceIds?: SliceId[],
-  ): Promise<DbGetResult> {
+  ): Promise<Container> {
     // Validate Route
     if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
 
@@ -143,7 +143,7 @@ export class Db {
     filter?: ControllerChildProperty[],
     sliceIds?: SliceId[],
     routeAccumulator?: Route,
-  ): Promise<DbGetResult> {
+  ): Promise<Container> {
     const nodeTableKey = route.top.tableKey;
     const nodeRoute = route;
     const nodeRouteRef = await this._getReferenceOfRouteSegment(nodeRoute.top);
@@ -192,12 +192,12 @@ export class Db {
 
       // Apply Filters
       let filterResult = false;
-      let filterProperty: ControllerChildProperty | undefined;
+      const filterProperties: ControllerChildProperty[] = [];
       if (filterActive) {
         for (const f of filter) {
           if (f.tableKey !== nodeTableKey) continue;
           if (nodeRow._hash === f.ref) {
-            filterProperty = f;
+            filterProperties.push(f);
             filterResult = true;
           }
         }
@@ -233,12 +233,16 @@ export class Db {
             if (layerMatchesSliceIds.length > 0) sliceIdResult = true;
             break;
           case 'components':
-            if (filterProperty && filterProperty.sliceIds) {
-              const componentSliceIds = filterProperty.sliceIds;
+            if (filterProperties.length > 0) {
+              const componentSliceIds = filterProperties.flatMap(
+                (f) => f.sliceIds,
+              );
               const componentMatchesSliceIds = nodeSliceIds.filter((sId) =>
                 componentSliceIds.includes(sId),
               );
-              if (componentMatchesSliceIds.length > 0) sliceIdResult = true;
+              if (componentMatchesSliceIds.length > 0) {
+                sliceIdResult = true;
+              }
             }
             break;
           default:
@@ -268,33 +272,46 @@ export class Db {
           node,
           route.propertyKey!,
         );
+        const isolatedNodeValue = isolatedNode[nodeTableKey]._data
+          .map((d) => d[route.propertyKey!])
+          .filter((v) => v !== undefined && v !== null);
+
         return {
           rljson: isolatedNode,
           tree: { [nodeTableKey]: isolatedNode[nodeTableKey] },
-          object: {
-            value: isolatedNode[nodeTableKey]._data.map(
-              (d) => d[route.propertyKey!],
-            ),
-            shadow: node[nodeTableKey]._data,
-            route: Route.fromFlat(
-              (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
-                (nodeHash ? `@${nodeHash}` : '') +
-                `/${route.propertyKey}`,
-            ).toRouteWithoutProperty(),
-          } as DbRouteValueAndShadow,
+          cell: [
+            {
+              value:
+                isolatedNodeValue && isolatedNodeValue.length > 0
+                  ? isolatedNodeValue
+                  : null,
+              row: node[nodeTableKey]._data,
+              route: Route.fromFlat(
+                (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
+                  (nodeHash ? `@${nodeHash}` : '') +
+                  `/${route.propertyKey}`,
+              ).toRouteWithoutProperty(),
+            },
+          ] as Cell[],
         };
       }
+      const nodeValue = node[nodeTableKey]._data.filter(
+        (v) => v !== undefined && v !== null,
+      );
+
       return {
         rljson: node,
         tree: { [nodeTableKey]: node[nodeTableKey] },
-        object: {
-          value: node[nodeTableKey]._data,
-          shadow: node[nodeTableKey]._data,
-          route: Route.fromFlat(
-            (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
-              (nodeHash ? `@${nodeHash}` : ''),
-          ),
-        } as DbRouteValueAndShadow,
+        cell: [
+          {
+            value: nodeValue,
+            row: nodeValue,
+            route: Route.fromFlat(
+              (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
+                (nodeHash ? `@${nodeHash}` : ''),
+            ),
+          },
+        ] as Cell[],
       };
     }
 
@@ -313,9 +330,9 @@ export class Db {
     const nodeRowsMatchingChildrenRefs = new Map<
       string,
       {
-        rljsonRow: Json;
+        rljson: Json;
         tree: Json;
-        object: DbRouteValueAndShadow | DbRouteValueAndShadow[];
+        cell: Cell | Cell[];
       }
     >();
 
@@ -365,7 +382,7 @@ export class Db {
       const {
         rljson: rowChildrenRljson,
         tree: rowChildrenTree,
-        object: rowChildrenObject,
+        cell: rowChildrenObject,
       } = await this._get(
         childrenRoute,
         childrenWhere,
@@ -467,21 +484,27 @@ export class Db {
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
         nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
-          rljsonRow: nodeRow,
-          tree: { ...nodeRowObj, add: layer },
-          object: rowChildrenObject,
+          rljson: nodeRow,
+          tree: {
+            ...nodeRowObj,
+            add: { ...(nodeRowObj.add as Json), ...layer },
+          },
+          cell: rowChildrenObject,
         });
       } else if (nodeType === 'cakes') {
         nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
-          rljsonRow: nodeRow,
-          tree: { ...nodeRowObj, layers: rowChildrenTree },
-          object: rowChildrenObject,
+          rljson: nodeRow,
+          tree: {
+            ...nodeRowObj,
+            layers: { ...(nodeRowObj.layers as Json), ...rowChildrenTree },
+          },
+          cell: rowChildrenObject,
         });
       } else if (nodeType === 'components') {
         nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
-          rljsonRow: nodeRow,
+          rljson: nodeRow,
           tree: { ...nodeRowObj },
-          object: rowChildrenObject,
+          cell: rowChildrenObject,
         });
       } else {
         throw new Error(
@@ -504,7 +527,7 @@ export class Db {
         ...{
           [nodeTableKey]: {
             ...{
-              _data: matchedNodeRows.map((mr) => mr.rljsonRow),
+              _data: matchedNodeRows.map((mr) => mr.rljson),
               _type: nodeType,
             },
             ...{
@@ -525,7 +548,7 @@ export class Db {
           },
         },
       },
-      object: matchedNodeRows.map((mr) => mr.object).flat(),
+      cell: matchedNodeRows.map((mr) => mr.cell).flat(),
     };
   }
 
@@ -594,7 +617,7 @@ export class Db {
           columnInfo.route,
         ).toRouteWithProperty();
 
-        const { tree: columnTree, object: columnRawData } = await this.get(
+        const columnContainer = await this.get(
           columnRoute,
           cakeRef,
           undefined,
@@ -602,7 +625,9 @@ export class Db {
         );
 
         const columnRawDataAsArray =
-          columnRawData && Array.isArray(columnRawData) ? columnRawData : [];
+          columnContainer.cell && Array.isArray(columnContainer.cell)
+            ? columnContainer.cell
+            : [];
 
         if (columnRawDataAsArray.length > 1) {
           throw new Error(
@@ -610,12 +635,10 @@ export class Db {
           );
         }
 
-        const column: JoinColumn<any> = {
-          ...columnRawDataAsArray[0],
-          ...{
-            tree: columnTree,
-            insert: null,
-          },
+        const column: JoinColumn = {
+          route: columnRoute,
+          value: columnContainer,
+          insert: null,
         };
         row.push(column);
       }
@@ -1155,5 +1178,19 @@ export class Db {
    */
   get cache() {
     return this._cache;
+  }
+
+  // ...........................................................................
+  /**
+   * Flattens the values of a Container into an array of JsonValues
+   * @param container - The Container to flatten
+   * @returns An array of JsonValues or null if the container has no cells
+   */
+  static flattenContainerValue(container: Container): JsonValue[] | null {
+    if (container.cell && Array.isArray(container.cell)) {
+      return container.cell.flatMap((c) => c.value).filter((v) => v !== null);
+    }
+
+    return null;
   }
 }
