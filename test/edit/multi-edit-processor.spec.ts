@@ -11,6 +11,7 @@ import {
   createEditTableCfg,
   createMultiEditTableCfg,
   Edit,
+  EditsTable,
   Insert,
   InsertHistoryRow,
   MultiEdit,
@@ -64,23 +65,23 @@ describe('MultiEditProcessor', () => {
   describe('Constructor', () => {
     it('should be defined', async () => {
       const editActionColumnSelection = exampleEditActionColumnSelection();
-      const editColumnSelection: Edit = {
+      const edit: Edit = {
         name: 'Test Edit',
         action: editActionColumnSelection,
         _hash: '',
       } as Edit;
 
-      const editInsert: Insert<Edit> = {
-        route: `${cakeKey}Edits`,
-        value: editColumnSelection,
-        command: 'add',
+      const editInsertTree = {
+        [`${cakeKey}Edits`]: {
+          _data: [edit],
+          _type: 'edits',
+        } as EditsTable,
       };
 
       const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
-        editInsert,
-        {
-          skipHistory: true,
-        },
+        Route.fromFlat(`/${cakeKey}Edits`),
+        editInsertTree,
+        { skipHistory: true },
       );
 
       const multiEdit: MultiEdit = {
@@ -105,26 +106,26 @@ describe('MultiEditProcessor', () => {
     describe('Single Edit', async () => {
       it('ColumnSelection', async () => {
         const editActionColumnSelection = exampleEditActionColumnSelection();
-        const editColumnSelection: Edit = {
+        const edit: Edit = {
           name: 'Select: brand, type, serviceIntervals, isElectric, height, width, length, engine, repairedByWorkshop',
           action: editActionColumnSelection,
           _hash: '',
         } as Edit;
 
-        const editInsert: Insert<Edit> = {
-          route: `${cakeKey}Edits`,
-          value: editColumnSelection,
-          command: 'add',
+        const editInsertTree = {
+          [`${cakeKey}Edits`]: {
+            _data: [edit],
+            _type: 'edits',
+          } as EditsTable,
         };
 
         const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
-          editInsert,
-          {
-            skipHistory: true,
-          },
+          Route.fromFlat(`/${cakeKey}Edits`),
+          editInsertTree,
+          { skipHistory: true },
         );
 
-        const multiEdit = {
+        const multiEdit: MultiEdit = {
           previous: null,
           edit: editRef!,
           _hash: '',
@@ -143,26 +144,25 @@ describe('MultiEditProcessor', () => {
       it('RowFilter', async () => {
         const editActionRowFilter = exampleEditActionRowFilter();
 
-        const editRowFilter: Edit = {
+        const edit: Edit = {
           name: 'Filter: isElectric = true, length > 4000',
           action: editActionRowFilter,
           _hash: '',
         } as Edit;
-
-        const editInsert: Insert<Edit> = {
-          route: `${cakeKey}Edits`,
-          value: editRowFilter,
-          command: 'add',
+        const editInsertTree = {
+          [`${cakeKey}Edits`]: {
+            _data: [edit],
+            _type: 'edits',
+          } as EditsTable,
         };
 
         const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
-          editInsert,
-          {
-            skipHistory: true,
-          },
+          Route.fromFlat(`/${cakeKey}Edits`),
+          editInsertTree,
+          { skipHistory: true },
         );
 
-        const multiEdit = {
+        const multiEdit: MultiEdit = {
           previous: null,
           edit: editRef!,
           _hash: '',
@@ -181,26 +181,26 @@ describe('MultiEditProcessor', () => {
       it('RowSort', async () => {
         const editActionRowSort = exampleEditActionRowSort();
 
-        const editRowSort: Edit = {
+        const edit: Edit = {
           name: 'Sort: brand ASC',
           action: editActionRowSort,
           _hash: '',
         } as Edit;
 
-        const editInsert: Insert<Edit> = {
-          route: `${cakeKey}Edits`,
-          value: editRowSort,
-          command: 'add',
+        const editInsertTree = {
+          [`${cakeKey}Edits`]: {
+            _data: [edit],
+            _type: 'edits',
+          } as EditsTable,
         };
 
         const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
-          editInsert,
-          {
-            skipHistory: true,
-          },
+          Route.fromFlat(`/${cakeKey}Edits`),
+          editInsertTree,
+          { skipHistory: true },
         );
 
-        const multiEdit = {
+        const multiEdit: MultiEdit = {
           previous: null,
           edit: editRef!,
           _hash: '',
@@ -219,26 +219,26 @@ describe('MultiEditProcessor', () => {
       it('SetValue', async () => {
         const editActionSetValue = exampleEditActionSetValue();
 
-        const editSetValue: Edit = {
+        const edit: Edit = {
           name: 'Set: serviceIntervals = [15000,30000,45000,60000]',
           action: editActionSetValue,
           _hash: '',
         } as Edit;
 
-        const editInsert: Insert<Edit> = {
-          route: `${cakeKey}Edits`,
-          value: editSetValue,
-          command: 'add',
+        const editInsertTree = {
+          [`${cakeKey}Edits`]: {
+            _data: [edit],
+            _type: 'edits',
+          } as EditsTable,
         };
 
         const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
-          editInsert,
-          {
-            skipHistory: true,
-          },
+          Route.fromFlat(`/${cakeKey}Edits`),
+          editInsertTree,
+          { skipHistory: true },
         );
 
-        const multiEdit = {
+        const multiEdit: MultiEdit = {
           previous: null,
           edit: editRef!,
           _hash: '',
@@ -255,26 +255,26 @@ describe('MultiEditProcessor', () => {
       });
 
       it('SetValue Referenced & Insert', async () => {
-        const editSetValueReferenced: Edit = {
+        const edit: Edit = {
           name: 'Set: length = 4800',
           action: exampleEditSetValueReferenced(),
           _hash: '',
         } as Edit;
 
-        const editInsert: Insert<Edit> = {
-          route: `${cakeKey}Edits`,
-          value: editSetValueReferenced,
-          command: 'add',
+        const editInsertTree = {
+          [`${cakeKey}Edits`]: {
+            _data: [edit],
+            _type: 'edits',
+          } as EditsTable,
         };
 
         const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
-          editInsert,
-          {
-            skipHistory: true,
-          },
+          Route.fromFlat(`/${cakeKey}Edits`),
+          editInsertTree,
+          { skipHistory: true },
         );
 
-        const multiEdit = {
+        const multiEdit: MultiEdit = {
           previous: null,
           edit: editRef!,
           _hash: '',
@@ -287,7 +287,7 @@ describe('MultiEditProcessor', () => {
           multiEdit,
         );
 
-        expect(proc.join.rows.every((c) => equals(c, [4800]))).toBe(true);
+        expect(proc.join.rows.flat().every((c) => c.includes(4800))).toBe(true);
 
         const inserts = proc.join.insert();
 

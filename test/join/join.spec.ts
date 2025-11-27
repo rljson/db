@@ -163,7 +163,7 @@ describe('Join', () => {
       };
       const editedJoin = join.setValue(setValue);
 
-      const values = editedJoin.rows.flatMap((r) => r);
+      const values = editedJoin.rows.flatMap((r) => r).flat();
       const uniqueValues = Array.from(new Set(values));
 
       expect(uniqueValues).toEqual(['Opel']);
@@ -189,7 +189,7 @@ describe('Join', () => {
       ];
       const editedJoin = join.setValues(setValues);
 
-      const values = editedJoin.rows.flatMap((r) => r);
+      const values = editedJoin.rows.flatMap((r) => r).flat();
       const uniqueValues = Array.from(new Set(values)).sort();
 
       expect(uniqueValues).toEqual(['BMW']);
@@ -222,8 +222,8 @@ describe('Join', () => {
       const filteredResult = Array.from(
         new Set(filtered.rows.flatMap((r) => r)),
       );
-      expect(filteredResult.length).toBe(1);
-      expect(filteredResult).toEqual(['Audi']);
+      expect(filteredResult.length).toBe(2);
+      expect(filteredResult).toEqual([['Audi'], ['Audi']]);
     });
   });
 

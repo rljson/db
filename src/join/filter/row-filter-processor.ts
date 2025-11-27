@@ -4,6 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+import { Json } from '@rljson/json';
 import { Route } from '@rljson/rljson';
 
 import { Join, JoinRowsHashed } from '../join.ts';
@@ -11,7 +12,6 @@ import { ColumnSelection } from '../selection/column-selection.ts';
 
 import { ColumnFilterProcessor } from './column-filter-processor.ts';
 import { RowFilter } from './row-filter.ts';
-
 
 // #############################################################################
 export class RowFilterProcessor {
@@ -202,33 +202,35 @@ export class RowFilterProcessor {
     }
 
     for (const i of remainingIndices) {
-      const cellValue = join.value(i, columnIndex);
+      const cellValues = join.value(i, columnIndex);
 
-      if (Array.isArray(cellValue)) {
-        for (const v of cellValue) {
-          /* v8 ignore else -- @preserve */
-          if (
-            typeof v === 'object' &&
-            v !== null &&
-            v.hasOwnProperty('_value')
-          ) {
-            const matchValue = v._value;
-
+      for (const cellValue of cellValues) {
+        if (Array.isArray(cellValue)) {
+          for (const v of cellValue) {
             /* v8 ignore else -- @preserve */
-            if (filter.matches(matchValue)) {
-              result.push(i);
-              break;
-            }
-          } else {
-            if (filter.matches(v)) {
-              result.push(i);
-              break;
+            if (
+              typeof v === 'object' &&
+              v !== null &&
+              v.hasOwnProperty('_value')
+            ) {
+              const matchValue = (v as Json)._value as string;
+
+              /* v8 ignore else -- @preserve */
+              if (filter.matches(matchValue)) {
+                result.push(i);
+                break;
+              }
+            } else {
+              if (filter.matches(v as string)) {
+                result.push(i);
+                break;
+              }
             }
           }
-        }
-      } else {
-        if (filter.matches(cellValue)) {
-          result.push(i);
+        } else {
+          if (filter.matches(cellValue as string)) {
+            result.push(i);
+          }
         }
       }
     }
@@ -286,10 +288,36 @@ export class RowFilterProcessor {
         continue;
       }
 
-      const cellValue = join.value(r, columnIndex);
+      const cellValues = join.value(r, columnIndex);
 
-      if (filter.matches(cellValue)) {
-        applyTo[r] = true;
+      for (const cellValue of cellValues) {
+        if (Array.isArray(cellValue)) {
+          for (const v of cellValue) {
+            /* v8 ignore else -- @preserve */
+            if (
+              typeof v === 'object' &&
+              v !== null &&
+              v.hasOwnProperty('_value')
+            ) {
+              const matchValue = (v as Json)._value as string;
+
+              /* v8 ignore else -- @preserve */
+              if (filter.matches(matchValue)) {
+                applyTo[r] = true;
+                break;
+              }
+            } else {
+              if (filter.matches(v as string)) {
+                applyTo[r] = true;
+                break;
+              }
+            }
+          }
+        } else {
+          if (filter.matches(cellValue as string)) {
+            applyTo[r] = true;
+          }
+        }
       }
     }
   }

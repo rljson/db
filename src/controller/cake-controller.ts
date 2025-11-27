@@ -42,7 +42,7 @@ export interface CakeControllerRefs extends Partial<Cake> {
   base?: Ref;
 }
 
-export class CakeController<N extends string, C extends Record<string, string>>
+export class CakeController<N extends string, C extends Cake>
   extends BaseController<CakesTable, C>
   implements Controller<CakesTable, C, N>
 {
@@ -151,7 +151,7 @@ export class CakeController<N extends string, C extends Record<string, string>>
 
     const normalizedValue: { [layerTable: string]: string } = {};
     for (const [layerTable, layerRef] of Object.entries(
-      value as { [layerTable: string]: string },
+      value.layers as { [layerTable: string]: string },
     )) {
       /* v8 ignore next -- @preserve */
       if (Array.isArray(layerRef) && layerRef.length > 1) {
@@ -167,6 +167,7 @@ export class CakeController<N extends string, C extends Record<string, string>>
 
     // Overwrite base layers with given layers
     const cake = {
+      ...value,
       layers: { ...this._baseLayers, ...normalizedValue },
       ...(refs || this._refs),
     };

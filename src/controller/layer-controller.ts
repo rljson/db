@@ -38,7 +38,7 @@ export interface LayerControllerRefs extends Partial<Layer> {
   componentsTable: TableKey;
 }
 
-export class LayerController<N extends string, C extends Record<string, string>>
+export class LayerController<N extends string, C extends Layer>
   extends BaseController<LayersTable, C>
   implements Controller<LayersTable, C, N>
 {
@@ -124,11 +124,12 @@ export class LayerController<N extends string, C extends Record<string, string>>
         `Command ${command} is not supported by LayerController.`,
       );
     }
+    const isAdd = command.startsWith('add');
 
     const normalizedValue: Record<SliceId, ComponentRef> = {};
-    for (const [sliceId, compRef] of Object.entries(
-      value as Record<string, any>,
-    )) {
+    for (const [sliceId, compRef] of isAdd
+      ? Object.entries(value.add as Record<string, any>)
+      : Object.entries(value.remove as Record<string, any>)) {
       /* v8 ignore next -- @preserve */
       if (Array.isArray(compRef) && compRef.length > 1) {
         throw new Error(
@@ -141,17 +142,23 @@ export class LayerController<N extends string, C extends Record<string, string>>
     }
 
     // layer to add/remove
-    const layer =
-      command.startsWith('add') === true
-        ? {
+    const layer = isAdd
+      ? {
+          ...value,
+          ...{
             add: normalizedValue as Record<SliceId, ComponentRef>,
-            ...(refs || this._refs),
-          }
-        : ({
-            add: {},
+            remove: {},
+          },
+          ...refs,
+        }
+      : {
+          ...value,
+          ...{
             remove: normalizedValue as Record<SliceId, ComponentRef>,
-            ...(refs || this._refs),
-          } as Layer & { _hash?: string });
+            add: {},
+          },
+          ...refs,
+        };
 
     const rlJson = { [this._tableKey]: { _data: [layer] } } as Rljson;
 

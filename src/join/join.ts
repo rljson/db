@@ -5,10 +5,12 @@
 // found in the LICENSE file in the root of this package.
 
 import { Hash } from '@rljson/hash';
-import { JsonValueType } from '@rljson/json';
+import { JsonValue, JsonValueType } from '@rljson/json';
 import { Insert, Ref, Route, SliceId } from '@rljson/rljson';
 
-import { Container, Db } from '../db.ts';
+import { Container } from '../db.ts';
+import { inject } from '../tools/inject.ts';
+import { isolate } from '../tools/isolate.ts';
 
 import { RowFilterProcessor } from './filter/row-filter-processor.ts';
 import { RowFilter } from './filter/row-filter.ts';
@@ -28,7 +30,7 @@ export type JoinProcess = {
 export interface JoinColumn {
   route: Route;
   value: Container;
-  insert: Container | null;
+  inserts: Container[] | null;
 }
 
 export type JoinRow = JoinColumn[];
@@ -89,17 +91,57 @@ export class Join {
 
     for (const [sliceId, joinRowH] of Object.entries(this.data)) {
       const cols = [...joinRowH.columns];
-
+      const insertCols = [];
       for (const col of cols) {
+        const insertCol = { ...col };
+
         /*v8 ignore else -- @preserve */
-        if (Route.fromFlat(setValue.route).equalsWithoutRefs(col.route))
-          col.insert = setValue.value;
-        else continue;
+        if (Route.fromFlat(setValue.route).equalsWithoutRefs(col.route)) {
+          for (const cell of col.value.cell) {
+            if (cell.path.length === 0) {
+              throw new Error(
+                `Join: Error while applying SetValue: ` +
+                  `Cannot set value for column without paths. ` +
+                  `Route: ${setValue.route.toString()}.`,
+              );
+            }
+
+            if (cell.path.length > 1) {
+              throw new Error(
+                `Join: Error while applying SetValue: ` +
+                  `Cannot set value for multiple paths in one cell. ` +
+                  `Found paths: [${cell.path.join(', ')}] for route: ` +
+                  `${setValue.route.toString()}.`,
+              );
+            }
+
+            const insertTree = isolate({ ...col.value.tree }, cell.path[0]);
+            inject({ ...insertTree }, cell.path[0], setValue.value);
+
+            const insert: Container = {
+              cell: [
+                {
+                  ...cell,
+                  ...{ value: setValue.value },
+                },
+              ],
+              tree: insertTree,
+              rljson: col.value.rljson,
+            };
+
+            insertCol.inserts = [...(insertCol.inserts ?? []), insert];
+          }
+          insertCols.push(insertCol);
+        } else continue;
       }
 
       data[sliceId] = {
-        rowHash: Hash.default.calcHash(cols.map((c) => c.value) as any[]),
-        columns: cols,
+        rowHash: Hash.default.calcHash(
+          insertCols.map((col) =>
+            col.value.cell.flatMap((c) => c.value),
+          ) as any[],
+        ),
+        columns: insertCols,
       };
     }
 
@@ -156,17 +198,17 @@ export class Join {
     const data: JoinRowsHashed = {};
     for (let i = 0; i < this.rowCount; i++) {
       const [sliceId, row] = Object.entries(this.data)[i];
-      const selectedColumns: JoinColumn[] = [];
+      const cols: JoinColumn[] = [];
       // Select only the requested columns
       for (let j = 0; j < masterColumnIndices.length; j++) {
-        selectedColumns.push(row.columns[masterColumnIndices[j]]);
+        cols.push(row.columns[masterColumnIndices[j]]);
       }
       // Store the selected columns
       data[sliceId] = {
         rowHash: Hash.default.calcHash(
-          selectedColumns.map((c) => c.value) as any[],
+          cols.map((col) => col.value.cell.flatMap((c) => c.value)) as any[],
         ),
-        columns: selectedColumns,
+        columns: cols,
       };
     }
 
@@ -218,6 +260,8 @@ export class Join {
    * Returns insert Object of the join
    */
   insert(): Insert<any>[] {
+    debugger;
+
     return [] as Insert<any>[];
   }
 
@@ -229,7 +273,7 @@ export class Join {
    * @param column The column index
    * @returns The value at the given row and column
    */
-  value(row: number, column: number): any {
+  value(row: number, column: number): JsonValue[] {
     return this.rows[row][column];
   }
 
@@ -387,11 +431,13 @@ export class Join {
         });
         /* v8 ignore next -- @preserve */
         const insertValue =
-          joinCol && joinCol.insert
-            ? Db.flattenContainerValue(joinCol.insert) ?? null
+          joinCol && joinCol.inserts
+            ? joinCol.inserts.flatMap((con) =>
+                con.cell.flatMap((c) => c.value),
+              ) ?? null
             : null;
         const baseValue = joinCol
-          ? Db.flattenContainerValue(joinCol.value) ?? null
+          ? joinCol.value.cell.flatMap((c) => c.value) ?? null
           : null;
 
         row.push(insertValue ?? baseValue);
@@ -416,17 +462,17 @@ export class Join {
     const sliceIds = Object.keys(rows);
     const hashedRows: JoinRowsHashed = {};
     for (const sliceId of sliceIds) {
-      const columns = rows[sliceId];
+      const cols = rows[sliceId];
       const rowHash = Hash.default.calcHash(
-        columns.map(
+        cols.map(
           (col) =>
-            col.insert?.cell.flatMap((c) => c.value) ??
+            col.inserts?.flatMap((con) => con.cell.flatMap((c) => c.value)) ??
             col.value.cell.flatMap((c) => c.value),
         ) as any[],
       );
       hashedRows[sliceId] = {
         rowHash,
-        columns,
+        columns: cols,
       };
     }
     return hashedRows;

@@ -742,13 +742,17 @@ describe('Controller', () => {
         );
         //Remove Layer
         const origin = 'H45H';
-        const removeValue: Partial<Layer> = {
-          VIN1: (staticExample().carGeneral._data[1]._hash as string) || '',
-        } as Record<SliceId, string>;
+        const removeLayer: Partial<Layer> = {
+          remove: {
+            VIN1:
+              (staticExample().carGeneral._data[1]._hash as string) ||
+              ('' as string),
+          },
+        };
 
         const insertHistoryFirstRows = await carGeneralLayerController.insert(
           'remove',
-          removeValue,
+          removeLayer,
           origin,
         );
         const insertHistoryFirstRow = insertHistoryFirstRows[0];
@@ -764,7 +768,7 @@ describe('Controller', () => {
         expect(resultingLayer).toBeDefined();
         expect(resultingLayer.carGeneralLayer._data.length).toBe(1);
         expect(rmhsh(resultingLayer.carGeneralLayer._data[0].remove)).toEqual(
-          removeValue,
+          removeLayer.remove,
         );
       });
     });

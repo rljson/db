@@ -4,27 +4,28 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+import { rmhsh } from '@rljson/hash';
 import { Io } from '@rljson/io';
 import { Json, JsonValue, merge } from '@rljson/json';
 import {
   Cake,
   CakesTable,
+  ComponentRef,
   ComponentsTable,
-  Insert,
+  ContentType,
   InsertHistoryRow,
   InsertHistoryTimeId,
   isTimeId,
   Layer,
+  LayersTable,
   Ref,
   Rljson,
   Route,
   RouteSegment,
   SliceId,
   SliceIds,
-  validateInsert,
+  TableType,
 } from '@rljson/rljson';
-
-import { traverse } from 'object-traversal';
 
 import {
   Controller,
@@ -44,12 +45,17 @@ export type Cell = {
   route: Route;
   value: JsonValue[] | null;
   row: JsonValue[] | null;
+  path: Array<Array<string | number>>;
 };
 
 export type Container = {
   rljson: Rljson;
   tree: Json;
   cell: Cell[];
+};
+
+export type ContainerWithControllers = Container & {
+  controllers: Record<string, Controller<any, any, any>>;
 };
 
 /**
@@ -75,7 +81,7 @@ export class Db {
    */
   readonly notify: Notify;
 
-  private _cache: Map<string, Container> = new Map();
+  private _cache: Map<string, ContainerWithControllers> = new Map();
 
   // ...........................................................................
   /**
@@ -92,7 +98,7 @@ export class Db {
     where: string | Json,
     filter?: ControllerChildProperty[],
     sliceIds?: SliceId[],
-  ): Promise<Container> {
+  ): Promise<ContainerWithControllers> {
     // Validate Route
     if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
 
@@ -107,7 +113,7 @@ export class Db {
       return this._cache.get(cacheHash)!;
     } else {
       // Get Controllers
-      const controllers = await this._indexedControllers(isolatedRoute);
+      const controllers = await this.indexedControllers(isolatedRoute);
 
       // Fetch Data
       const data = await this._get(
@@ -118,9 +124,14 @@ export class Db {
         sliceIds,
       );
 
+      const dataWithControllers: ContainerWithControllers = {
+        ...data,
+        ...{ controllers },
+      };
+
       // Cache Data
-      this._cache.set(cacheHash, data);
-      return data;
+      this._cache.set(cacheHash, dataWithControllers);
+      return dataWithControllers;
     }
   }
 
@@ -168,7 +179,7 @@ export class Db {
 
     //  Add route ref to where
     if (nodeRouteRef && nodeRouteRef.length > 0)
-      nodeWhere = { ...nodeWhere, ...{ _hash: nodeRouteRef } };
+      nodeWhere = { _hash: nodeRouteRef };
 
     // Delete internal flags
     delete (nodeWhere as Json)['_through'];
@@ -266,52 +277,50 @@ export class Db {
     } as Rljson;
 
     // Return if is root node (deepest level, base case)
+    const nodeValue = node[nodeTableKey]._data.filter(
+      (v) => v !== undefined && v !== null,
+    );
     if (route.isRoot) {
       if (route.hasPropertyKey) {
         const isolatedNode = this.isolatePropertyFromComponents(
           node,
           route.propertyKey!,
         );
-        const isolatedNodeValue = isolatedNode[nodeTableKey]._data
-          .map((d) => d[route.propertyKey!])
-          .filter((v) => v !== undefined && v !== null);
 
         return {
           rljson: isolatedNode,
-          tree: { [nodeTableKey]: isolatedNode[nodeTableKey] },
-          cell: [
-            {
-              value:
-                isolatedNodeValue && isolatedNodeValue.length > 0
-                  ? isolatedNodeValue
-                  : null,
-              row: node[nodeTableKey]._data,
-              route: Route.fromFlat(
-                (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
-                  (nodeHash ? `@${nodeHash}` : '') +
-                  `/${route.propertyKey}`,
-              ).toRouteWithoutProperty(),
-            },
-          ] as Cell[],
+          tree: { [nodeTableKey]: node[nodeTableKey] },
+          cell: nodeValue.map(
+            (v, idx) =>
+              ({
+                value: v[route.propertyKey!] ?? null,
+                row: v,
+                route: Route.fromFlat(
+                  (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
+                    (nodeHash ? `@${nodeHash}` : '') +
+                    `/${route.propertyKey}`,
+                ).toRouteWithProperty(),
+                path: [[nodeTableKey, '_data', idx, route.propertyKey]],
+              } as Cell),
+          ) as Cell[],
         };
       }
-      const nodeValue = node[nodeTableKey]._data.filter(
-        (v) => v !== undefined && v !== null,
-      );
 
       return {
         rljson: node,
         tree: { [nodeTableKey]: node[nodeTableKey] },
-        cell: [
-          {
-            value: nodeValue,
-            row: nodeValue,
-            route: Route.fromFlat(
-              (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
-                (nodeHash ? `@${nodeHash}` : ''),
-            ),
-          },
-        ] as Cell[],
+        cell: nodeValue.map(
+          (v, idx) =>
+            ({
+              value: v[route.propertyKey!] ?? null,
+              row: v,
+              route: Route.fromFlat(
+                (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
+                  (nodeHash ? `@${nodeHash}` : ''),
+              ),
+              path: [[nodeTableKey, '_data', idx]],
+            } as Cell),
+        ) as Cell[],
       };
     }
 
@@ -332,7 +341,7 @@ export class Db {
       {
         rljson: Json;
         tree: Json;
-        cell: Cell | Cell[];
+        cell: Cell[];
       }
     >();
 
@@ -352,10 +361,7 @@ export class Db {
       const childrenRefSliceIds = new Set<SliceId>();
 
       for (const cr of childrenRefs) {
-        if (cr.columnKey && cr.sliceIds && cr.sliceIds.length > 0) {
-          for (const sId of cr.sliceIds) {
-            childrenRefSliceIds.add(sId);
-          }
+        if (!!cr.columnKey) {
           const childrenRefColumnCfg = nodeColumnCfgs.find(
             (c) => c.key === cr.columnKey,
           );
@@ -365,6 +371,13 @@ export class Db {
               childrenRefColumnCfg.key,
               childrenRefColumnCfg.ref?.type ?? '',
             );
+          }
+
+          if (cr.sliceIds && cr.sliceIds.length > 0) {
+            //Cake is referenced, switch sliceIds
+            for (const sId of cr.sliceIds) {
+              childrenRefSliceIds.add(sId);
+            }
           }
         }
       }
@@ -379,16 +392,27 @@ export class Db {
         childrenRefTypes.size === 1 &&
         [...childrenRefTypes.values()][0] === 'cakes';
 
+      const componentIsReferenced =
+        childrenRefTypes.size === 1 &&
+        nodeType === 'components' &&
+        [...childrenRefTypes.values()][0] === 'components';
+
+      const childrenSliceIds = cakeIsReferenced
+        ? [...childrenRefSliceIds]
+        : componentIsReferenced
+        ? undefined
+        : nodeSliceIds;
+
       const {
         rljson: rowChildrenRljson,
         tree: rowChildrenTree,
-        cell: rowChildrenObject,
+        cell: rowChildrenCell,
       } = await this._get(
         childrenRoute,
         childrenWhere,
         controllers,
         childrenRefs,
-        cakeIsReferenced ? [...childrenRefSliceIds] : nodeSliceIds,
+        childrenSliceIds,
         Route.fromFlat(
           (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
             (nodeHash ? `@${nodeHash}` : '') +
@@ -449,39 +473,74 @@ export class Db {
 
       // If Layer, construct layer objects with sliceIds relations
       if (nodeType === 'layers') {
-        const components = (
+        const compChildrenTrees = (
           (rowChildrenTree as any)[childrenTableKey]! as ComponentsTable<Json>
         )._data;
+        const compChildrenPaths = rowChildrenCell.map((c) => c.path);
 
-        const layer = components
-          .map((comp) => {
-            const sliceIds = matchingChildrenRefs.find(
-              (cr) => cr.ref === comp._hash,
-            )?.sliceIds;
+        const components = compChildrenTrees.map((c, idx) => {
+          return {
+            tree: c,
+            path: compChildrenPaths.filter((p) => p[0][2] == idx),
+          };
+        });
 
-            if (!sliceIds || sliceIds.length === 0) {
-              throw new Error(
-                `Db._get: No sliceIds found for component ${
-                  comp._hash
-                } of layer ${(nodeRow as any)._hash}.`,
-              );
-            }
-            if (sliceIds.length > 1) {
-              throw new Error(
-                `Db._get: Multiple sliceIds found for component ${
-                  comp._hash
-                } of layer ${(nodeRow as any)._hash}.`,
-              );
-            }
+        const layerTreesAndPaths = components.map(({ tree: comp, path }) => {
+          const sliceIds = matchingChildrenRefs.find(
+            (cr) => cr.ref === comp._hash,
+          )?.sliceIds;
 
-            const sliceId = sliceIds[0];
-            return {
-              [sliceId]: {
-                [childrenTableKey]: { ...comp, ...{ _type: 'components' } },
+          if (!sliceIds || sliceIds.length === 0) {
+            throw new Error(
+              `Db._get: No sliceIds found for component ${
+                comp._hash
+              } of layer ${(nodeRow as any)._hash}.`,
+            );
+          }
+          if (sliceIds.length > 1) {
+            throw new Error(
+              `Db._get: Multiple sliceIds found for component ${
+                comp._hash
+              } of layer ${(nodeRow as any)._hash}.`,
+            );
+          }
+
+          const sliceId = sliceIds[0];
+
+          const pathsForSliceId = [
+            ...path
+              .map((p) => p[0])
+              .map((p) => {
+                const newPath = [...p];
+                newPath[2] = 0;
+                return ['add', sliceId, ...newPath];
+              }),
+          ];
+
+          return {
+            [sliceId]: {
+              tree: {
+                [childrenTableKey]: {
+                  ...{ _data: [comp] },
+                  ...{ _type: 'components' },
+                },
               },
-            };
-          })
-          .reduce((acc, curr) => ({ ...acc, ...curr }), {});
+              path: pathsForSliceId,
+            },
+          };
+        });
+
+        const layer = layerTreesAndPaths
+          .flatMap((ltap) =>
+            Object.entries(ltap).map(([sliceId, { tree }]) => ({
+              [sliceId]: tree,
+            })),
+          )
+          .reduce((a, b) => ({ ...a, ...b }), {});
+
+        const paths = layerTreesAndPaths.map(
+          (ltap) => Object.values(ltap)[0].path,
+        );
 
         nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
           rljson: nodeRow,
@@ -489,7 +548,15 @@ export class Db {
             ...nodeRowObj,
             add: { ...(nodeRowObj.add as Json), ...layer },
           },
-          cell: rowChildrenObject,
+          cell: rowChildrenCell.map(
+            (c, idx) =>
+              ({
+                ...c,
+                ...{
+                  path: [paths.flat()[idx]],
+                },
+              } as Cell),
+          ),
         });
       } else if (nodeType === 'cakes') {
         nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
@@ -498,14 +565,67 @@ export class Db {
             ...nodeRowObj,
             layers: { ...(nodeRowObj.layers as Json), ...rowChildrenTree },
           },
-          cell: rowChildrenObject,
+          cell: rowChildrenCell.map((c) => ({
+            ...c,
+            ...{
+              path: c.path.map((p) => ['layers', ...p]),
+            },
+          })),
         });
       } else if (nodeType === 'components') {
-        nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
-          rljson: nodeRow,
-          tree: { ...nodeRowObj },
-          cell: rowChildrenObject,
-        });
+        if (rowChildrenTree && Object.keys(rowChildrenTree).length > 0) {
+          const columnReferenceMap = nodeColumnCfgs
+            .filter((c) => c.ref && c.ref.type === 'components')
+            .reduce((acc, curr) => {
+              acc.set(curr.key, curr.ref!.tableKey);
+              return acc;
+            }, new Map<string, string>());
+
+          const resolvedRefs: Record<string, { tree: Json; cell: Cell[] }> = {};
+          for (const [colKey, childTableKey] of columnReferenceMap) {
+            const tree = {
+              ...(rowChildrenTree[childTableKey] as Json),
+              ...{ _tableKey: childTableKey },
+            };
+            const cell = rowChildrenCell.map((c) => ({
+              ...c,
+              ...{
+                path: c.path
+                  .filter((p) => p[0] === childTableKey)
+                  .map((p) => [colKey, ...p.slice(1)]),
+              },
+            }));
+
+            resolvedRefs[colKey] = { tree, cell };
+          }
+
+          const resolvedProperties = Object.entries(resolvedRefs)
+            .map(([colKey, { tree }]) => ({
+              [colKey]: tree,
+            }))
+            .reduce((a, b) => ({ ...a, ...b }), {});
+
+          const resolvedTree = {
+            ...nodeRowObj,
+            ...resolvedProperties,
+          };
+
+          const resolvedCell = Object.values(resolvedRefs)
+            .map((r) => r.cell)
+            .flat();
+
+          nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+            rljson: nodeRow,
+            tree: resolvedTree,
+            cell: resolvedCell,
+          });
+        } else {
+          nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+            rljson: nodeRow,
+            tree: { ...nodeRowObj },
+            cell: rowChildrenCell,
+          });
+        }
       } else {
         throw new Error(
           `Db._get: Unsupported node type ${nodeType} for getting children.`,
@@ -548,7 +668,14 @@ export class Db {
           },
         },
       },
-      cell: matchedNodeRows.map((mr) => mr.cell).flat(),
+      cell: matchedNodeRows
+        .map((mr, idx) =>
+          mr.cell.map((c) => ({
+            ...c,
+            ...{ path: c.path.map((p) => [nodeTableKey, '_data', idx, ...p]) },
+          })),
+        )
+        .flat(),
     };
   }
 
@@ -624,21 +751,10 @@ export class Db {
           [sliceId],
         );
 
-        const columnRawDataAsArray =
-          columnContainer.cell && Array.isArray(columnContainer.cell)
-            ? columnContainer.cell
-            : [];
-
-        if (columnRawDataAsArray.length > 1) {
-          throw new Error(
-            `Db.join: Multiple column data entries found for column route "${columnRoute.flat}" in cake "${cakeKey}@${cakeRef}" for sliceId "${sliceId}".`,
-          );
-        }
-
         const column: JoinColumn = {
           route: columnRoute,
           value: columnContainer,
-          insert: null,
+          inserts: null,
         };
         row.push(column);
       }
@@ -685,19 +801,19 @@ export class Db {
    * @throws {Error} If the Insert is not valid or if any controller cannot be created
    */
   async insert(
-    insert: Insert<any>,
+    route: Route,
+    tree: Json,
     options?: { skipNotification?: boolean; skipHistory?: boolean },
   ): Promise<InsertHistoryRow<any>[]> {
-    const initialRoute = Route.fromFlat(insert.route);
-    const runs = await this._resolveInsert(insert);
-    const errors = validateInsert(insert);
-    if (!!errors.hasErrors) {
-      throw new Error(
-        `Db.insert: Insert is not valid:\n${JSON.stringify(errors, null, 2)}`,
-      );
+    const controllers = await this.indexedControllers(
+      Route.fromFlat(route.flatWithoutRefs),
+    );
+    const runFns: Record<string, ControllerRunFn<any, any>> = {};
+    for (const [tableKey, controller] of Object.entries(controllers)) {
+      runFns[tableKey] = controller.insert.bind(controller);
     }
 
-    return this._insert(insert, initialRoute, runs, options);
+    return this._insert(route, tree, runFns, options);
   }
 
   // ...........................................................................
@@ -710,130 +826,241 @@ export class Db {
    * @throws {Error} If the route is not valid or if any controller cannot be created
    */
   private async _insert(
-    insert: Insert<any>,
     route: Route,
+    tree: Json,
     runFns: Record<string, ControllerRunFn<any, any>>,
     options?: { skipNotification?: boolean; skipHistory?: boolean },
   ): Promise<InsertHistoryRow<any>[]> {
-    let results: InsertHistoryRow<any>[];
-    let tableKey: string;
+    const results: InsertHistoryRow<any>[] = [];
 
     //Run parent controller with child refs as value
-    const segment = route.segment(0);
-    tableKey = segment.tableKey;
+    const nodeRoute = route;
+    const nodeSegment = nodeRoute.segment(0);
+    const nodeTableKey = nodeSegment.tableKey;
+    const nodeTree = (tree[nodeTableKey] as TableType)!;
+    const nodeType = nodeTree._type as ContentType;
 
-    let previous: InsertHistoryTimeId[] = [];
-    if (Route.segmentHasRef(segment)) {
-      const routeRef: InsertHistoryTimeId = Route.segmentRef(segment)!;
-      if (Route.segmentHasInsertHistoryRef(segment)) {
-        //Collect previous refs from child results
-        previous = [...previous, routeRef];
-      }
-      if (Route.segmentHasDefaultRef(segment)) {
-        const timeIds = await this.getTimeIdsForRef(
-          tableKey,
-          Route.segmentRef(segment)!,
-        );
-        previous = [...previous, ...timeIds];
-      }
+    if (nodeTree._data.length === 0) {
+      throw new Error(
+        `Db._insert: No data found for table "${nodeTableKey}" in route "${route.flat}".`,
+      );
     }
 
+    const previousHash = (nodeSegment as any)[nodeTableKey + 'Ref'] ?? null;
+    const previousTimeId: string | null =
+      (nodeSegment as any)[nodeTableKey + 'InsertHistoryRef'] ?? null;
+
+    const previous: InsertHistoryTimeId[] = previousHash
+      ? await this.getTimeIdsForRef(nodeTableKey, previousHash as string)
+      : previousTimeId
+      ? [previousTimeId]
+      : [];
+
     //If not root, run nested controllers first
-    if (!route.isRoot) {
+    if (!nodeRoute.isRoot) {
       //Run nested controller first
-      const childRoute = route.deeper(1);
+      const childRoute = nodeRoute.deeper(1);
+      const childTableKey = childRoute.top.tableKey;
 
-      //Iterate over child values and create Inserts for each
-      const childKeys = this._childKeys(insert.value);
-      const childRefs: Record<string, string[]> = {};
+      if (nodeType === 'cakes') {
+        const cakes = (nodeTree as CakesTable)._data;
+        if (cakes.length > 1) {
+          throw new Error(
+            `Db._insert: Multiple cakes found for cake table "${nodeTableKey}" when inserting into child table "${childTableKey}". Only single cake inserts are supported.`,
+          );
+        }
 
-      for (const k of childKeys) {
-        const childValue = (insert.value as any)[k];
-        const childInsert: Insert<any> = { ...insert, value: childValue };
+        //Check if there is no cake or no childTree --> Add new one
+
+        const cake = cakes[0] as Cake;
+        const childTree = (cake.layers as Json)[childTableKey] as TableType;
         const childResults = await this._insert(
-          childInsert,
           childRoute,
+          { [childTableKey]: childTree },
           runFns,
         );
-        const childRefKey = childRoute.top.tableKey + 'Ref';
-        const childRefArray = childResults.map(
-          (childResult) => (childResult as any)[childRefKey] as string,
-        );
 
-        childRefs[k] = childRefArray;
-      }
+        if (childResults.length > 1) {
+          throw new Error(
+            `Db._insert: Multiple inserts returned for child table "${childTableKey}" when inserting into cake table "${nodeTableKey}". Only single child inserts are supported.`,
+          );
+        }
 
-      //Run parent controller with child refs as value
-      const runFn = runFns[tableKey];
+        const childResult = childResults[0];
 
-      results = [
-        ...(
-          await runFn(
-            insert.command,
-            {
-              ...insert.value,
-              ...childRefs,
+        const insertValue = {
+          ...(cake as any as Json),
+          ...{
+            layers: {
+              ...cake.layers,
+              ...{
+                [childTableKey]: (childResult as any)[childTableKey + 'Ref'],
+              },
             },
-            insert.origin,
-          )
-        ).map((r) => ({ ...r, ...{ previous } })),
-      ];
-    } else {
-      //Run root controller
-      tableKey = route.root.tableKey;
-      const runFn = runFns[tableKey];
+          },
+        };
+        const runFn = runFns[nodeTableKey];
+        const result = await runFn('add', rmhsh(insertValue), 'db.insert');
+        results.push(
+          ...result.map((r) => ({
+            ...r,
+            ...{ previous },
+            ...{ route: route.flat },
+          })),
+        );
+      }
+      if (nodeType === 'layers') {
+        const layers = (nodeTree as LayersTable)._data;
+        for (const layer of layers) {
+          const layerInsert: Record<SliceId, ComponentRef> = {};
 
-      const insertValue = insert.value;
-      for (const [propertyKey, propertyValue] of Object.entries(insert.value)) {
-        if (
-          propertyValue &&
-          typeof propertyValue === 'object' &&
-          !!(propertyValue as any)._tableKey
-        ) {
-          const referenceRoute = (propertyValue as any)._tableKey;
+          //Check what if there is no layer or no compomentTree --> Add new one
 
-          // Remove _tableKey from propertyValue to avoid issues during insert
-          delete (propertyValue as any)._tableKey;
+          for (const [sliceId, componentTree] of Object.entries(layer.add)) {
+            if (sliceId === '_hash') continue;
 
-          const referenceInsert: Insert<any> = {
-            command: insert.command,
-            route: referenceRoute,
-            value: propertyValue,
-          };
-          const referencesWritten = (
-            await this._insert(
-              referenceInsert,
-              Route.fromFlat(referenceRoute),
+            const writtenComponents = await this._insert(
+              childRoute,
+              componentTree as any,
               runFns,
-            )
-          ).map((h) => (h as any)[referenceRoute + 'Ref']);
+            );
 
-          insertValue[propertyKey] =
-            referencesWritten.length === 1
-              ? referencesWritten[0]
-              : referencesWritten;
+            if (writtenComponents.length > 1) {
+              throw new Error(
+                `Db._insert: Multiple components written for layer "${
+                  (layer as any)._hash
+                }" and sliceId "${sliceId}" is currently not supported.`,
+              );
+            }
+
+            const writtenComponent = writtenComponents[0];
+
+            layerInsert[sliceId] = (writtenComponent as any)[
+              childTableKey + 'Ref'
+            ];
+          }
+          const runFn = runFns[nodeTableKey];
+          const result = await runFn(
+            'add',
+            rmhsh({
+              ...layer,
+              ...{ add: layerInsert },
+            }),
+            'db.insert',
+          );
+          results.push(
+            ...result.map((r) => ({
+              ...r,
+              ...{ previous },
+              ...{ route: route.flat },
+            })),
+          );
         }
       }
+      if (
+        (['components', 'edits', 'multiEdits'] as ContentType[]).includes(
+          nodeType,
+        )
+      ) {
+        const runFn = runFns[nodeTableKey];
+        const components = (nodeTree as ComponentsTable<Json>)._data;
+        for (const component of components) {
+          const resolvedComponent = { ...component } as Json;
+          for (const [property, value] of Object.entries(component)) {
+            if (
+              (value as any).hasOwnProperty('_tableKey') &&
+              (value as any)._tableKey === childTableKey
+            ) {
+              const writtenReferences = await this._insert(
+                childRoute,
+                { [childTableKey]: value as any },
+                runFns,
+              );
+              resolvedComponent[property] = writtenReferences.map(
+                (wr) => (wr as any)[childTableKey + 'Ref'],
+              );
+            }
+          }
 
-      //Run on controller, get InsertHistoryRow from return, pass previous revisions
-      results = [
-        ...(await runFn(insert.command, insertValue, insert.origin)).map(
-          (r) => ({ ...r, previous }),
-        ),
-      ];
+          const result = await runFn(
+            'add',
+            rmhsh(resolvedComponent),
+            'db.insert',
+          );
+          results.push(
+            ...result.map((r) => ({
+              ...r,
+              ...{ previous },
+              ...{ route: route.flat },
+            })),
+          );
+        }
+      }
+    } else {
+      //Run root controller
+      const runFn = runFns[nodeTableKey];
+
+      if (
+        (['components', 'edits', 'multiEdits'] as ContentType[]).includes(
+          nodeType,
+        )
+      ) {
+        const components = rmhsh(
+          (tree as any)[nodeTableKey],
+        ) as ComponentsTable<Json>;
+
+        for (const component of components._data) {
+          delete (component as any)._tableKey;
+          delete (component as any)._type;
+
+          const result = await runFn('add', component, 'db.insert');
+          results.push(
+            ...result.map((r) => ({
+              ...r,
+              ...{ previous },
+              ...{ route: route.flat },
+            })),
+          );
+        }
+      }
+      if (nodeType === 'layers') {
+        const layers = rmhsh((tree as any)[nodeTableKey]);
+        for (const layer of (layers as LayersTable)._data) {
+          const result = await runFn('add', layer, 'db.insert');
+
+          results.push(
+            ...result.map((r) => ({
+              ...r,
+              ...{ previous },
+              ...{ route: route.flat },
+            })),
+          );
+        }
+      }
+      if (nodeType === 'cakes') {
+        const cakes = rmhsh((tree as any)[nodeTableKey]);
+        for (const cake of (cakes as CakesTable)._data) {
+          const result = await runFn('add', cake, 'db.insert');
+
+          results.push(
+            ...result.map((r) => ({
+              ...r,
+              ...{ previous },
+              ...{ route: route.flat },
+            })),
+          );
+        }
+      }
     }
 
     for (const result of results) {
-      //Write route to result
-      result.route = insert.route;
-
       //Write insertHistory
       if (!options?.skipHistory)
-        await this._writeInsertHistory(tableKey, result);
+        await this._writeInsertHistory(nodeTableKey, result);
 
       //Notify listeners
       if (!options?.skipNotification)
-        this.notify.notify(Route.fromFlat(insert.route), result);
+        this.notify.notify(Route.fromFlat(result.route), result);
     }
 
     return results;
@@ -867,59 +1094,6 @@ export class Db {
 
   // ...........................................................................
   /**
-   * Resolves an Insert by returning the run functions of all controllers involved in the Insert's route
-   * @param insert - The Insert to resolve
-   * @returns A record of controller run functions, keyed by table name
-   * @throws {Error} If the route is not valid or if any controller cannot be created
-   */
-  private async _resolveInsert(
-    insert: Insert<any>,
-  ): Promise<Record<string, ControllerRunFn<any, any>>> {
-    // Get Controllers and their Run Functions
-    const controllers = await this._indexedControllers(
-      Route.fromFlat(insert.route),
-    );
-
-    // Add Controllers for unrelated component references
-    const referencedComponentTableKeys: Set<string> = new Set();
-
-    traverse({ ...insert.value }, ({ key, parent }) => {
-      if (key == '_tableKey')
-        referencedComponentTableKeys.add(parent![key] as string);
-    });
-    for (const tableKey of referencedComponentTableKeys) {
-      controllers[tableKey] ??= await this.getController(tableKey);
-    }
-
-    const runFns: Record<string, ControllerRunFn<any, any>> = {};
-    for (const tableKey of Object.keys(controllers)) {
-      runFns[tableKey] = controllers[tableKey].insert.bind(
-        controllers[tableKey],
-      );
-    }
-
-    return runFns;
-  }
-
-  // ...........................................................................
-  /**
-   * Returns the keys of child refs in a value based on a route
-   * @param value - The value to check
-   * @returns An array of keys of child refs in the value
-   */
-  private _childKeys(value: Json): string[] {
-    const keys = Object.keys(value);
-    const childKeys: string[] = [];
-    for (const k of keys) {
-      if (typeof (value as any)[k] !== 'object') continue;
-
-      childKeys.push(k);
-    }
-    return childKeys;
-  }
-
-  // ...........................................................................
-  /**
    * Get a controller for a specific table
    * @param tableKey - The key of the table to get the controller for
    * @param refs - Optional references required by some controllers
@@ -941,7 +1115,7 @@ export class Db {
   }
 
   // ...........................................................................
-  private async _indexedControllers(
+  public async indexedControllers(
     route: Route,
   ): Promise<Record<string, Controller<any, any, any>>> {
     // Create Controllers
@@ -1178,19 +1352,5 @@ export class Db {
    */
   get cache() {
     return this._cache;
-  }
-
-  // ...........................................................................
-  /**
-   * Flattens the values of a Container into an array of JsonValues
-   * @param container - The Container to flatten
-   * @returns An array of JsonValues or null if the container has no cells
-   */
-  static flattenContainerValue(container: Container): JsonValue[] | null {
-    if (container.cell && Array.isArray(container.cell)) {
-      return container.cell.flatMap((c) => c.value).filter((v) => v !== null);
-    }
-
-    return null;
   }
 }

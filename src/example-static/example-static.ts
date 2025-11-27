@@ -522,6 +522,7 @@ export const staticExample = (): StaticExample => {
         type: 'jsonValue',
         ref: {
           tableKey: 'carDimensions',
+          type: 'components',
         },
       } as ColumnCfg,
       { key: 'repairedByWorkshop', type: 'string' },
