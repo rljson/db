@@ -4,7 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { rmhsh } from '@rljson/hash';
+import { hsh, rmhsh } from '@rljson/hash';
 import { Io } from '@rljson/io';
 import { Json, JsonValue, merge } from '@rljson/json';
 import {
@@ -145,13 +145,18 @@ export class Db {
     routeAccumulator?: Route,
   ): Promise<Container> {
     //Activate Cache
-    const cacheKey = `${route.flat}|${JSON.stringify(where)}|${JSON.stringify(
+    const params = {
+      route: route.flat,
+      where,
       filter,
-    )}|${JSON.stringify(sliceIds)}|${routeAccumulator?.flat ?? ''}`;
+      sliceIds,
+      routeAccumulator: routeAccumulator ? routeAccumulator.flat : '',
+    };
+    const cacheHash = (hsh(rmhsh(params)) as any)._hash as string;
 
-    const isCached = this._cache.has(cacheKey);
+    const isCached = this._cache.has(cacheHash);
     if (isCached) {
-      return this._cache.get(cacheKey)!;
+      return this._cache.get(cacheHash)!;
     }
 
     const nodeTableKey = route.top.tableKey;
@@ -305,7 +310,7 @@ export class Db {
         };
 
         //Set Cache
-        this._cache.set(cacheKey, result);
+        this._cache.set(cacheHash, result);
 
         return result;
       }
@@ -327,7 +332,7 @@ export class Db {
         ) as Cell[],
       };
       //Set Cache
-      this._cache.set(cacheKey, result);
+      this._cache.set(cacheHash, result);
 
       return result;
     }
@@ -686,7 +691,7 @@ export class Db {
         .flat(),
     };
     //Set Cache
-    this._cache.set(cacheKey, result);
+    this._cache.set(cacheHash, result);
 
     return result;
   }
