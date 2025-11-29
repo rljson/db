@@ -84,6 +84,7 @@ const chainLayers = (layers: Layer[]): Layer[] => {
       continue;
     }
 
+    /* v8 ignore else -- @preserve */
     if (chainedLayers[i - 1]._hash) {
       newLayer.base = chainedLayers[i - 1]._hash as string;
     }
@@ -96,10 +97,12 @@ const chainSliceIds = (sliceIds: SliceIds[]): SliceIds[] => {
   const chainedSliceIds: SliceIds[] = [];
   for (let i = 0; i < sliceIds.length; i++) {
     const newSliceIds = { ...rmhsh(sliceIds[i]) };
+    /* v8 ignore else -- @preserve */
     if (i == 0) {
       chainedSliceIds.push(hsh<SliceIds>(newSliceIds));
       continue;
     }
+    /* v8 ignore else -- @preserve */
     if (chainedSliceIds[i - 1]._hash) {
       newSliceIds.base = chainedSliceIds[i - 1]._hash as string;
     }

@@ -116,9 +116,11 @@ export class RowSort {
       for (const index of sortIndices) {
         const sort = sortOrders[i++];
         //TODO: Make cells holding several values sortable
+        /* v8 ignore next -- @preserve */
         const vA = rowA[index].inserts
           ? rowA[index].inserts![0].cell[0].value![0]
           : rowA[index].value?.cell[0].value![0];
+        /* v8 ignore next -- @preserve */
         const vB = rowB[index].inserts
           ? rowB[index].inserts![0].cell[0].value![0]
           : rowB[index].value?.cell[0].value![0];

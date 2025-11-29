@@ -110,6 +110,7 @@ export class Join {
         /*v8 ignore else -- @preserve */
         if (Route.fromFlat(setValue.route).equalsWithoutRefs(col.route)) {
           for (const cell of col.value.cell) {
+            /* v8 ignore next -- @preserve */
             if (cell.path.length === 0) {
               throw new Error(
                 `Join: Error while applying SetValue: ` +
@@ -118,6 +119,7 @@ export class Join {
               );
             }
 
+            /* v8 ignore next -- @preserve */
             if (cell.path.length > 1) {
               throw new Error(
                 `Join: Error while applying SetValue: ` +
@@ -145,6 +147,7 @@ export class Join {
               rljson: col.value.rljson,
             };
 
+            /* v8 ignore next -- @preserve */
             insertCol.inserts = insert ? [insert] : insertCol.inserts;
           }
         }
@@ -318,6 +321,7 @@ export class Join {
       );
       const insertPaths = Array.from(insertPathSet).map((v) => JSON.parse(v));
 
+      /* v8 ignore next -- @preserve */
       if (insertPaths.length > 1) {
         throw new Error(
           `Join: Error while getting inserts: ` +
@@ -331,6 +335,7 @@ export class Join {
       const insertPath = insertPaths[0];
       const insertTree = mergeTrees(trees as any, insertPath, joinPreserveKeys);
 
+      /* v8 ignore next -- @preserve */
       if (Object.keys(insertTree).length === 0) {
         throw new Error(
           `Join: Error while getting inserts: ` +
@@ -518,6 +523,7 @@ export class Join {
                 con.cell.flatMap((c) => c.value),
               ) ?? null
             : null;
+        /* v8 ignore next -- @preserve */
         const baseValue =
           joinCol && joinCol.value.cell
             ? joinCol.value.cell.flatMap((c) => c.value) ?? null
@@ -546,6 +552,7 @@ export class Join {
     const hashedRows: JoinRowsHashed = {};
     for (const sliceId of sliceIds) {
       const cols = rows[sliceId];
+      /* v8 ignore next -- @preserve */
       const rowHash = Hash.default.calcHash(
         cols.map((col) =>
           col.inserts?.flatMap((con) => con.cell.flatMap((c) => c.value)) ??

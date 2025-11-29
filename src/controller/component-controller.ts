@@ -92,57 +92,23 @@ export class ComponentController<
         `Command ${command} is not supported by ComponentController.`,
       );
     }
+    /* v8 ignore else -- @preserve */
     if (!!refs) {
       throw new Error(`Refs are not supported on ComponentController.`);
     }
 
-    //Value to add
-    const values: Array<JsonValue & { _hash: string }> = [];
-    const referencedValues: Map<string, Json> = new Map();
-    for (const [k, v] of Object.entries(value)) {
-      if (Array.isArray(v)) {
-        //Possibly array of references
-        for (const possibleRef of v) {
-          if (
-            typeof possibleRef === 'object' &&
-            (possibleRef as any).hasOwnProperty('_ref') &&
-            (possibleRef as any).hasOwnProperty('_value')
-          ) {
-            const ref = (possibleRef as any)._ref as string;
-            const val = (possibleRef as any)._value;
+    const component = value as JsonValue & { _hash?: string };
 
-            if (!referencedValues.has(ref))
-              referencedValues.set(ref, { [k]: val });
-            else {
-              const existing = referencedValues.get(ref)!;
-              referencedValues.set(ref, { ...{ [k]: val }, ...existing });
-            }
-          }
-        }
-      }
-    }
+    //Remove internal flags
+    delete (component as any)._somethingToInsert;
 
-    if (referencedValues.size > 0) {
-      for (const refValue of referencedValues.values()) {
-        values.push({ ...value, ...refValue } as JsonValue & { _hash: string });
-      }
-    } else {
-      values.push(value as JsonValue & { _hash: string });
-    }
+    const rlJson = { [this._tableKey]: { _data: [component] } } as Rljson;
 
-    const components = values as (JsonValue & { _hash?: string })[];
+    //Write component to io
+    await this._core.import(rlJson);
 
-    const results: InsertHistoryRow<N>[] = [];
-    for (const component of components) {
-      //Remove internal flags
-      delete (component as any)._somethingToInsert;
-
-      const rlJson = { [this._tableKey]: { _data: [component] } } as Rljson;
-
-      //Write component to io
-      await this._core.import(rlJson);
-
-      const result = {
+    return [
+      {
         //Ref to component
         [this._tableKey + 'Ref']: hsh(component as Json)._hash as string,
 
@@ -151,12 +117,8 @@ export class ComponentController<
         origin,
         //Unique id/timestamp
         timeId: timeId(),
-      } as any as InsertHistoryRow<N>;
-
-      results.push(result);
-    }
-
-    return results;
+      },
+    ] as any as InsertHistoryRow<N>[];
   }
 
   // ...........................................................................

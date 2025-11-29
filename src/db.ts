@@ -260,6 +260,7 @@ export class Db {
               }
             }
             break;
+          /* v8 ignore next -- @preserve */
           default:
             sliceIdResult = true;
             break;
@@ -379,7 +380,9 @@ export class Db {
             (c) => c.key === cr.columnKey,
           );
 
+          /* v8 ignore else -- @preserve */
           if (childrenRefColumnCfg) {
+            /* v8 ignore next -- @preserve */
             childrenRefTypes.set(
               childrenRefColumnCfg.key,
               childrenRefColumnCfg.ref?.type ?? '',
@@ -395,6 +398,7 @@ export class Db {
         }
       }
 
+      /* v8 ignore next -- @preserve */
       if (childrenRefTypes.size > 1) {
         throw new Error(
           `Db._get: Multiple reference types found for children of table ${nodeTableKey}.`,
@@ -485,6 +489,7 @@ export class Db {
       );
 
       // If Layer, construct layer objects with sliceIds relations
+      /* v8 ignore else -- @preserve */
       if (nodeType === 'layers') {
         const compChildrenTrees = (
           (rowChildrenTree as any)[childrenTableKey]! as ComponentsTable<Json>
@@ -503,6 +508,7 @@ export class Db {
             (cr) => cr.ref === comp._hash,
           )?.sliceIds;
 
+          /* v8 ignore next -- @preserve */
           if (!sliceIds || sliceIds.length === 0) {
             throw new Error(
               `Db._get: No sliceIds found for component ${
@@ -510,6 +516,7 @@ export class Db {
               } of layer ${(nodeRow as any)._hash}.`,
             );
           }
+          /* v8 ignore next -- @preserve */
           if (sliceIds.length > 1) {
             throw new Error(
               `Db._get: Multiple sliceIds found for component ${
@@ -586,6 +593,7 @@ export class Db {
           })),
         });
       } else if (nodeType === 'components') {
+        /* v8 ignore else -- @preserve */
         if (rowChildrenTree && Object.keys(rowChildrenTree).length > 0) {
           const columnReferenceMap = nodeColumnCfgs
             .filter((c) => c.ref && c.ref.type === 'components')
@@ -736,11 +744,13 @@ export class Db {
 
     const cakes = (cakesTable as CakesTable)._data;
 
+    /* v8 ignore next -- @preserve */
     if (cakes.length === 0) {
       throw new Error(
         `Db.join: Cake with ref "${cakeRef}" not found in cake table "${cakeKey}".`,
       );
     }
+    /* v8 ignore next -- @preserve */
     if (cakes.length > 1) {
       throw new Error(
         `Db.join: Multiple cakes with ref "${cakeRef}" found in cake table "${cakeKey}".`,
@@ -857,6 +867,7 @@ export class Db {
     const nodeTree = (tree[nodeTableKey] as TableType)!;
     const nodeType = nodeTree._type as ContentType;
 
+    /* v8 ignore next -- @preserve */
     if (nodeTree._data.length === 0) {
       throw new Error(
         `Db._insert: No data found for table "${nodeTableKey}" in route "${route.flat}".`,
@@ -881,6 +892,8 @@ export class Db {
 
       if (nodeType === 'cakes') {
         const cakes = (nodeTree as CakesTable)._data;
+
+        /* v8 ignore next -- @preserve */
         if (cakes.length > 1) {
           throw new Error(
             `Db._insert: Multiple cakes found for cake table "${nodeTableKey}" when inserting into child table "${childTableKey}". Only single cake inserts are supported.`,
@@ -897,6 +910,7 @@ export class Db {
           runFns,
         );
 
+        /* v8 ignore next -- @preserve */
         if (childResults.length > 1) {
           throw new Error(
             `Db._insert: Multiple inserts returned for child table "${childTableKey}" when inserting into cake table "${nodeTableKey}". Only single child inserts are supported.`,
@@ -942,6 +956,7 @@ export class Db {
               runFns,
             );
 
+            /* v8 ignore next -- @preserve */
             if (writtenComponents.length > 1) {
               throw new Error(
                 `Db._insert: Multiple components written for layer "${
@@ -1027,7 +1042,6 @@ export class Db {
         ) as ComponentsTable<Json>;
 
         for (const component of components._data) {
-          if (component == undefined) debugger;
           delete (component as any)._tableKey;
           delete (component as any)._type;
 

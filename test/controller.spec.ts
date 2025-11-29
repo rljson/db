@@ -626,6 +626,55 @@ describe('Controller', () => {
         //Read by empty
       });
 
+      it('resolveBaseLayer', async () => {
+        //LayerController Refs
+        const carGeneralLayerRefs = {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
+            '') as string,
+          componentsTable: 'carGeneral',
+        } as LayerControllerRefs;
+
+        //Create LayerController
+        const carGeneralLayerController = (await createController(
+          'layers',
+          core,
+          'carGeneralLayer',
+          carGeneralLayerRefs,
+        )) as LayerController<'carGeneralLayer', Layer>;
+
+        const layerHash = staticExample().carGeneralLayer._data[2]
+          ._hash as string;
+        const {
+          ['carGeneralLayer']: { _data: layers },
+        } = await carGeneralLayerController.get(layerHash);
+
+        expect(layers.length).toBe(1);
+
+        const layer = layers[0] as Layer;
+        expect(layer).toBeDefined();
+        expect(Object.keys(rmhsh(layer.add))).toEqual(['VIN11', 'VIN12']);
+
+        const resolvedBaseLayer =
+          await carGeneralLayerController.resolveBaseLayer(layer);
+
+        expect(resolvedBaseLayer).toBeDefined();
+        expect(Object.keys(rmhsh(resolvedBaseLayer.add))).toEqual([
+          'VIN1',
+          'VIN2',
+          'VIN3',
+          'VIN4',
+          'VIN5',
+          'VIN6',
+          'VIN7',
+          'VIN8',
+          'VIN9',
+          'VIN10',
+          'VIN11',
+          'VIN12',
+        ]);
+      });
+
       it('Insert -> Invalid Command', async () => {
         //LayerController Refs
         const carGeneralLayerRefs = {

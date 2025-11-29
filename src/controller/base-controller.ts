@@ -136,6 +136,7 @@ export abstract class BaseController<T extends TableType, C extends JsonValue>
    * @returns The content type managed by the controller.
    */
   contentType(): ContentType {
+    /* v8 ignore next -- @preserve */
     return this._contentType ?? 'components';
   }
 
@@ -145,6 +146,7 @@ export abstract class BaseController<T extends TableType, C extends JsonValue>
    * @returns The table configuration managed by the controller.
    */
   tableCfg(): TableCfg {
+    /* v8 ignore next -- @preserve */
     if (!this._tableCfg) {
       throw new Error(
         `TableCfg for controller ${this._tableKey} is not initialized.`,

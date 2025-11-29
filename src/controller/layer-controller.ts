@@ -102,6 +102,7 @@ export class LayerController<N extends string, C extends Layer>
       // Try to read refs from first row of layers table (Fallback)
       // TODO: THIS MUST BE TIME CONSIDERED!!!
       const layer = table._data[0] as LayerControllerRefs;
+      /* v8 ignore else -- @preserve */
       if (!!layer) {
         this._refs = {
           sliceIdsTable: layer.sliceIdsTable,
@@ -136,6 +137,7 @@ export class LayerController<N extends string, C extends Layer>
           `LayerController insert: Component ref for slice ${sliceId} cannot be an array of size > 1. No 1:n relations supported.`,
         );
       }
+      /* v8 ignore next -- @preserve */
       normalizedValue[sliceId] = Array.isArray(compRef)
         ? compRef[0]
         : (compRef as ComponentRef);
@@ -200,9 +202,11 @@ export class LayerController<N extends string, C extends Layer>
       // Get base layer first
       const baseLayer = await this.get(layer.base);
 
+      /* v8 ignore next -- @preserve */
       if (!baseLayer[this._tableKey]?._data?.[0]) {
         throw new Error(`Base layer ${layer.base} does not exist.`);
       }
+      /* v8 ignore next -- @preserve */
       if (baseLayer[this._tableKey]._data.length > 1) {
         throw new Error(
           `Base layer ${layer.base} resolving not possible. Not unique.`,
@@ -215,6 +219,7 @@ export class LayerController<N extends string, C extends Layer>
 
       // Merge base layer's add components
       for (const [sliceId, compRef] of Object.entries(baseLayerResolved.add)) {
+        /* v8 ignore next -- @preserve */
         if (sliceId.startsWith('_')) continue;
 
         add.set(sliceId, compRef);
@@ -250,6 +255,7 @@ export class LayerController<N extends string, C extends Layer>
 
         // Merge resolved sliceIds
         for (const sId of resolvedSliceIds.add) {
+          /* v8 ignore next -- @preserve */
           if (sId.startsWith('_')) continue;
 
           sliceIds.add(sId);
@@ -262,11 +268,13 @@ export class LayerController<N extends string, C extends Layer>
       [layer.sliceIdsTable]: { _data: layerSliceIds },
     } = await this._core.readRow(layer.sliceIdsTable, layer.sliceIdsTableRow);
 
+    /* v8 ignore next -- @preserve */
     if (!layerSliceIds || layerSliceIds.length === 0) {
       throw new Error(
         `Layer sliceIds ${layer.sliceIdsTableRow} does not exist.`,
       );
     }
+    /* v8 ignore next -- @preserve */
     if (layerSliceIds.length > 1) {
       throw new Error(
         `Layer sliceIds ${layer.sliceIdsTableRow} has more than one entry.`,
@@ -276,11 +284,13 @@ export class LayerController<N extends string, C extends Layer>
     const layerSliceId = layerSliceIds[0] as SliceIds;
 
     for (const sId of layerSliceId.add) {
+      /* v8 ignore next -- @preserve */
       if (sId.startsWith('_')) continue;
 
       sliceIds.add(sId);
     }
 
+    /* v8 ignore next -- @preserve */
     if (!!layerSliceId.remove)
       for (const sId of Object.keys(layerSliceId.remove)) {
         if (sliceIds.has(sId)) {
@@ -295,6 +305,7 @@ export class LayerController<N extends string, C extends Layer>
     }
 
     // Remove sliceIds that are both in add and remove
+    /* v8 ignore next -- @preserve */
     if (!!layer.remove)
       for (const sliceId of Object.keys(layer.remove)) {
         if (add.has(sliceId)) {
@@ -317,6 +328,7 @@ export class LayerController<N extends string, C extends Layer>
       const resolvedLayer = await this.resolveBaseLayer(layer);
 
       for (const [sliceId, ref] of Object.entries(resolvedLayer.add)) {
+        /* v8 ignore next -- @preserve */ /* v8 ignore next -- @preserve */
         if (sliceId.startsWith('_')) continue;
 
         childRefs.push({

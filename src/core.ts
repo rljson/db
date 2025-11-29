@@ -10,7 +10,6 @@ import {
   BaseValidator,
   ContentType,
   createInsertHistoryTableCfg,
-  InsertHistoryRow,
   Rljson,
   TableCfg,
   Validate,
@@ -133,22 +132,6 @@ export class Core {
     }
 
     return tableCfg;
-  }
-
-  /**
-   * Retrieves the insert history for a given table
-   * @param tableKey Table key of the table
-   * @returns Insert history Rljson
-   */
-  async getInsertHistory(tableKey: string): Promise<InsertHistoryRow<any>[]> {
-    const insertHistoryTableKey = `${tableKey}InsertHistory`;
-    const {
-      [insertHistoryTableKey]: { _data: insertHistoryRowsUnsorted },
-    } = await this._io.dumpTable({
-      table: insertHistoryTableKey,
-    });
-
-    return insertHistoryRowsUnsorted as InsertHistoryRow<any>[];
   }
 
   // ...........................................................................

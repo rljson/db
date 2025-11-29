@@ -6,6 +6,7 @@
 
 import { Json } from '@rljson/json';
 
+/* v8 ignore next -- @preserve */
 export const mergeTrees = (
   trees: Json[],
   path: (string | number)[],

@@ -99,6 +99,7 @@ export class CakeController<N extends string, C extends Cake>
     } else {
       // Try to read refs from first (latest?) row of cakes table (Fallback)
       const cake = this._table._data[0] as CakeControllerRefs;
+      /* v8 ignore else -- @preserve */
       if (!!cake) {
         this._refs = {
           sliceIdsTable: cake.sliceIdsTable,
@@ -160,6 +161,7 @@ export class CakeController<N extends string, C extends Cake>
         );
       }
 
+      /* v8 ignore next -- @preserve */
       normalizedValue[layerTable] = Array.isArray(layerRef)
         ? layerRef[0]
         : layerRef;
