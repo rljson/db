@@ -81,7 +81,7 @@ export class Db {
    */
   readonly notify: Notify;
 
-  private _cache: Map<string, ContainerWithControllers> = new Map();
+  private _cache: Map<string, Container> = new Map();
 
   // ...........................................................................
   /**
@@ -105,34 +105,23 @@ export class Db {
     //Isolate Property Key
     const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
 
-    const cacheHash = `${isolatedRoute.flat}|${JSON.stringify(
+    // Get Controllers
+    const controllers = await this.indexedControllers(isolatedRoute);
+
+    // Fetch Data
+    const data = await this._get(
+      isolatedRoute,
       where,
-    )}|${JSON.stringify(filter)}|${JSON.stringify(sliceIds)}`;
-    const isCached = this._cache.has(cacheHash);
-    if (isCached) {
-      return this._cache.get(cacheHash)!;
-    } else {
-      // Get Controllers
-      const controllers = await this.indexedControllers(isolatedRoute);
+      controllers,
+      filter,
+      sliceIds,
+    );
 
-      // Fetch Data
-      const data = await this._get(
-        isolatedRoute,
-        where,
-        controllers,
-        filter,
-        sliceIds,
-      );
-
-      const dataWithControllers: ContainerWithControllers = {
-        ...data,
-        ...{ controllers },
-      };
-
-      // Cache Data
-      this._cache.set(cacheHash, dataWithControllers);
-      return dataWithControllers;
-    }
+    const dataWithControllers: ContainerWithControllers = {
+      ...data,
+      ...{ controllers },
+    };
+    return dataWithControllers;
   }
 
   // ...........................................................................
@@ -155,6 +144,16 @@ export class Db {
     sliceIds?: SliceId[],
     routeAccumulator?: Route,
   ): Promise<Container> {
+    //Activate Cache
+    const cacheKey = `${route.flat}|${JSON.stringify(where)}|${JSON.stringify(
+      filter,
+    )}|${JSON.stringify(sliceIds)}|${routeAccumulator?.flat ?? ''}`;
+
+    const isCached = this._cache.has(cacheKey);
+    if (isCached) {
+      return this._cache.get(cacheKey)!;
+    }
+
     const nodeTableKey = route.top.tableKey;
     const nodeRoute = route;
     const nodeRouteRef = await this._getReferenceOfRouteSegment(nodeRoute.top);
@@ -287,7 +286,7 @@ export class Db {
           route.propertyKey!,
         );
 
-        return {
+        const result = {
           rljson: isolatedNode,
           tree: { [nodeTableKey]: node[nodeTableKey] },
           cell: nodeValue.map(
@@ -304,9 +303,14 @@ export class Db {
               } as Cell),
           ) as Cell[],
         };
+
+        //Set Cache
+        this._cache.set(cacheKey, result);
+
+        return result;
       }
 
-      return {
+      const result = {
         rljson: node,
         tree: { [nodeTableKey]: node[nodeTableKey] },
         cell: nodeValue.map(
@@ -322,6 +326,10 @@ export class Db {
             } as Cell),
         ) as Cell[],
       };
+      //Set Cache
+      this._cache.set(cacheKey, result);
+
+      return result;
     }
 
     // Fetch Children Data
@@ -641,7 +649,7 @@ export class Db {
     // Return Node with matched Children
     const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());
 
-    return {
+    const result = {
       rljson: {
         ...node,
         ...{
@@ -677,6 +685,10 @@ export class Db {
         )
         .flat(),
     };
+    //Set Cache
+    this._cache.set(cacheKey, result);
+
+    return result;
   }
 
   // ...........................................................................

@@ -567,12 +567,12 @@ describe('Db', () => {
       const { rljson: firstGet } = await db.get(Route.fromFlat(route), where);
 
       const cache = db.cache;
-      expect(cache.size).toBe(1);
-      expect(firstGet).toBe(Array.from(cache.values()).map((v) => v.rljson)[0]);
+      expect(cache.size).toBe(7);
+      expect(firstGet).toBe(Array.from(cache.values()).map((v) => v.rljson)[6]);
 
       const { rljson: secondGet } = await db.get(Route.fromFlat(route), where);
       expect(secondGet).toEqual(firstGet);
-      expect(cache.size).toBe(1);
+      expect(cache.size).toBe(7);
     });
 
     it('get component property by ref', async () => {
