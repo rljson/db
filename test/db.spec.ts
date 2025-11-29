@@ -2169,7 +2169,7 @@ describe('Db', () => {
             exampleData.push([[comp.repairedByWorkshop]]);
             continue;
           }
-          exampleData.push([[]]); // Value missing in component
+          exampleData.push([[null]]); // Value missing in component
         }
       }
 

@@ -4,7 +4,11 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-export const isolate = (tree: any, path: (string | number)[]): any => {
+export const isolate = (
+  tree: any,
+  path: (string | number)[],
+  preservedKeys: string[] = [],
+): any => {
   // Handle empty path - return empty object/array based on tree type
   if (path.length === 0) {
     return Array.isArray(tree) ? [] : {};
@@ -20,10 +24,13 @@ export const isolate = (tree: any, path: (string | number)[]): any => {
   // Create new container based on tree type
   const result = Array.isArray(tree) ? [] : {};
 
-  // Preserve properties with keys starting with "_"
+  // Preserve properties with keys starting with "_" and any keys in preservedKeys array
   if (!Array.isArray(tree)) {
     for (const key in tree) {
-      if (typeof key === 'string' && key.startsWith('_')) {
+      if (
+        (typeof key === 'string' && key.startsWith('_')) ||
+        preservedKeys.includes(key)
+      ) {
         (result as any)[key] = tree[key];
       }
     }
@@ -39,13 +46,14 @@ export const isolate = (tree: any, path: (string | number)[]): any => {
   // If this is the last key in path, include the full value
   if (remainingPath.length === 0) {
     if (Array.isArray(result)) {
-      (result as any[])[currentKey as number] = currentValue;
+      // For arrays, push the value to avoid sparse arrays
+      (result as any[]).push(currentValue);
     } else {
       (result as any)[currentKey] = currentValue;
     }
   } else {
-    // Recursively isolate the remaining path
-    const isolatedChild = isolate(currentValue, remainingPath);
+    // Recursively isolate the remaining path, passing down preservedKeys
+    const isolatedChild = isolate(currentValue, remainingPath, preservedKeys);
 
     // Only include the key if the isolated child has content
     const hasContent = Array.isArray(isolatedChild)
@@ -54,7 +62,8 @@ export const isolate = (tree: any, path: (string | number)[]): any => {
 
     if (hasContent || isolatedChild === null) {
       if (Array.isArray(result)) {
-        (result as any[])[currentKey as number] = isolatedChild;
+        // For arrays, push the value to avoid sparse arrays
+        (result as any[]).push(isolatedChild);
       } else {
         (result as any)[currentKey] = isolatedChild;
       }

@@ -8,6 +8,7 @@ import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Json, JsonH } from '@rljson/json';
 import {
+  Cake,
   CakesTable,
   Layer,
   LayersTable,
@@ -413,7 +414,7 @@ describe('Controller', () => {
         } as LayerControllerRefs;
 
         //Create LayerController
-        let layerCtrl: LayerController<'CarGeneral', Record<string, string>>;
+        let layerCtrl: LayerController<'CarGeneral', Layer>;
 
         //Wrong TableKey
         layerCtrl = new LayerController(core, '#', carGeneralLayerRefs);
@@ -784,7 +785,7 @@ describe('Controller', () => {
         } as CakeControllerRefs;
 
         //Create CakeController
-        let cakeCtrl: CakeController<'CarCake', Record<string, string>>;
+        let cakeCtrl: CakeController<'CarCake', Cake>;
 
         //Wrong TableKey
         cakeCtrl = new CakeController(core, '#', carCakeRefs);

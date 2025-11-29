@@ -1010,6 +1010,7 @@ export class Db {
         ) as ComponentsTable<Json>;
 
         for (const component of components._data) {
+          if (component == undefined) debugger;
           delete (component as any)._tableKey;
           delete (component as any)._type;
 

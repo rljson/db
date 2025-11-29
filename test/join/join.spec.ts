@@ -240,11 +240,15 @@ describe('Join', () => {
         new Set(selected.rows.flatMap((r) => r)),
       );
 
-      expect(selectedResult.length).toBe(8);
-      expect(selectedResult).toEqual([
+      expect(selectedResult.length).toBe(12);
+      expect(selectedResult.flat()).toEqual([
+        'Volkswagen',
         'Volkswagen',
         'Audi',
+        'Audi',
         'BMW',
+        'BMW',
+        'Tesla',
         'Tesla',
         'Ford',
         'Chevrolet',
@@ -279,7 +283,7 @@ describe('Join', () => {
         'Audi',
         'Audi',
       ];
-      expect(sortedResult).toEqual(expected);
+      expect(sortedResult.flat()).toEqual(expected);
     });
   });
 
@@ -298,7 +302,9 @@ describe('Join', () => {
 
       const inserts = await join.setValue(setValue).insert();
       const insert = inserts[0];
-      const inserteds = await db.insert(insert);
+      const inserteds = await db.insert(insert.route, insert.tree, {
+        skipHistory: true,
+      });
       const inserted = inserteds[0];
 
       const writtenCakeRef = inserted['carCakeRef'] as string;
@@ -309,7 +315,7 @@ describe('Join', () => {
         {},
       );
 
-      expect(writtenData['carGeneral']._data.length).toBe(12);
+      expect(writtenData['carGeneral']._data.length).toBe(1);
       const writtenDataSet = new Set(
         writtenData['carGeneral']._data.map((d: any) => d['brand']),
       );

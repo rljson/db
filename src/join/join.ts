@@ -5,18 +5,30 @@
 // found in the LICENSE file in the root of this package.
 
 import { Hash } from '@rljson/hash';
-import { JsonValue, JsonValueType } from '@rljson/json';
-import { Insert, Ref, Route, SliceId } from '@rljson/rljson';
+import { Json, JsonValue, JsonValueType } from '@rljson/json';
+import { Ref, Route, SliceId } from '@rljson/rljson';
 
-import { Container } from '../db.ts';
+import { traverse } from 'object-traversal';
+
+import { Cell, Container } from '../db.ts';
 import { inject } from '../tools/inject.ts';
 import { isolate } from '../tools/isolate.ts';
+import { mergeTrees } from '../tools/merge-trees.ts';
 
 import { RowFilterProcessor } from './filter/row-filter-processor.ts';
 import { RowFilter } from './filter/row-filter.ts';
 import { ColumnSelection } from './selection/column-selection.ts';
 import { SetValue } from './set-value/set-value.ts';
 import { RowSort } from './sort/row-sort.ts';
+
+export const joinPreserveKeys = [
+  'sliceIdsTable',
+  'sliceIdsRow',
+  'base',
+  'sliceIdsTable',
+  'sliceIdsTableRow',
+  'componentsTable',
+];
 
 export type JoinProcessType = 'filter' | 'setValue' | 'selection' | 'sort';
 
@@ -115,7 +127,11 @@ export class Join {
               );
             }
 
-            const insertTree = isolate({ ...col.value.tree }, cell.path[0]);
+            const insertTree = isolate(
+              { ...col.value.tree },
+              cell.path[0],
+              joinPreserveKeys,
+            );
             inject({ ...insertTree }, cell.path[0], setValue.value);
 
             const insert: Container = {
@@ -129,10 +145,10 @@ export class Join {
               rljson: col.value.rljson,
             };
 
-            insertCol.inserts = [...(insertCol.inserts ?? []), insert];
+            insertCol.inserts = insert ? [insert] : insertCol.inserts;
           }
-          insertCols.push(insertCol);
-        } else continue;
+        }
+        insertCols.push(insertCol);
       }
 
       data[sliceId] = {
@@ -259,10 +275,76 @@ export class Join {
   /**
    * Returns insert Object of the join
    */
-  insert(): Insert<any>[] {
-    debugger;
+  insert(): { route: Route; tree: Json }[] {
+    const colInserts: Map<
+      number,
+      { route: Route; cell: Cell[]; trees: Json[] }
+    > = new Map();
+    for (const row of Object.values(this.data)) {
+      for (let i = 0; i < this.columnCount; i++) {
+        const col = row.columns[i];
+        if (col.inserts && col.inserts.length > 0) {
+          if (!colInserts.has(i)) {
+            colInserts.set(i, {
+              route: col.route,
+              cell: [],
+              trees: [],
+            });
+          }
+          for (const insert of col.inserts) {
+            colInserts.get(i)!.cell.push(...insert.cell);
+            colInserts.get(i)!.trees.push(insert.tree);
+          }
+        }
+      }
+    }
 
-    return [] as Insert<any>[];
+    const inserts: { route: Route; tree: Json }[] = [];
+
+    for (const [colIndex, colInsert] of colInserts) {
+      const trees = colInsert.trees;
+
+      traverse(trees, ({ parent, key }) => {
+        if (key == '_hash') {
+          delete parent![key];
+        }
+      });
+
+      const insertPathSet = new Set(
+        colInsert.cell
+          .flatMap((c) => c.path)
+          .map((p) => p.slice(0, 8))
+          .map((v) => JSON.stringify(v)),
+      );
+      const insertPaths = Array.from(insertPathSet).map((v) => JSON.parse(v));
+
+      if (insertPaths.length > 1) {
+        throw new Error(
+          `Join: Error while getting inserts: ` +
+            `Cannot merge inserts for column at index ${colIndex} ` +
+            `with multiple insert paths: [${Array.from(insertPathSet).join(
+              ', ',
+            )}].`,
+        );
+      }
+
+      const insertPath = insertPaths[0];
+      const insertTree = mergeTrees(trees as any, insertPath, joinPreserveKeys);
+
+      if (Object.keys(insertTree).length === 0) {
+        throw new Error(
+          `Join: Error while getting inserts: ` +
+            `Merged insert tree for column at index ${colIndex} is empty.`,
+        );
+      }
+
+      inserts.push({
+        route: colInsert.route,
+        tree: insertTree,
+      });
+    }
+
+    return inserts;
   }
 
   // ...........................................................................
@@ -436,9 +518,10 @@ export class Join {
                 con.cell.flatMap((c) => c.value),
               ) ?? null
             : null;
-        const baseValue = joinCol
-          ? joinCol.value.cell.flatMap((c) => c.value) ?? null
-          : null;
+        const baseValue =
+          joinCol && joinCol.value.cell
+            ? joinCol.value.cell.flatMap((c) => c.value) ?? null
+            : null;
 
         row.push(insertValue ?? baseValue);
       }
@@ -464,10 +547,11 @@ export class Join {
     for (const sliceId of sliceIds) {
       const cols = rows[sliceId];
       const rowHash = Hash.default.calcHash(
-        cols.map(
-          (col) =>
-            col.inserts?.flatMap((con) => con.cell.flatMap((c) => c.value)) ??
-            col.value.cell.flatMap((c) => c.value),
+        cols.map((col) =>
+          col.inserts?.flatMap((con) => con.cell.flatMap((c) => c.value)) ??
+          col.value.cell
+            ? col.value.cell.flatMap((c) => c.value)
+            : [],
         ) as any[],
       );
       hashedRows[sliceId] = {

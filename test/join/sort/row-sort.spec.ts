@@ -8,10 +8,10 @@ import { Route } from '@rljson/rljson';
 
 import { describe, expect, it } from 'vitest';
 
+import { Container } from '../../../src/db';
 import { Join, JoinColumn, JoinRows } from '../../../src/join/join';
 import { ColumnSelection } from '../../../src/join/selection/column-selection';
 import { RowSort } from '../../../src/join/sort/row-sort';
-
 
 describe('RowSort', () => {
   const columnSelection = new ColumnSelection([
@@ -132,10 +132,10 @@ describe('RowSort', () => {
         const joinRows: JoinRows = rows
           .map((r, i) => ({
             ['row' + i]: r.map((v, colIdx) => ({
-              value: v,
+              value: { cell: [{ value: [v] }] } as Container,
               route: Route.fromFlat(columnSelection.columns[colIdx].route),
-              insert: null,
-            })) as JoinColumn<any>[],
+              inserts: null,
+            })) as JoinColumn[],
           }))
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -161,10 +161,10 @@ describe('RowSort', () => {
         const joinRows: JoinRows = rows
           .map((r, i) => ({
             ['row' + i]: r.map((v, colIdx) => ({
-              value: v,
+              value: { cell: [{ value: [v] }] } as Container,
               route: Route.fromFlat(columnSelection.columns[colIdx].route),
-              insert: null,
-            })) as JoinColumn<any>[],
+              inserts: null,
+            })) as JoinColumn[],
           }))
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -178,7 +178,9 @@ describe('RowSort', () => {
         // Act
         const result = sort
           .applyTo(join)
-          .map((index) => join.row(index).map((c) => c.value));
+          .map((index) =>
+            join.row(index).flatMap((c) => c.value.cell[0].value),
+          );
 
         // Assert
         expect(result).toEqual([
@@ -202,10 +204,10 @@ describe('RowSort', () => {
         const joinRows: JoinRows = rows
           .map((r, i) => ({
             ['row' + i]: r.map((v, colIdx) => ({
-              value: v,
+              value: { cell: [{ value: [v] }] } as Container,
               route: Route.fromFlat(columnSelection.columns[colIdx].route),
-              insert: null,
-            })) as JoinColumn<any>[],
+              inserts: null,
+            })) as JoinColumn[],
           }))
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -216,7 +218,9 @@ describe('RowSort', () => {
         // Act
         const result = sort
           .applyTo(join)
-          .map((index) => join.row(index).map((c) => c.value));
+          .map((index) =>
+            join.row(index).flatMap((c) => c.value.cell[0].value),
+          );
 
         // Assert
         expect(result).toEqual([
@@ -237,10 +241,10 @@ describe('RowSort', () => {
         const joinRows: JoinRows = rows
           .map((r, i) => ({
             ['row' + i]: r.map((v, colIdx) => ({
-              value: v,
+              value: { cell: [{ value: [v] }] } as Container,
               route: Route.fromFlat(columnSelection.columns[colIdx].route),
-              insert: null,
-            })) as JoinColumn<any>[],
+              inserts: null,
+            })) as JoinColumn[],
           }))
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -254,7 +258,9 @@ describe('RowSort', () => {
 
           const result = sort
             .applyTo(join)
-            .map((index) => join.row(index).map((c) => c.value));
+            .map((index) =>
+              join.row(index).flatMap((c) => c.value.cell[0].value),
+            );
 
           expect(result).toEqual([
             ['Alice', 20],
@@ -270,7 +276,9 @@ describe('RowSort', () => {
           });
           const result = sort
             .applyTo(join)
-            .map((index) => join.row(index).map((c) => c.value));
+            .map((index) =>
+              join.row(index).flatMap((c) => c.value.cell[0].value),
+            );
 
           // Assert
           expect(result).toEqual([
@@ -291,10 +299,10 @@ describe('RowSort', () => {
         const joinRows: JoinRows = rows
           .map((r, i) => ({
             ['row' + i]: r.map((v, colIdx) => ({
-              value: v,
+              value: { cell: [{ value: [v] }] } as Container,
               route: Route.fromFlat(columnSelection.columns[colIdx].route),
-              insert: null,
-            })) as JoinColumn<any>[],
+              inserts: null,
+            })) as JoinColumn[],
           }))
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -307,7 +315,9 @@ describe('RowSort', () => {
           });
           const result = sort
             .applyTo(join)
-            .map((index) => join.row(index).map((c) => c.value));
+            .map((index) =>
+              join.row(index).flatMap((c) => c.value.cell[0].value),
+            );
 
           expect(result).toEqual([
             ['Alice', 20],
@@ -323,7 +333,9 @@ describe('RowSort', () => {
           });
           const result = sort
             .applyTo(join)
-            .map((index) => join.row(index).map((c) => c.value));
+            .map((index) =>
+              join.row(index).flatMap((c) => c.value.cell[0].value),
+            );
 
           // Assert
           expect(result).toEqual([
@@ -345,10 +357,10 @@ describe('RowSort', () => {
         const joinRows: JoinRows = rows
           .map((r, i) => ({
             ['row' + i]: r.map((v, colIdx) => ({
-              value: v,
+              value: { cell: [{ value: [v] }] } as Container,
               route: Route.fromFlat(columnSelection.columns[colIdx].route),
-              insert: null,
-            })) as JoinColumn<any>[],
+              inserts: null,
+            })) as JoinColumn[],
           }))
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -361,7 +373,9 @@ describe('RowSort', () => {
         });
         const result2 = sort2
           .applyTo(join)
-          .map((index) => join.row(index).map((c) => c.value));
+          .map((index) =>
+            join.row(index).flatMap((c) => c.value.cell[0].value),
+          );
 
         expect(result2).toEqual([
           ['Charlie Old', 85],
@@ -377,7 +391,9 @@ describe('RowSort', () => {
         });
         const result = sort
           .applyTo(join)
-          .map((index) => join.row(index).map((c) => c.value));
+          .map((index) =>
+            join.row(index).flatMap((c) => c.value.cell[0].value),
+          );
 
         expect(result).toEqual([
           ['Alice', 20],

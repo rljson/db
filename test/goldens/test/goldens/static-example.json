@@ -386,7 +386,7 @@
     "_hash": "KS0HqoBEYj0KzQT49k7JXL"
   },
   "carTechnical": {
-    "_tableCfg": "OXvp3M8zt0dWygHTZfTp7I",
+    "_tableCfg": "lem2sCEhtEjKJINATV6-gg",
     "_type": "components",
     "_data": [
       {
@@ -475,7 +475,7 @@
         "_hash": "if6y59aWx09S-ucZB3_E8O"
       }
     ],
-    "_hash": "OkdHY5J39TuKCYBXy9Shgf"
+    "_hash": "2o9lbOVB0GJQJzeTgQfAn9"
   },
   "carColor": {
     "_tableCfg": "ly3011-E3YdeftOYLKqzXd",
@@ -1352,9 +1352,10 @@
             "type": "jsonValue",
             "ref": {
               "tableKey": "carDimensions",
-              "_hash": "XCICxBKlpdfihvZILuFLbB"
+              "type": "components",
+              "_hash": "b6PGxGAxXqgCMYPtqSecTv"
             },
-            "_hash": "apQS8aNzHcY3X9XcfXpzxS"
+            "_hash": "_4H6FEX6H-j6nG-JOIG6bz"
           },
           {
             "key": "repairedByWorkshop",
@@ -1365,7 +1366,7 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "OXvp3M8zt0dWygHTZfTp7I"
+        "_hash": "lem2sCEhtEjKJINATV6-gg"
       },
       {
         "key": "carColor",
