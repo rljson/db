@@ -102,10 +102,10 @@ describe('RowSort', () => {
         const joinRows: JoinRows = rows
           .map((r, i) => ({
             ['row' + i]: r.map((v, colIdx) => ({
-              value: v,
+              value: { cell: [{ value: [v] }] } as Container,
               route: Route.fromFlat(columnSelection.columns[colIdx].route),
-              insert: null,
-            })) as JoinColumn<any>[],
+              inserts: null,
+            })) as JoinColumn[],
           }))
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
