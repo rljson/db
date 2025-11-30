@@ -323,4 +323,52 @@ describe('Join', () => {
       expect(writtenDataSet.size).toBe(1);
     });
   });
+
+  describe('deeply nested', () => {
+    beforeEach(async () => {});
+    it('should join on deeply nested structures and insert', async () => {
+      const cakeKey = 'catalogCake';
+      const cakeRef = (staticExample().catalogCake._data[0]._hash ??
+        '') as string;
+
+      const route = `${cakeKey}/catalogSeriesLayer/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+
+      const brandColumnSelectionDeeplyNested =
+        ColumnSelection.exampleCarsDeeplyNestedColumnSelection();
+
+      // Initial join for CarGeneral -> Brand
+      const join = await db.join(
+        brandColumnSelectionDeeplyNested,
+        cakeKey,
+        cakeRef,
+      );
+
+      const setValue: SetValue = {
+        route,
+        value: 'Opel',
+      };
+
+      const inserts = await join.setValue(setValue).insert();
+      const insert = inserts[0];
+      const inserteds = await db.insert(insert.route, insert.tree, {
+        skipHistory: true,
+      });
+      const inserted = inserteds[0];
+
+      const writtenCakeRef = inserted['carCakeRef'] as string;
+      const { rljson: writtenData } = await db.get(
+        Route.fromFlat(
+          `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/brand`,
+        ),
+        {},
+      );
+
+      expect(writtenData['carGeneral']._data.length).toBe(1);
+      const writtenDataSet = new Set(
+        writtenData['carGeneral']._data.map((d: any) => d['brand']),
+      );
+      expect(writtenDataSet.has('Opel')).toBe(true);
+      expect(writtenDataSet.size).toBe(1);
+    });
+  });
 });

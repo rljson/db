@@ -422,6 +422,21 @@ export class ColumnSelection {
     ]);
   }
 
+  static exampleCarsDeeplyNestedColumnSelection(): ColumnSelection {
+    return new ColumnSelection([
+      {
+        key: 'brand',
+        route:
+          'catalogCake/catalogSeriesLayer/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand',
+        alias: 'brand',
+        titleLong: 'Car Brand',
+        titleShort: 'Brand',
+        type: 'string',
+        _hash: '',
+      } as ColumnInfo,
+    ]);
+  }
+
   static exampleCarsColumnSelectionOnlySomeColumns(): ColumnSelection {
     return new ColumnSelection([
       {
