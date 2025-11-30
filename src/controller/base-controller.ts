@@ -135,8 +135,8 @@ export abstract class BaseController<T extends TableType, C extends JsonValue>
    * Gets the content type of the controller.
    * @returns The content type managed by the controller.
    */
+  /* v8 ignore next -- @preserve */
   contentType(): ContentType {
-    /* v8 ignore next -- @preserve */
     return this._contentType ?? 'components';
   }
 

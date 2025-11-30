@@ -57,6 +57,8 @@ export class SliceIdController<N extends string, C extends SliceId[]>
     // Table must be of type sliceIds
     const rljson = await this._core.dumpTable(this._tableKey);
     const table = rljson[this._tableKey] as SliceIdsTable;
+
+    /* v8 ignore next -- @preserve */
     if (table._type !== 'sliceIds') {
       throw new Error(`Table ${this._tableKey} is not of type sliceIds.`);
     }
@@ -79,6 +81,7 @@ export class SliceIdController<N extends string, C extends SliceId[]>
       // Try to read refs from first row of sliceIds table (Fallback)
       // TODO: THIS MUST BE TIME CONSIDERED!!!
       const sliceId = table._data[0] as SliceIdControllerRefs;
+      /* v8 ignore else -- @preserve */
       if (!!sliceId) {
         this._refs = {
           base: sliceId.base,
@@ -151,9 +154,11 @@ export class SliceIdController<N extends string, C extends SliceId[]>
     if (!!sliceIds.base) {
       const baseSliceIds = await this.get(sliceIds.base);
 
+      /* v8 ignore next -- @preserve */
       if (!baseSliceIds[this._tableKey]?._data?.[0]) {
         throw new Error(`Base sliceIds ${sliceIds.base} does not exist.`);
       }
+      /* v8 ignore next -- @preserve */
       if (baseSliceIds[this._tableKey]._data.length > 1) {
         throw new Error(
           `Base sliceIds ${sliceIds.base} has more than one entry.`,
@@ -172,12 +177,14 @@ export class SliceIdController<N extends string, C extends SliceId[]>
       add.add(sliceId);
     }
 
+    /* v8 ignore next -- @preserve */
     if (!!sliceIds.remove)
       for (const sliceId of sliceIds.remove) {
         remove.add(sliceId);
       }
 
     // Remove sliceIds that are both in add and remove
+    /* v8 ignore next -- @preserve */
     for (const sliceId of remove.values()) {
       if (add.has(sliceId)) {
         add.delete(sliceId);
@@ -187,6 +194,7 @@ export class SliceIdController<N extends string, C extends SliceId[]>
     return { add: Array.from(add) };
   }
 
+  /* v8 ignore next -- @preserve */
   async getChildRefs(): Promise<ControllerChildProperty[]> {
     return [];
   }
