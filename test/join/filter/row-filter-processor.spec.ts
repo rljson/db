@@ -8,6 +8,7 @@ import { Route } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { Container } from '../../../src/db';
 import { BooleanFilterProcessor } from '../../../src/join/filter/boolean-filter-processor';
 import { NumberFilterProcessor } from '../../../src/join/filter/number-filter-processor';
 import { exampleRowFilter } from '../../../src/join/filter/row-filter';
@@ -133,7 +134,7 @@ describe('RowFilterProcessor', () => {
 
           const threeJoinRows: JoinRows = threeRows
             .map((r, i) => ({
-              ['row' + i]: r.map((v) => ({ value: v })) as JoinColumn<any>[],
+              ['row' + i]: r.map((v) => ({ value: v })) as JoinColumn[],
             }))
             .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -190,10 +191,10 @@ describe('RowFilterProcessor', () => {
         const threeJoinRows: JoinRows = threeRows
           .map((r, i) => ({
             ['row' + i]: r.map((v, colIdx) => ({
-              value: v,
+              value: { cell: [{ value: [v] }] } as Container,
               route: Route.fromFlat(['a', 'b', 'c'][colIdx]),
-              insert: null,
-            })) as JoinColumn<any>[],
+              inserts: null,
+            })) as JoinColumn[],
           }))
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -255,10 +256,16 @@ describe('RowFilterProcessor', () => {
           const threeJoinRows: JoinRows = threeRows
             .map((r, i) => ({
               ['row' + i]: r.map((v, colIdx) => ({
-                value: v,
+                value: {
+                  cell: [
+                    {
+                      value: [v],
+                    },
+                  ],
+                } as Container,
                 route: Route.fromFlat(['a', 'b', 'c'][colIdx]),
-                insert: null,
-              })) as JoinColumn<any>[],
+                inserts: null,
+              })) as JoinColumn[],
             }))
             .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -323,10 +330,10 @@ describe('RowFilterProcessor', () => {
           const threeJoinRows: JoinRows = threeRows
             .map((r, i) => ({
               ['row' + i]: r.map((v, colIdx) => ({
-                value: v,
+                value: { cell: [{ value: [v] }] } as Container,
                 route: Route.fromFlat(['a', 'b', 'c'][colIdx]),
-                insert: null,
-              })) as JoinColumn<any>[],
+                inserts: null,
+              })) as JoinColumn[],
             }))
             .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -389,10 +396,10 @@ describe('RowFilterProcessor', () => {
           const threeJoinRows: JoinRows = threeRows
             .map((r, i) => ({
               ['row' + i]: r.map((v, colIdx) => ({
-                value: v,
+                value: { cell: [{ value: [v] }] } as Container,
                 route: Route.fromFlat(['a', 'b', 'c'][colIdx]),
-                insert: null,
-              })) as JoinColumn<any>[],
+                inserts: null,
+              })) as JoinColumn[],
             }))
             .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -453,10 +460,10 @@ describe('RowFilterProcessor', () => {
           const threeJoinRows: JoinRows = threeRows
             .map((r, i) => ({
               ['row' + i]: r.map((v, colIdx) => ({
-                value: v,
+                value: { cell: [{ value: [v] }] } as Container,
                 route: Route.fromFlat(['a', 'b', 'c'][colIdx]),
-                insert: null,
-              })) as JoinColumn<any>[],
+                inserts: null,
+              })) as JoinColumn[],
             }))
             .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 
@@ -519,10 +526,10 @@ describe('RowFilterProcessor', () => {
         const threeJoinRows: JoinRows = threeRows
           .map((r, i) => ({
             ['row' + i]: r.map((v, colIdx) => ({
-              value: v,
+              value: { cell: [{ value: [v] }] } as Container,
               route: Route.fromFlat(['a', 'b', 'c'][colIdx]),
-              insert: null,
-            })) as JoinColumn<any>[],
+              inserts: null,
+            })) as JoinColumn[],
           }))
           .reduce((acc, curr) => ({ ...acc, ...curr }), {});
 

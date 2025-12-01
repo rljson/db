@@ -5,25 +5,24 @@
 // found in the LICENSE file in the root of this package.
 
 import { rmhsh } from '@rljson/hash';
-import { Json } from '@rljson/json';
-import { Route } from '@rljson/rljson';
+import { Edit, MultiEdit, Route } from '@rljson/rljson';
 
 import { Db } from '../db.ts';
+import { RowFilter } from '../join/filter/row-filter.ts';
 import { Join, JoinRowsHashed } from '../join/join.ts';
 import {
   ColumnInfo,
   ColumnSelection,
 } from '../join/selection/column-selection.ts';
-import { RowSort } from '../join/sort/row-sort.ts';
+import { SetValue } from '../join/set-value/set-value.ts';
+import { RowSort, RowSortType } from '../join/sort/row-sort.ts';
 
 import {
-  EditActionColumnSelection,
-  EditActionRowFilter,
-  EditActionRowSort,
-  EditActionSetValue,
-} from './edit-action.ts';
-import { Edit } from './edit.ts';
-import { MultiEdit } from './multi-edit.ts';
+  EditColumnSelection,
+  EditRowFilter,
+  EditRowSort,
+  EditSetValue,
+} from './edit.ts';
 
 export type MultiEditColumnSelection = ColumnSelection;
 export type MultiEditRowHashed = JoinRowsHashed;
@@ -85,8 +84,8 @@ export class MultiEditProcessor {
     if (!this._join) {
       switch (action.type) {
         case 'selection':
-          const editColInfos =
-            action.data as EditActionColumnSelection as ColumnInfo[];
+          const editColInfos = (edit as EditColumnSelection).action.data
+            .columns as ColumnInfo[];
           const editColSelection = new ColumnSelection(editColInfos);
           this._join = await this.db.join(
             editColSelection,
@@ -95,7 +94,7 @@ export class MultiEditProcessor {
           );
           break;
         case 'setValue':
-          const editSetValue = action.data as EditActionSetValue;
+          const editSetValue = (edit as EditSetValue).action.data as SetValue;
           const editSetValueKey = Route.fromFlat(editSetValue.route).segment()
             .tableKey;
           const editSetValueColumnInfo: ColumnInfo = {
@@ -119,7 +118,7 @@ export class MultiEditProcessor {
           ).setValue(editSetValue);
           break;
         case 'sort':
-          const editRowSort = action.data as EditActionRowSort;
+          const editRowSort = (edit as EditRowSort).action.data;
           const editRowSortColumnInfos: ColumnInfo[] = [];
           for (const routeStr of Object.keys(editRowSort)) {
             const route = Route.fromFlat(routeStr);
@@ -147,7 +146,7 @@ export class MultiEditProcessor {
           ).sort(new RowSort(editRowSort));
           break;
         case 'filter':
-          const editRowFilter = action.data as EditActionRowFilter;
+          const editRowFilter = (edit as EditRowFilter).action.data;
           const editRowFilterColumnInfos: ColumnInfo[] = [];
           for (const colFilter of editRowFilter.columnFilters) {
             const route = Route.fromFlat(colFilter.column);
@@ -181,23 +180,27 @@ export class MultiEditProcessor {
     } else {
       switch (action.type) {
         case 'selection':
-          const editColInfos =
-            action.data as EditActionColumnSelection as ColumnInfo[];
+          const editColInfos = (edit as EditColumnSelection).action.data
+            .columns as ColumnInfo[];
           const editColSelection = new ColumnSelection(editColInfos);
           this._join = this._join.select(editColSelection);
           break;
         case 'setValue':
-          const editSetValue = rmhsh(action.data as Json) as EditActionSetValue;
+          const editSetValue = rmhsh(
+            (edit as EditSetValue).action.data as SetValue,
+          );
           this._join = this._join.setValue(editSetValue);
           break;
         case 'sort':
-          const editRowSort = rmhsh(action.data as Json) as EditActionRowSort;
+          const editRowSort = rmhsh(
+            (edit as EditRowSort).action.data,
+          ) as RowSortType;
           this._join = this._join.sort(new RowSort(editRowSort));
           break;
         case 'filter':
           const editRowFilter = rmhsh(
-            action.data as Json,
-          ) as EditActionRowFilter;
+            (edit as EditRowFilter).action.data,
+          ) as RowFilter;
           this._join = this._join.filter(editRowFilter);
           break;
         /* v8 ignore next -- @preserve */

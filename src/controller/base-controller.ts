@@ -6,9 +6,11 @@
 
 import { equals, Json, JsonValue } from '@rljson/json';
 import {
+  ContentType,
   InsertHistoryRow,
   Ref,
   Rljson,
+  TableCfg,
   TableKey,
   TableType,
 } from '@rljson/rljson';
@@ -16,11 +18,18 @@ import {
 import { Core } from '../core.ts';
 
 import { CakeControllerCommands } from './cake-controller.ts';
-import { Controller, ControllerRefs } from './controller.ts';
+import {
+  Controller,
+  ControllerChildProperty,
+  ControllerRefs,
+} from './controller.ts';
 
-export abstract class BaseController<T extends TableType>
-  implements Controller<any, any>
+export abstract class BaseController<T extends TableType, C extends JsonValue>
+  implements Controller<T, C, string>
 {
+  protected _contentType?: ContentType;
+  protected _tableCfg?: TableCfg;
+
   constructor(
     protected readonly _core: Core,
     protected readonly _tableKey: TableKey,
@@ -29,7 +38,7 @@ export abstract class BaseController<T extends TableType>
   // ...........................................................................
   abstract insert(
     command: CakeControllerCommands,
-    value: Json,
+    value: C,
     origin?: Ref,
     refs?: ControllerRefs,
   ): Promise<InsertHistoryRow<any>[]>;
@@ -41,10 +50,14 @@ export abstract class BaseController<T extends TableType>
   abstract getChildRefs(
     where: string | Json,
     filter?: Json,
-  ): Promise<Array<{ tableKey: TableKey; columnKey?: string; ref: Ref }>>;
+  ): Promise<ControllerChildProperty[]>;
 
   // ...........................................................................
-  abstract filterRow(row: Json, key: string, value: JsonValue): boolean;
+  abstract filterRow(
+    row: Json,
+    key: string,
+    value: JsonValue,
+  ): Promise<boolean>;
 
   // ...........................................................................
   /**
@@ -115,5 +128,30 @@ export abstract class BaseController<T extends TableType>
       ...filter,
     } as { [column: string]: JsonValue });
     return rows;
+  }
+
+  // ...........................................................................
+  /**
+   * Gets the content type of the controller.
+   * @returns The content type managed by the controller.
+   */
+  /* v8 ignore next -- @preserve */
+  contentType(): ContentType {
+    return this._contentType ?? 'components';
+  }
+
+  // ...........................................................................
+  /**
+   * Gets the table configuration of the controller.
+   * @returns The table configuration managed by the controller.
+   */
+  tableCfg(): TableCfg {
+    /* v8 ignore next -- @preserve */
+    if (!this._tableCfg) {
+      throw new Error(
+        `TableCfg for controller ${this._tableKey} is not initialized.`,
+      );
+    }
+    return this._tableCfg;
   }
 }

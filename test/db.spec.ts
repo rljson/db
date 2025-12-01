@@ -8,15 +8,28 @@ import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import {
-  Insert, InsertHistory, InsertHistoryRow, LayerRef, LayersTable, Route, SliceIdsTable
+  Cake,
+  InsertHistoryRow,
+  InsertHistoryTable,
+  Layer,
+  LayersTable,
+  Route,
+  SliceIdsTable,
 } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { CarGeneral, carsExample } from '../src/cars-example';
 import { Db } from '../src/db';
-import { ColumnInfo, ColumnSelection } from '../src/join/selection/column-selection';
-
+import {
+  CarGeneral,
+  staticExample,
+} from '../src/example-static/example-static';
+import {
+  ColumnInfo,
+  ColumnSelection,
+} from '../src/join/selection/column-selection';
+import { inject } from '../src/tools/inject';
+import { isolate } from '../src/tools/isolate';
 
 describe('Db', () => {
   let db: Db;
@@ -31,12 +44,12 @@ describe('Db', () => {
     db = new Db(io);
 
     //Create Tables for TableCfgs in carsExample
-    for (const tableCfg of carsExample().tableCfgs._data) {
+    for (const tableCfg of staticExample().tableCfgs._data) {
       await db.core.createTableWithInsertHistory(tableCfg);
     }
 
     //Import Data
-    await db.core.import(carsExample());
+    await db.core.import(staticExample());
   });
 
   describe('core', () => {
@@ -76,18 +89,38 @@ describe('Db', () => {
 
       expect(inserts0.length).toBe(0);
 
-      //Insert new carGeneral
-      const insert0: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
+      const route = Route.fromFlat(`carGeneral`);
+
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component1 = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
           _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-      };
-      await db.insert(insert0);
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert1 = isolate(tree, path);
+      inject(insert1, path, component1);
+
+      await db.insert(route, insert1);
 
       const {
         ['carGeneralInsertHistory']: { _data: inserts1 },
@@ -98,18 +131,29 @@ describe('Db', () => {
 
       expect(inserts1.length).toBe(1);
 
-      //Insert another carGeneral
-      const insert1: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
+      const component2 = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
           _hash: '',
-          brand: 'Mercedes Benz',
-          doors: 4,
-          type: 'EQC 400 4MATIC',
-        } as CarGeneral,
-      };
-      await db.insert(insert1);
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert2 = isolate(tree, path);
+      inject(insert2, path, component2);
+
+      await db.insert(route, insert2);
 
       const {
         ['carGeneralInsertHistory']: { _data: inserts2Asc },
@@ -139,25 +183,47 @@ describe('Db', () => {
 
   describe('getInsertHistoryRowsByRef(table,ref)', () => {
     it('returns InsertHistory rows for given ref', async () => {
-      //Insert new carGeneral
-      const insert0: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
+      const route = Route.fromFlat(`carGeneral`);
+
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
           _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-      };
-      const insertHistoryRows = (await db.insert(
-        insert0,
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      const results = (await db.insert(
+        route,
+        insert,
       )) as InsertHistoryRow<'CarGeneral'>[];
-      const insertHistoryRow = insertHistoryRows[0];
+
+      const result = results[0];
 
       const insertHistoryRowsByRef = await db.getInsertHistoryRowsByRef(
         'carGeneral',
-        insertHistoryRow.carGeneralRef as string,
+        result.carGeneralRef as string,
       );
 
       expect(insertHistoryRowsByRef!.length).toBe(1);
@@ -166,56 +232,98 @@ describe('Db', () => {
 
   describe('getInsertHistoryRowByTimeId(table,timeId)', () => {
     it('returns InsertHistory row for given timeId', async () => {
-      //Insert new carGeneral
-      const insert0: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
-          _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-      };
+      const route = Route.fromFlat(`carGeneral`);
 
-      const insertHistoryRows = (await db.insert(
-        insert0,
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      const results = (await db.insert(
+        route,
+        insert,
       )) as InsertHistoryRow<'CarGeneral'>[];
-      const insertHistoryRow = insertHistoryRows[0];
+
+      const result = results[0];
 
       const insertHistoryRowByTimeId = await db.getInsertHistoryRowByTimeId(
         'carGeneral',
-        insertHistoryRow.timeId,
+        result.timeId,
       );
 
       expect(insertHistoryRowByTimeId).toBeDefined();
 
-      expect(insertHistoryRowByTimeId.timeId).toBe(insertHistoryRow.timeId);
+      expect(insertHistoryRowByTimeId.timeId).toBe(result.timeId);
     });
   });
 
   describe('getTimeIdsForRef(table, ref)', () => {
     it('returns TimeIds for given ref', async () => {
-      //Insert new carGeneral
-      const insert0: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
-          _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-      };
+      const route = Route.fromFlat(`carGeneral`);
 
-      const insertHistoryRows = (await db.insert(
-        insert0,
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      const results = (await db.insert(
+        route,
+        insert,
       )) as InsertHistoryRow<'CarGeneral'>[];
-      const insertHistoryRow = insertHistoryRows[0];
+
+      const result = results[0];
 
       const timeIds = await db.getTimeIdsForRef(
         'carGeneral',
-        insertHistoryRow.carGeneralRef as string,
+        result.carGeneralRef as string,
       );
       expect(timeIds.length).toBe(1);
 
@@ -250,22 +358,24 @@ describe('Db', () => {
   describe('isolatePropertyFromComponents(rljson, propertyKey)', () => {
     it('returns rljson with isolated property for given propertyKey', async () => {
       const propertyKey = 'brand';
-      const rljson = await db.get(Route.fromFlat('/carGeneral'), {});
+      const { rljson } = await db.get(Route.fromFlat('/carGeneral'), {});
 
       const isolated = await db.isolatePropertyFromComponents(
         rljson,
         propertyKey,
       );
       expect(isolated.carGeneral).toBeDefined();
-      expect(isolated.carGeneral._data.map((c) => c.brand)).toEqual([
+      expect(
+        Array.from(new Set(isolated.carGeneral._data.map((c) => c.brand))),
+      ).toEqual([
         'Volkswagen',
+        'Hyundai',
+        'Nissan',
         'Tesla',
         'Audi',
-        'Audi',
-        'Volkswagen',
+        'Ford',
         'BMW',
-        'BMW',
-        'Tesla',
+        'Chevrolet',
       ]);
 
       const nonExistingPropertyKey = 'nonExistingProperty';
@@ -283,28 +393,47 @@ describe('Db', () => {
 
   describe('getRefOfTimeId(table, timeId)', () => {
     it('returns ref for given timeId', async () => {
-      //Insert new carGeneral
-      const insert0: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
+      const route = Route.fromFlat(`carGeneral`);
+
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
           _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-      };
-      const insertHistoryRows = (await db.insert(
-        insert0,
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      const results = (await db.insert(
+        route,
+        insert,
       )) as InsertHistoryRow<'CarGeneral'>[];
 
-      const insertHistoryRow = insertHistoryRows[0];
-      const ref = await db.getRefOfTimeId(
-        'carGeneral',
-        insertHistoryRow.timeId,
-      );
+      const result = results[0];
 
-      expect(ref).toBe(insertHistoryRow.carGeneralRef);
+      const ref = await db.getRefOfTimeId('carGeneral', result.timeId);
+
+      expect(ref).toBe(result.carGeneralRef);
     });
   });
 
@@ -314,11 +443,114 @@ describe('Db', () => {
         'Route  is not valid.',
       );
     });
+    it('get sliceId of cake w/ chained sliceIds definition', async () => {
+      const cakeKey = 'carCake';
+      const sliceIds = ['VIN1', 'VIN2'];
+      const route = `/${cakeKey}(${sliceIds.join(',')})`;
+
+      const {
+        rljson: {
+          [cakeKey]: { _data: results },
+        },
+      } = await db.get(Route.fromFlat(route), {});
+
+      expect(results.length).toBe(3);
+
+      expect(results.map((r) => r._hash).sort()).toEqual(
+        staticExample()
+          .carCake._data.map((c) => c._hash)
+          .sort(),
+      );
+    });
+    it('get sliceId of cake w/ single sliceIds definition', async () => {
+      const cakeKey = 'carCake';
+      const sliceIds = ['VIN11'];
+      const route = `/${cakeKey}(${sliceIds.join(',')})`;
+
+      const {
+        rljson: {
+          [cakeKey]: { _data: results },
+        },
+      } = await db.get(Route.fromFlat(route), {});
+
+      expect(results.length).toBe(1);
+
+      expect(results.map((r) => r._hash)).toEqual([
+        staticExample().carCake._data[2]._hash,
+      ]);
+    });
+    it('get sliceId of layer/component', async () => {
+      const layerKey = 'carGeneralLayer';
+      const componentKey = 'carGeneral';
+      const sliceIds = ['VIN11'];
+      const route = `/${layerKey}(${sliceIds.join(',')})/${componentKey}`;
+
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+      const layers = result[layerKey]._data;
+      const components = result[componentKey]._data;
+
+      expect(layers.length).toBe(1);
+      expect(components.length).toBe(1);
+    });
+    it('get sliceId of cake/layer/component', async () => {
+      const cakeKey = 'carCake';
+      const sliceIds = ['VIN11'];
+      const route = `/${cakeKey}(${sliceIds.join(
+        ',',
+      )})/carGeneralLayer/carGeneral`;
+
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+      const cakes = result[cakeKey]._data;
+      const layers = result['carGeneralLayer']._data;
+      const components = result['carGeneral']._data;
+
+      expect(cakes.length).toBe(1);
+      expect(layers.length).toBe(1);
+      expect(components.length).toBe(1);
+    });
+    it('get sliceId w/ ref of cake/layer/component', async () => {
+      const cakeKey = 'carCake';
+      const cakeRef = staticExample().carCake._data[2]._hash ?? '';
+      const sliceIds = ['VIN11'];
+      const route = `/${cakeKey}(${sliceIds.join(
+        ',',
+      )})@${cakeRef}/carGeneralLayer/carGeneral`;
+
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+      const cakes = result[cakeKey]._data;
+      const layers = result['carGeneralLayer']._data;
+      const components = result['carGeneral']._data;
+
+      expect(cakes.length).toBe(1);
+      expect(layers.length).toBe(1);
+      expect(components.length).toBe(1);
+    });
+    it('get empty for sliceId w/ unmatching ref of cake/layer/component', async () => {
+      const cakeKey = 'carCake';
+      const cakeRef = staticExample().carCake._data[0]._hash ?? '';
+      const sliceIds = ['VIN12'];
+      const route = `/${cakeKey}(${sliceIds.join(
+        ',',
+      )})@${cakeRef}/carGeneralLayer/carGeneral`;
+
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+      const cakes = result[cakeKey];
+      const layers = result['carGeneralLayer'];
+      const components = result['carGeneral'];
+
+      expect(!cakes || cakes._data.length == 0).toBe(true);
+      expect(!layers).toBe(true);
+      expect(!components).toBe(true);
+    });
     it('get component by ref', async () => {
       const route = '/carGeneral';
-      const ref = carsExample().carGeneral._data[0]._hash ?? '';
+      const ref = staticExample().carGeneral._data[0]._hash ?? '';
 
-      const result = await db.get(Route.fromFlat(route), ref);
+      const { rljson: result } = await db.get(Route.fromFlat(route), ref);
       expect(result).toBeDefined();
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
@@ -332,15 +564,15 @@ describe('Db', () => {
         },
       };
 
-      const firstGet = await db.get(Route.fromFlat(route), where);
+      const { rljson: firstGet } = await db.get(Route.fromFlat(route), where);
 
       const cache = db.cache;
-      expect(cache.size).toBe(1);
-      expect(firstGet).toBe(Array.from(cache.values())[0]);
+      expect(cache.size).toBe(7);
+      expect(firstGet).toBe(Array.from(cache.values()).map((v) => v.rljson)[6]);
 
-      const secondGet = await db.get(Route.fromFlat(route), where);
+      const { rljson: secondGet } = await db.get(Route.fromFlat(route), where);
       expect(secondGet).toEqual(firstGet);
-      expect(cache.size).toBe(1);
+      expect(cache.size).toBe(7);
     });
 
     it('get component property by ref', async () => {
@@ -348,40 +580,40 @@ describe('Db', () => {
       const propertyKey = 'brand';
       const route = `${componentKey}/${propertyKey}`;
 
-      const ref = carsExample().carGeneral._data[0]._hash ?? '';
+      const ref = staticExample().carGeneral._data[0]._hash ?? '';
 
-      const result = await db.get(Route.fromFlat(route), ref);
+      const { rljson: result } = await db.get(Route.fromFlat(route), ref);
 
       expect(result).toBeDefined();
       expect(result[componentKey]).toBeDefined();
       expect(result[componentKey]._data.length).toBe(1);
       expect(result[componentKey]._data[0]).toEqual({
         _hash: ref,
-        [propertyKey]: carsExample().carGeneral._data[0][propertyKey],
+        [propertyKey]: staticExample().carGeneral._data[0][propertyKey],
       });
       expect(result[componentKey]._data[0][propertyKey]).toBe(
-        carsExample().carGeneral._data[0][propertyKey],
+        staticExample().carGeneral._data[0][propertyKey],
       );
     });
     it('get component by where', async () => {
       const route = '/carGeneral';
-      const where = rmhsh(carsExample().carGeneral._data[0]) as {
+      const where = rmhsh(staticExample().carGeneral._data[0]) as {
         [column: string]: JsonValue;
       };
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
       expect(result.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
     });
     it('get components by where', async () => {
       const route = '/carGeneral';
       const where = { brand: 'Volkswagen' } as Partial<CarGeneral>;
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(2); //2 Volkswagens in example data
@@ -391,29 +623,32 @@ describe('Db', () => {
     it('get layer by ref', async () => {
       const route = '/carGeneralLayer';
       const ref =
-        (carsExample().carGeneralLayer._data[0]._hash as string) ?? '';
+        (staticExample().carGeneralLayer._data[0]._hash as string) ?? '';
 
-      const result = await db.get(Route.fromFlat(route), ref);
+      const { rljson: result } = await db.get(Route.fromFlat(route), ref);
       expect(result).toBeDefined();
       expect(result.carGeneralLayer).toBeDefined();
       expect(result.carGeneralLayer._data.length).toBe(1);
       expect(result.carGeneralLayer._data[0]._hash).toBe(ref);
     });
-    it('get cake by ref', async () => {
+    it('get cake by route ref', async () => {
       const route = '/carCake';
-      const ref = (carsExample().carCake._data[0]._hash as string) ?? '';
+      const ref = (staticExample().carCake._data[0]._hash as string) ?? '';
 
-      const result = await db.get(Route.fromFlat(`${route}@${ref}`), {});
+      const { rljson: result } = await db.get(
+        Route.fromFlat(`${route}@${ref}`),
+        {},
+      );
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
       expect(result.carCake._data.length).toBe(1);
       expect(result.carCake._data[0]._hash).toBe(ref);
     });
-    it('get cake/layer by ref', async () => {
+    it('get cake/layer by route ref', async () => {
       const cakeRoute = '/carCake';
-      const cakeRef = (carsExample().carCake._data[0]._hash as string) ?? '';
+      const cakeRef = (staticExample().carCake._data[0]._hash as string) ?? '';
 
-      const result = await db.get(
+      const { rljson: result } = await db.get(
         Route.fromFlat(`${cakeRoute}@${cakeRef}/carGeneralLayer`),
         {},
       );
@@ -425,61 +660,75 @@ describe('Db', () => {
     it('get nested layer/component by where', async () => {
       const route = '/carGeneralLayer/carGeneral';
       const where = {
-        carGeneral: rmhsh(carsExample().carGeneral._data[0]) as {
+        carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
           [column: string]: JsonValue;
         },
       };
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carGeneralLayer).toBeDefined();
-      expect(result.carGeneralLayer._data.length).toBe(1);
-      expect(result.carGeneralLayer._data[0]._hash).toBe(
-        carsExample().carGeneralLayer._data[0]._hash,
+      expect(result.carGeneralLayer._data.length).toBe(3); //3 layers because they are chained
+      expect(result.carGeneralLayer._data.map((l) => l._hash).sort()).toEqual(
+        staticExample()
+          .carGeneralLayer._data.map((l) => l._hash)
+          .sort(),
       );
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
       expect(result.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
     });
     it('get nested layer/component by where w/ revision', async () => {
       //Add Layer with switching VIN -> CarGeneral relation
-      const Insert: Insert<Json> = {
-        route: '/carGeneralLayer',
-        command: 'add',
-        value: {
-          VIN1: carsExample().carGeneral._data[1]._hash || '',
-          VIN2: carsExample().carGeneral._data[0]._hash || '',
-          _hash: '',
-        } as Json,
-        origin: 'H45H',
-        acknowledged: false,
-      };
+      const route = Route.fromFlat('/carGeneralLayer');
+      const { tree, cell } = await db.get(route, {});
+      const layer: Layer = {
+        base: staticExample().carGeneralLayer._data[2]._hash as string,
+        add: {
+          VIN1: staticExample().carGeneral._data[1]._hash || '',
+          VIN2: staticExample().carGeneral._data[0]._hash || '',
+        },
+        componentsTable: 'carGeneral',
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: staticExample().carSliceId._data[2]._hash as string,
+      } as Layer;
+
+      expect(cell.length).toBe(3);
+      expect(cell[0].path.length).toBe(1);
+
+      const path = cell[0].path[0];
+
+      inject(tree, path, layer);
+      const insert = isolate(tree, path);
 
       const addedLayerInsertHistorys = (await db.insert(
-        Insert,
+        route,
+        insert,
       )) as InsertHistoryRow<'CarGeneralLayer'>[];
 
+      expect(addedLayerInsertHistorys.length).toBe(1);
       const addedLayerInsertHistory = addedLayerInsertHistorys[0];
-      //Search for first carGeneral
+
       const where = {
-        carGeneral: rmhsh(carsExample().carGeneral._data[0]) as {
+        carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
           [column: string]: JsonValue;
         },
       };
 
       //GET Result via first layer revision
-      const layerRevHash1 = carsExample().carGeneralLayer._data[0]._hash ?? '';
+      const layerRevHash1 =
+        staticExample().carGeneralLayer._data[0]._hash ?? '';
       const route1 = `/carGeneralLayer@${layerRevHash1}/carGeneral`;
 
       //GET Result via second layer revision
       const layerRevHash2 = addedLayerInsertHistory.carGeneralLayerRef ?? '';
       const route2 = `/carGeneralLayer@${layerRevHash2}/carGeneral`;
 
-      const result1 = await db.get(Route.fromFlat(route1), where);
+      const { rljson: result1 } = await db.get(Route.fromFlat(route1), where);
 
-      const result2 = await db.get(Route.fromFlat(route2), where);
+      const { rljson: result2 } = await db.get(Route.fromFlat(route2), where);
 
       expect(result1).toBeDefined();
       expect(result2).toBeDefined();
@@ -487,13 +736,13 @@ describe('Db', () => {
       expect(result1.carGeneral).toBeDefined();
       expect(result1.carGeneral._data.length).toBe(1);
       expect(result1.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
 
       expect(result2.carGeneral).toBeDefined();
       expect(result2.carGeneral._data.length).toBe(1);
       expect(result2.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
 
       expect(result1.carGeneralLayer).toBeDefined();
@@ -508,69 +757,109 @@ describe('Db', () => {
       const route = '/carTechnical/carDimensions';
       const where = {
         carDimensions: {
-          ...(rmhsh(carsExample().carDimensions._data[0]) as {
+          ...(rmhsh(staticExample().carDimensions._data[0]) as {
             [column: string]: JsonValue;
           }),
           ...{ _through: 'dimensions' },
         },
       };
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
+
       expect(result).toBeDefined();
       expect(result.carTechnical).toBeDefined();
       expect(result.carTechnical._data.length).toBe(1);
       expect(result.carTechnical._data[0]._hash).toBe(
-        carsExample().carTechnical._data[0]._hash,
+        staticExample().carTechnical._data[0]._hash,
       );
       expect(result.carDimensions).toBeDefined();
       expect(result.carDimensions._data.length).toBe(1);
       expect(result.carDimensions._data[0]._hash).toBe(
-        carsExample().carDimensions._data[0]._hash,
+        staticExample().carDimensions._data[0]._hash,
+      );
+    });
+
+    it('get any nested cake/layer/component/component/property by route', async () => {
+      const route =
+        '/carCake/carTechnicalLayer/carTechnical/carDimensions/length';
+
+      const sliceId = 'VIN1';
+      const cakeRef = staticExample().carCake._data[0]._hash ?? '';
+      const where = cakeRef as string;
+
+      const result = await db.get(Route.fromFlat(route), where, undefined, [
+        sliceId,
+      ]);
+
+      expect(result).toBeDefined();
+    });
+
+    it('get any nested cake/layer/component', async () => {
+      const route = '/carCake/carGeneralLayer/carGeneral';
+      const where = {};
+
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
+      expect(result).toBeDefined();
+      expect(result.carCake).toBeDefined();
+      expect(result.carCake._data.length).toBe(
+        staticExample().carCake._data.length,
+      );
+
+      expect(result.carGeneralLayer).toBeDefined();
+      expect(result.carGeneralLayer._data.length).toBe(
+        staticExample().carGeneralLayer._data.length,
+      );
+
+      expect(result.carGeneral).toBeDefined();
+      expect(result.carGeneral._data.length).toBe(
+        staticExample().carGeneral._data.length,
       );
     });
     it('get nested cake/layer/component by where', async () => {
       const route = '/carCake/carGeneralLayer/carGeneral';
       const where = {
         carGeneralLayer: {
-          carGeneral: rmhsh(carsExample().carGeneral._data[0]) as {
+          carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
             [column: string]: JsonValue;
           },
         },
       };
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
-      expect(result.carCake._data.length).toBe(1);
+      expect(result.carCake._data.length).toBe(3); //3 cakes because layers are chained
       expect(result.carCake._data[0]._hash).toBe(
-        carsExample().carCake._data[0]._hash,
+        staticExample().carCake._data[0]._hash,
       );
       expect(result.carGeneralLayer).toBeDefined();
-      expect(result.carGeneralLayer._data.length).toBe(1);
-      expect(result.carGeneralLayer._data[0]._hash).toBe(
-        carsExample().carGeneralLayer._data[0]._hash,
+      expect(result.carGeneralLayer._data.length).toBe(3);
+      expect(result.carGeneralLayer._data.map((l) => l._hash).sort()).toEqual(
+        staticExample()
+          .carGeneralLayer._data.map((l) => l._hash)
+          .sort(),
       );
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
       expect(result.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
     });
-    it('get nested cake/layer/component by hash w/ revision hash', async () => {
-      const cakeRevisionHash = carsExample().carCake._data[0]._hash ?? '';
+    it('get nested cake/layer/component by hash w/ route revision hash', async () => {
+      const cakeRevisionHash = staticExample().carCake._data[0]._hash ?? '';
       const layerRevisionHash =
-        carsExample().carGeneralLayer._data[0]._hash ?? '';
+        staticExample().carGeneralLayer._data[0]._hash ?? '';
 
       const route = `/carCake@${cakeRevisionHash}/carGeneralLayer@${layerRevisionHash}/carGeneral`;
 
       const where = {
         carGeneralLayer: {
           carGeneral: {
-            _hash: carsExample().carGeneral._data[0]._hash ?? '',
+            _hash: staticExample().carGeneral._data[0]._hash ?? '',
           },
         },
       };
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(route), where);
 
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
@@ -584,25 +873,35 @@ describe('Db', () => {
       expect(result.carGeneral).toBeDefined();
       expect(result.carGeneral._data.length).toBe(1);
       expect(result.carGeneral._data[0]._hash).toBe(
-        carsExample().carGeneral._data[0]._hash,
+        staticExample().carGeneral._data[0]._hash,
       );
     });
-    it('get nested cake/layer/component by hash w/ revision TimeId', async () => {
-      //Add new InsertHistory Entry to Layer Revisions, recursively adding it to the cake
-      const layerInsert: Insert<Json> = {
-        route: '/carCake/carGeneralLayer',
-        command: 'add',
-        value: {
-          carGeneralLayer: {
-            VIN1: carsExample().carGeneral._data[1]._hash || '',
-            VIN2: carsExample().carGeneral._data[0]._hash || '',
-            _hash: '',
-          },
-        } as Json,
-        origin: 'H45H',
-        acknowledged: false,
-      };
-      const cakeInsertHistoryRows = await db.insert(layerInsert);
+    it('get nested cake/layer/component by hash w/ route revision TimeId', async () => {
+      const route = Route.fromFlat('/carCake/carGeneralLayer');
+      const { tree, cell } = await db.get(route, {});
+      const layer: Layer = {
+        add: {
+          VIN1: staticExample().carGeneral._data[1]._hash || '',
+          VIN2: staticExample().carGeneral._data[0]._hash || '',
+        },
+        componentsTable: 'carGeneral',
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: staticExample().carSliceId._data[2]._hash as string,
+      } as Layer;
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(3);
+
+      const path = paths[0];
+
+      const insert = isolate(tree, path);
+      inject(insert, path, layer);
+
+      const cakeInsertHistoryRows = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarCake'>[];
+
       const cakeInsertHistoryRow = cakeInsertHistoryRows[0];
       const cakeRevisionTimeId = cakeInsertHistoryRow.timeId;
 
@@ -613,16 +912,18 @@ describe('Db', () => {
       const layerRevisionTimeId = layerInsertHistoryRows[0].timeId;
 
       //Build route with TimeIds
-      const route = `/carCake@${cakeRevisionTimeId}/carGeneralLayer@${layerRevisionTimeId}/carGeneral`;
+      const refRoute = `/carCake@${cakeRevisionTimeId}/carGeneralLayer@${layerRevisionTimeId}/carGeneral`;
 
       //Get all Volkswagens in example data
       const where = {
-        carGeneralLayer: {
-          carGeneral: { brand: 'Volkswagen' } as Partial<CarGeneral>,
+        carCake: {
+          carGeneralLayer: {
+            carGeneral: { brand: 'Volkswagen' } as Partial<CarGeneral>,
+          },
         },
       };
 
-      const result = await db.get(Route.fromFlat(route), where);
+      const { rljson: result } = await db.get(Route.fromFlat(refRoute), where);
 
       expect(result).toBeDefined();
       expect(result.carCake).toBeDefined();
@@ -639,43 +940,298 @@ describe('Db', () => {
       expect(result.carGeneral._data[0].brand).toBe('Volkswagen');
       expect(result.carGeneral._data[1].brand).toBe('Volkswagen');
     });
-  });
-  describe('insert', () => {
-    it('throws on invalid Insert', async () => {
-      //Mismatched route/value depth
-      await expect(
-        db.insert({
-          route: '/carCake/carGeneralLayer/carGeneral',
-          command: 'add',
-          value: { x: 1, y: 2 },
-          origin: 'H45H',
-          acknowledged: false,
-        }),
-      ).rejects.toThrow();
+
+    it('get related cakes by component/cake sliceId reference', async () => {
+      const cakeKey = 'seriesCake';
+      const cakeRef = staticExample().seriesCake._data[2]._hash ?? '';
+
+      const route = `/${cakeKey}@${cakeRef}/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+      const seriesCakes = result[cakeKey]._data;
+      expect(seriesCakes.length).toBe(1);
+
+      const seriesCarsLayers = result['seriesCarsLayer']._data;
+      expect(seriesCarsLayers.length).toBe(1);
+
+      const seriesCars = result['seriesCars']._data;
+      expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
+
+      const carCakes = result['carCake']._data;
+      expect(carCakes.length).toBe(staticExample().carCake._data.length);
+
+      const carGeneralLayers = result['carGeneralLayer']._data;
+      expect(carGeneralLayers.length).toBe(
+        staticExample().carGeneralLayer._data.length,
+      );
+
+      const carGeneralComponents = result['carGeneral']._data;
+      expect(carGeneralComponents.length).toBe(
+        staticExample().carGeneral._data.length,
+      );
     });
 
-    it('insert on component route', async () => {
-      const Insert: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
-          _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-        origin: 'H45H',
-        acknowledged: false,
-      };
+    it('get single related component/cake by sliceId reference by explicit sliceId', async () => {
+      const cakeKey = 'seriesCake';
+      const cakeRef = staticExample().seriesCake._data[2]._hash ?? '';
+      const sliceIds = ['Serie7'];
 
-      const results = await db.insert(Insert);
+      const route = `/${cakeKey}(${sliceIds.join(
+        ',',
+      )})@${cakeRef}/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+      const seriesCakes = result[cakeKey]._data;
+      expect(seriesCakes.length).toBe(1);
+
+      const seriesCarsLayers = result['seriesCarsLayer']._data;
+      expect(seriesCarsLayers.length).toBe(1);
+      expect(seriesCarsLayers.map((l) => l._hash)).toEqual([
+        staticExample().seriesCarsLayer._data[2]._hash,
+      ]);
+
+      const seriesCars = result['seriesCars']._data;
+      expect(seriesCars.length).toBe(1);
+      expect(seriesCars.map((c) => c._hash)).toEqual([
+        staticExample().seriesCars._data[7]._hash,
+      ]);
+
+      const carCakes = result['carCake']._data;
+      expect(carCakes.length).toBe(1);
+      expect(carCakes.map((c) => c._hash)).toEqual([
+        staticExample().carCake._data[2]._hash,
+      ]);
+
+      const carGeneralLayers = result['carGeneralLayer']._data;
+      expect(carGeneralLayers.length).toBe(1);
+      expect(carGeneralLayers.map((l) => l._hash)).toEqual([
+        staticExample().carGeneralLayer._data[2]._hash,
+      ]);
+
+      const carGeneralComponents = result['carGeneral']._data;
+      expect(carGeneralComponents.length).toBe(1);
+      expect(carGeneralComponents.map((c) => c._hash)).toEqual([
+        staticExample().carGeneral._data[7]._hash,
+      ]);
+    });
+
+    it('get related cakes by component/cake sliceId reference', async () => {
+      const cakeKey = 'catalogCake';
+      const cakeRef = staticExample().catalogCake._data[0]._hash ?? '';
+
+      const route = `/${cakeKey}@${cakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+      //Single starting point cake
+      const catalogCakes = result[cakeKey]._data;
+      expect(catalogCakes.length).toBe(1);
+
+      //Single catalogSeries layer related to starting cake
+      const catalogSeriesLayers = result['catalogSeriesLayer']._data;
+      expect(catalogSeriesLayers.length).toBe(1);
+      expect(catalogSeriesLayers.map((l) => l._hash)).toEqual([
+        staticExample().catalogSeriesLayer._data[0]._hash,
+      ]);
+
+      //All catalogSeries, due to layer is linking any of them
+      const catalogSeries = result['catalogSeries']._data;
+      expect(catalogSeries.length).toBe(
+        staticExample().catalogSeries._data.length,
+      );
+
+      //All seriesCakes, due to catalogSeries are linking any of them
+      const seriesCakes = result['seriesCake']._data;
+      expect(seriesCakes.length).toBe(staticExample().seriesCake._data.length);
+      expect(seriesCakes.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .seriesCake._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All seriesCarsLayers, due to seriesCakes are linking any of them
+      const seriesCarsLayers = result['seriesCarsLayer']._data;
+      expect(seriesCarsLayers.length).toBe(
+        staticExample().seriesCarsLayer._data.length,
+      );
+      expect(seriesCarsLayers.map((l) => l._hash).sort()).toEqual(
+        staticExample()
+          .seriesCarsLayer._data.map((l) => l._hash)
+          .sort(),
+      );
+
+      //All seriesCars, due to seriesCarsLayers are linking any of them
+      const seriesCars = result['seriesCars']._data;
+      expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
+      expect(seriesCars.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .seriesCars._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All carCakes, due to seriesCars are linking any of them
+      const carCakes = result['carCake']._data;
+      expect(carCakes.length).toBe(staticExample().carCake._data.length);
+      expect(carCakes.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .carCake._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All carGeneralLayers, due to carCakes are linking any of them
+      const carGeneralLayers = result['carGeneralLayer']._data;
+      expect(carGeneralLayers.length).toBe(
+        staticExample().carGeneralLayer._data.length,
+      );
+      expect(carGeneralLayers.map((l) => l._hash).sort()).toEqual(
+        staticExample()
+          .carGeneralLayer._data.map((l) => l._hash)
+          .sort(),
+      );
+
+      //All carGeneralComponents, due to carGeneralLayers are linking any of them
+      const carGeneralComponents = result['carGeneral']._data;
+      expect(carGeneralComponents.length).toBe(
+        staticExample().carGeneral._data.length,
+      );
+      expect(carGeneralComponents.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .carGeneral._data.map((c) => c._hash)
+          .sort(),
+      );
+    });
+    it('get related cakes by component/cake sliceId reference, filter on deeper sliceId', async () => {
+      const cakeKey = 'catalogCake';
+      const cakeRef = staticExample().catalogCake._data[0]._hash ?? '';
+      const filterSliceIds = ['VIN4', 'VIN8'];
+
+      const route = `/${cakeKey}@${cakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake(${filterSliceIds.join(
+        ',',
+      )})/carGeneralLayer/carGeneral/brand`;
+
+      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+      //Single starting point cake
+      const catalogCakes = result[cakeKey]._data;
+      expect(catalogCakes.length).toBe(1);
+
+      //Single catalogSeries layer related to starting cake
+      const catalogSeriesLayers = result['catalogSeriesLayer']._data;
+      expect(catalogSeriesLayers.length).toBe(1);
+      expect(catalogSeriesLayers.map((l) => l._hash)).toEqual([
+        staticExample().catalogSeriesLayer._data[0]._hash,
+      ]);
+
+      //All catalogSeries, due to layer is linking any of them
+      const catalogSeries = result['catalogSeries']._data;
+      expect(catalogSeries.length).toBe(
+        staticExample().catalogSeries._data.length,
+      );
+
+      //All seriesCakes, due to catalogSeries are linking any of them
+      const seriesCakes = result['seriesCake']._data;
+      expect(seriesCakes.length).toBe(staticExample().seriesCake._data.length);
+      expect(seriesCakes.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .seriesCake._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All seriesCarsLayers, due to seriesCakes are linking any of them
+      const seriesCarsLayers = result['seriesCarsLayer']._data;
+      expect(seriesCarsLayers.length).toBe(
+        staticExample().seriesCarsLayer._data.length,
+      );
+      expect(seriesCarsLayers.map((l) => l._hash).sort()).toEqual(
+        staticExample()
+          .seriesCarsLayer._data.map((l) => l._hash)
+          .sort(),
+      );
+
+      //All seriesCars, due to seriesCarsLayers are linking any of them
+      const seriesCars = result['seriesCars']._data;
+      expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
+      expect(seriesCars.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .seriesCars._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All carCakes, due to seriesCars are linking any of them
+      const carCakes = result['carCake']._data;
+      expect(carCakes.length).toBe(staticExample().carCake._data.length);
+      expect(carCakes.map((c) => c._hash).sort()).toEqual(
+        staticExample()
+          .carCake._data.map((c) => c._hash)
+          .sort(),
+      );
+
+      //All carGeneralLayers, due to carCakes are linking any of them
+      const carGeneralLayers = result['carGeneralLayer']._data;
+      expect(carGeneralLayers.length).toBe(
+        staticExample().carGeneralLayer._data.length,
+      );
+      expect(carGeneralLayers.map((l) => l._hash).sort()).toEqual(
+        staticExample()
+          .carGeneralLayer._data.map((l) => l._hash)
+          .sort(),
+      );
+
+      //All carGeneralComponents, due to carGeneralLayers are linking any of them
+      const carGeneralComponents = result['carGeneral']._data;
+      expect(carGeneralComponents.length).toBe(2);
+      expect(carGeneralComponents.map((c) => c._hash)).toEqual([
+        staticExample().carGeneral._data[3]._hash,
+        staticExample().carGeneral._data[7]._hash,
+      ]);
+    });
+  });
+  describe('insert', () => {
+    it('insert on component route', async () => {
+      const route = Route.fromFlat(`carGeneral`);
+
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarGeneral'>[];
+
       const result = results[0];
 
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
-      expect(result.route).toBe('/carGeneral');
-      expect(result.origin).toBe('H45H');
+      expect(result.route).toBe(route.flat);
     });
 
     it('insert on component route, w/ previous by Hash', async () => {
@@ -686,39 +1242,59 @@ describe('Db', () => {
           _type: 'insertHistory',
           _data: [
             {
-              carGeneralRef: carsExample().carGeneral._data[0]._hash ?? '',
+              carGeneralRef: staticExample().carGeneral._data[0]._hash ?? '',
               timeId: previousTimeId,
               route: '/carGeneral',
             } as InsertHistoryRow<'CarGeneral'>,
           ],
-        } as InsertHistory<'CarGeneral'>,
+        } as InsertHistoryTable<'CarGeneral'>,
       });
 
-      //Create Insert with predecessor ref in route
-      //by hash
-      const previousHash = carsExample().carGeneral._data[0]._hash ?? '';
-      const route = ['/carGeneral', previousHash].join('@');
-      const Insert: Insert<CarGeneral> = {
-        route,
-        command: 'add',
-        value: {
-          _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-        origin: 'H45H',
-        acknowledged: false,
-      };
+      const cloneRoute = Route.fromFlat(`carGeneral`);
 
-      const results = await db.insert(Insert);
+      const { tree, cell } = await db.get(cloneRoute, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      const previousHash = staticExample().carGeneral._data[0]._hash ?? '';
+      const route = Route.fromFlat(['/carGeneral', previousHash].join('@'));
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarGeneral'>[];
+
       const result = results[0];
 
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
-      expect(result.route).toBe(route);
-      expect(result.origin).toBe('H45H');
+      expect(result.route).toBe(route.flat);
       expect(result.previous).toEqual([previousTimeId]);
     });
 
@@ -730,110 +1306,171 @@ describe('Db', () => {
           _type: 'insertHistory',
           _data: [
             {
-              carGeneralRef: carsExample().carGeneral._data[0]._hash ?? '',
+              carGeneralRef: staticExample().carGeneral._data[0]._hash ?? '',
               timeId: previousTimeId,
               route: '/carGeneral',
             } as InsertHistoryRow<'CarGeneral'>,
           ],
-        } as InsertHistory<'CarGeneral'>,
+        } as InsertHistoryTable<'CarGeneral'>,
       });
 
-      //Create Insert with predecessor ref in route
-      //by timeId
-      const route = ['/carGeneral', previousTimeId].join('@');
-      const Insert: Insert<CarGeneral> = {
-        route,
-        command: 'add',
-        value: {
-          _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-        origin: 'H45H',
-        acknowledged: false,
-      };
+      const cloneRoute = Route.fromFlat(`carGeneral`);
 
-      const results = await db.insert(Insert);
+      const { tree, cell } = await db.get(cloneRoute, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      const route = Route.fromFlat(['/carGeneral', previousTimeId].join('@'));
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarGeneral'>[];
+
       const result = results[0];
 
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carGeneralRef).toBeDefined();
-      expect(result.route).toBe(route);
-      expect(result.origin).toBe('H45H');
+      expect(result.route).toBe(route.flat);
       expect(result.previous).toEqual([previousTimeId]);
     });
 
     it('insert on layer route', async () => {
-      const Insert: Insert<Json> = {
-        route: '/carGeneralLayer',
-        command: 'add',
-        value: {
-          VIN1: carsExample().carGeneral._data[1]._hash || '',
-          VIN2: carsExample().carGeneral._data[0]._hash || '',
-          _hash: '',
-        } as Json,
-        origin: 'H45H',
-        acknowledged: false,
-      };
-      const results = await db.insert(Insert);
-      const result = results[0];
-      expect(result).toBeDefined();
-      expect(result.timeId).toBeDefined();
-      expect(result.carGeneralLayerRef).toBeDefined();
-      expect(result.route).toBe('/carGeneralLayer');
-      expect(result.origin).toBe('H45H');
-    });
+      const sliceId = 'VIN1';
+      const cakeRef = (staticExample().carCake._data[0]._hash ?? '') as string;
+      const route = Route.fromFlat(
+        `/carCake(${sliceId})@${cakeRef}/carGeneralLayer`,
+      );
 
-    it('insert on cake route', async () => {
-      const carCake = carsExample().carCake._data[0];
-      const Insert: Insert<Record<string, LayerRef>> = {
-        route: '/carCake',
-        command: 'add',
-        value: {
-          ...rmhsh(carCake.layers),
-          ...{ carGeneralLayer: 'NEWHASH' },
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(1);
+
+      const path = paths[0];
+
+      const layer = {
+        add: {
+          VIN3: staticExample().carGeneral._data[2]._hash || '',
+          VIN4: staticExample().carGeneral._data[3]._hash || '',
         },
-        origin: 'H45H',
-        acknowledged: false,
-      };
+        componentsTable: 'carGeneral',
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: staticExample().carSliceId._data[0]._hash as string,
+      } as Layer;
 
-      const results = await db.insert(Insert);
+      const insert = isolate(tree, path);
+      inject(insert, path, layer);
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarCake'>[];
+
+      expect(results.length).toBe(1);
+
       const result = results[0];
-
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carCakeRef).toBeDefined();
-      expect(result.route).toBe('/carCake');
-      expect(result.origin).toBe('H45H');
+      expect(result.route).toBe(route.flat);
+    });
+
+    it('insert on cake route', async () => {
+      const route = Route.fromFlat(`/carCake`);
+
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(3);
+
+      const path = paths[0];
+
+      const cake = {
+        layers: {
+          carGeneralLayer: staticExample().carGeneralLayer._data[0]
+            ._hash as string,
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsRow: staticExample().carSliceId._data[0]._hash as string,
+      } as Cake;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, cake);
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarCake'>[];
+
+      expect(results.length).toBe(1);
+
+      const result = results[0];
+      expect(result).toBeDefined();
+      expect(result.timeId).toBeDefined();
+      expect(result.carCakeRef).toBeDefined();
+      expect(result.route).toBe(route.flat);
     });
 
     it('insert on nested: component/component', async () => {
-      const Insert: Insert<Json> = {
-        route: '/carTechnical/carDimensions',
-        command: 'add',
-        value: {
-          engine: 'Electric',
-          transmission: 'Automatic',
-          gears: 1,
-          dimensions: {
-            height: 1600,
-            width: 2000,
-            length: 4700,
-          },
-        } as Json,
-        origin: 'H45H',
-        acknowledged: false,
+      const route = Route.fromFlat(`/carTechnical/carDimensions`);
+
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        height: 1234,
+        width: 4567,
+        length: 8901,
       };
 
-      const results = await db.insert(Insert);
+      inject(tree, path, component);
+
+      //Nested --> Isolate only to first component
+      const insert = isolate(tree, path.slice(0, -3));
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarTechnical'>[];
+
+      expect(results.length).toBe(1);
+
       const result = results[0];
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carTechnicalRef).toBeDefined();
-      expect(result.route).toBe('/carTechnical/carDimensions');
-      expect(result.origin).toBe('H45H');
+      expect(result.route).toBe(route.flat);
 
       const writtenRow = await db.core.readRow(
         'carTechnical',
@@ -842,9 +1479,6 @@ describe('Db', () => {
       expect(writtenRow).toBeDefined();
       expect(writtenRow?.carTechnical?._data.length).toBe(1);
       const writtenComponent = writtenRow?.carTechnical?._data[0] as Json;
-      expect(writtenComponent.engine).toBe('Electric');
-      expect(writtenComponent.transmission).toBe('Automatic');
-      expect(writtenComponent.gears).toBe(1);
       expect(writtenComponent.dimensions).toBeDefined();
 
       const writtenDimensionRow = await db.core.readRow(
@@ -855,119 +1489,291 @@ describe('Db', () => {
       expect(writtenDimensionRow?.carDimensions?._data.length).toBe(1);
       const writtenDimension = writtenDimensionRow?.carDimensions
         ?._data[0] as CarGeneral;
-      expect(writtenDimension.height).toBe(1600);
-      expect(writtenDimension.width).toBe(2000);
-      expect(writtenDimension.length).toBe(4700);
+      expect(writtenDimension.height).toBe(1234);
+      expect(writtenDimension.width).toBe(4567);
+      expect(writtenDimension.length).toBe(8901);
     });
 
-    it('insert on nested: layer/component', async () => {
-      const Insert: Insert<Json> = {
-        route: '/carGeneralLayer/carGeneral',
-        command: 'add',
-        value: {
-          /*TODO: Validate value structure*/
-          VIN3: {
-            brand: 'Porsche',
-            doors: 4,
-            type: 'Cayenne E-Hybrid',
-          } as CarGeneral,
-          VIN4: {
-            brand: 'Mercedes Benz',
-            doors: 4,
-            type: 'EQC 400 4MATIC',
-          } as CarGeneral,
-        } as Record<string, CarGeneral>,
-        origin: 'H45H',
-        acknowledged: false,
+    it('insert on layer/component by layer', async () => {
+      const sliceId = 'VIN1';
+      const cakeRef = (staticExample().carCake._data[0]._hash ?? '') as string;
+      const route = Route.fromFlat(
+        `/carCake(${sliceId})@${cakeRef}/carGeneralLayer/carGeneral`,
+      );
+
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(1);
+
+      const path = paths[0];
+
+      const layer = {
+        add: {
+          VIN1: {
+            carGeneral: {
+              _data: [
+                {
+                  brand: 'Toyota',
+                  type: 'Yaris',
+                  doors: 2,
+                  energyConsumption: 8.2,
+                  units: {
+                    energy: 'l/100km',
+                  },
+                  serviceIntervals: [12000, 24000, 36000],
+                  isElectric: false,
+                  meta: {
+                    pressText: 'A reliable subcompact car.',
+                  },
+                },
+              ],
+              _type: 'components',
+            },
+          },
+        },
+        sliceIdsTable: 'carSliceId',
+        sliceIdsTableRow: staticExample().carSliceId._data[0]._hash as string,
+        componentsTable: 'carGeneral',
       };
 
-      const results = await db.insert(Insert);
+      const insert = isolate(tree, path);
+      inject(insert, path.slice(0, -5), layer);
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarCake'>[];
+
+      expect(results.length).toBe(1);
+
       const result = results[0];
-
-      expect(result).toBeDefined();
-      expect(result.timeId).toBeDefined();
-      expect(result.carGeneralLayerRef).toBeDefined();
-      expect(result.route).toBe('/carGeneralLayer/carGeneral');
-      expect(result.origin).toBe('H45H');
-
-      //Check if new layer is in db
-      const { carGeneralLayer: layerTable } = await db.core.dumpTable(
-        'carGeneralLayer',
-      );
-      const newLayer = layerTable._data.find(
-        (l) => l._hash === result.carGeneralLayerRef,
-      );
-      expect(newLayer).toBeDefined();
-
-      //Check if new components are in db
-      const { carGeneral: componentTable } = await db.core.dumpTable(
-        'carGeneral',
-      );
-      const newComponents = componentTable._data.filter(
-        (c) =>
-          c._hash === (newLayer as any).add.VIN3 ||
-          c._hash === (newLayer as any).add.VIN4,
-      );
-      expect(newComponents.length).toBe(2);
-    });
-
-    it('insert on nested: cake/layer/component', async () => {
-      const Insert: Insert<Json> = {
-        route: '/carCake/carGeneralLayer/carGeneral',
-        command: 'add',
-        value: {
-          carGeneralLayer: {
-            VIN5: {
-              brand: 'Porsche',
-              doors: 2,
-              type: '911 Carrera 4S',
-            } as CarGeneral,
-            VIN6: {
-              brand: 'Mercedes Benz',
-              doors: 4,
-              type: 'EQE 350+',
-            } as CarGeneral,
-          } as Record<string, CarGeneral>,
-        } as Record<string, Record<string, CarGeneral>>,
-        origin: 'H45H',
-        acknowledged: false,
-      };
-      const results = await db.insert(Insert);
-      const result = results[0];
-
       expect(result).toBeDefined();
       expect(result.timeId).toBeDefined();
       expect(result.carCakeRef).toBeDefined();
-      expect(result.route).toBe('/carCake/carGeneralLayer/carGeneral');
-      expect(result.origin).toBe('H45H');
 
-      //Check if new cake is in db
-      const { carCake: cakeTable } = await db.core.dumpTable('carCake');
-      const newCake = cakeTable._data.find(
-        (c) => c._hash === result.carCakeRef,
+      const writtenCake = await db.core.readRow(
+        'carCake',
+        result.carCakeRef as string,
       );
-      expect(newCake).toBeDefined();
+      expect(writtenCake).toBeDefined();
 
-      //Check if new layer is in db
-      const { carGeneralLayer: layerTable } = await db.core.dumpTable(
+      const writtenLayerHash = (writtenCake?.carCake?._data[0].layers as any)
+        .carGeneralLayer as string;
+
+      const writtenLayer = await db.core.readRow(
         'carGeneralLayer',
+        writtenLayerHash,
       );
-      const newLayer = layerTable._data.find(
-        (l) => l._hash === (newCake as any).layers.carGeneralLayer,
-      );
-      expect(newLayer).toBeDefined();
+      expect(writtenLayer).toBeDefined();
 
-      //Check if new components are in db
-      const { carGeneral: componentTable } = await db.core.dumpTable(
+      const writtenComponentHash = (
+        writtenLayer?.carGeneralLayer?._data[0].add as any
+      ).VIN1 as string;
+
+      const writtenComponent = await db.core.readRow(
         'carGeneral',
+        writtenComponentHash,
       );
-      const newComponents = componentTable._data.filter(
-        (c) =>
-          c._hash ===
-            (newLayer as any).add.VIN5 /*TODO: Fix typing for layers*/ ||
-          c._hash === (newLayer as any).add.VIN6,
+      expect(writtenComponent).toBeDefined();
+      expect(writtenComponent?.carGeneral?._data.length).toBe(1);
+      const writtenComponentData = writtenComponent?.carGeneral
+        ?._data[0] as CarGeneral;
+      expect(writtenComponentData.brand).toBe('Toyota');
+      expect(writtenComponentData.type).toBe('Yaris');
+      expect(writtenComponentData.doors).toBe(2);
+    });
+
+    it('insert on cake/layer/component by cake', async () => {
+      const sliceId = 'VIN1';
+      const cakeRef = (staticExample().carCake._data[0]._hash ?? '') as string;
+      const route = Route.fromFlat(
+        `/carCake(${sliceId})@${cakeRef}/carGeneralLayer/carGeneral`,
       );
-      expect(newComponents.length).toBe(2); //Only checking first layer components
+
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(1);
+
+      const path = paths[0];
+
+      const cake = {
+        _data: [
+          {
+            sliceIdsTable: 'carSliceId',
+            sliceIdsRow: '2RefO1-vC_FbgYaC1FWzFo',
+            layers: {
+              carGeneralLayer: {
+                _data: [
+                  {
+                    add: {
+                      VIN1: {
+                        carGeneral: {
+                          _data: [
+                            {
+                              brand: 'Toyota',
+                              type: 'Yaris',
+                              doors: 2,
+                              energyConsumption: 8.2,
+                              units: {
+                                energy: 'l/100km',
+                              },
+                              serviceIntervals: [12000, 24000, 36000],
+                              isElectric: false,
+                              meta: {
+                                pressText: 'A reliable subcompact car.',
+                              },
+                            },
+                          ],
+                          _type: 'components',
+                        },
+                      },
+                    },
+                    sliceIdsTable: 'carSliceId',
+                    sliceIdsTableRow: staticExample().carSliceId._data[0]
+                      ._hash as string,
+                    componentsTable: 'carGeneral',
+                  },
+                ],
+                _type: 'layers',
+              },
+              carTechnicalLayer: staticExample().carTechnicalLayer._data[0]
+                ._hash as string,
+              carColorLayer: staticExample().carColorLayer._data[0]
+                ._hash as string,
+            },
+          },
+        ],
+        _type: 'cakes',
+      };
+
+      const insert = isolate(tree, path);
+      inject(insert, ['carCake'], cake);
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarCake'>[];
+
+      expect(results.length).toBe(1);
+
+      const result = results[0];
+      expect(result).toBeDefined();
+      expect(result.timeId).toBeDefined();
+      expect(result.carCakeRef).toBeDefined();
+
+      const writtenCake = await db.core.readRow(
+        'carCake',
+        result.carCakeRef as string,
+      );
+      expect(writtenCake).toBeDefined();
+
+      const writtenLayerHash = (writtenCake?.carCake?._data[0].layers as any)
+        .carGeneralLayer as string;
+
+      const writtenLayer = await db.core.readRow(
+        'carGeneralLayer',
+        writtenLayerHash,
+      );
+      expect(writtenLayer).toBeDefined();
+
+      const writtenComponentHash = (
+        writtenLayer?.carGeneralLayer?._data[0].add as any
+      ).VIN1 as string;
+
+      const writtenComponent = await db.core.readRow(
+        'carGeneral',
+        writtenComponentHash,
+      );
+      expect(writtenComponent).toBeDefined();
+      expect(writtenComponent?.carGeneral?._data.length).toBe(1);
+      const writtenComponentData = writtenComponent?.carGeneral
+        ?._data[0] as CarGeneral;
+      expect(writtenComponentData.brand).toBe('Toyota');
+      expect(writtenComponentData.type).toBe('Yaris');
+      expect(writtenComponentData.doors).toBe(2);
+    });
+
+    it('insert multiple components on nested /cake/layer/component/property', async () => {
+      const route = Route.fromFlat(
+        '/carCake/carGeneralLayer/carGeneral/brand',
+      ).toRouteWithProperty();
+      const cakeRef = staticExample().carCake._data[0]._hash ?? '';
+      const { tree, cell } = await db.get(route, cakeRef as string);
+
+      const insert = { ...tree };
+      for (const { path } of cell) {
+        for (const p of path) {
+          inject({ ...insert }, p, 'AMG');
+        }
+      }
+      const inserted: InsertHistoryRow<any>[] = await db.insert(
+        route,
+        rmhsh(insert),
+      );
+
+      expect(inserted).toBeDefined();
+
+      const { cell: values } = await db.get(
+        route,
+        inserted[0].carCakeRef as string,
+      );
+
+      const results = values.flatMap((v) => v.value);
+
+      expect(Array.from(new Set(results))).toEqual(['AMG']);
+      expect(results.length).toBe(cell.flatMap((c) => c.value).length);
+    });
+
+    it('insert single component on nested /cake/layer/component/property', async () => {
+      const sliceId = 'VIN1';
+      const cakeRef = (staticExample().carCake._data[0]._hash ?? '') as string;
+      const route = Route.fromFlat(
+        `/carCake(${sliceId})@${cakeRef}/carGeneralLayer/carGeneral`,
+      );
+
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(1);
+
+      const path = paths[0];
+
+      const component = {
+        brand: 'Volkswagen',
+        type: 'Polo',
+        doors: 5,
+        energyConsumption: 7.4,
+        units: {
+          energy: 'l/100km',
+          _hash: '',
+        },
+        serviceIntervals: [15000, 30000, 45000],
+        isElectric: false,
+        meta: {
+          pressText: 'A popular compact car.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarCake'>[];
+
+      expect(results.length).toBe(1);
+
+      const result = results[0];
+      expect(result).toBeDefined();
+      expect(result.timeId).toBeDefined();
+      expect(result.carCakeRef).toBeDefined();
+      expect(result.route).toBe(route.flat);
     });
   });
   describe('notify', () => {
@@ -992,20 +1798,39 @@ describe('Db', () => {
 
       db.registerObserver(route, callback);
 
-      const Insert: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
-          _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-        origin: 'H45H',
-        acknowledged: false,
-      };
+      const { tree, cell } = await db.get(route, {});
 
-      const results = await db.insert(Insert);
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarGeneral'>[];
       const result = results[0];
 
       expect(callback).toHaveBeenCalledTimes(1);
@@ -1017,36 +1842,67 @@ describe('Db', () => {
 
       db.registerObserver(route, callback);
 
-      const Insert: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
-          _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-        origin: 'H45H',
-        acknowledged: false,
-      };
+      const { tree, cell } = await db.get(route, {});
 
-      const Insert2: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
-          _hash: '',
-          brand: 'Porsche',
-          doors: 4,
-          type: 'Cayenne E-Hybrid',
-        } as CarGeneral,
-        origin: 'H45H',
-        acknowledged: false,
-      };
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
 
-      const results = await db.insert(Insert);
+      const path = paths[0];
+
+      const component = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      const results = (await db.insert(
+        route,
+        insert,
+      )) as InsertHistoryRow<'CarGeneral'>[];
       const result = results[0];
 
-      const results2 = await db.insert(Insert2);
+      const component2 = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
+          _hash: '',
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
+
+      const insert2 = isolate(tree, path);
+      inject(insert, path, component2);
+
+      const results2 = (await db.insert(
+        route,
+        insert2,
+      )) as InsertHistoryRow<'CarGeneral'>[];
       const result2 = results2[0];
 
       expect(callback).toHaveBeenCalledTimes(2);
@@ -1055,29 +1911,39 @@ describe('Db', () => {
     });
 
     it('notify on nested component/component route', async () => {
-      const callback = vi.fn();
       const route = Route.fromFlat('/carTechnical/carDimensions');
 
-      db.registerObserver(route, callback);
+      const carTechnicalCallback = vi.fn();
+      db.registerObserver(
+        Route.fromFlat('/carTechnical/carDimensions'),
+        carTechnicalCallback,
+      );
 
-      const Insert: Insert<Json> = {
-        route: '/carTechnical/carDimensions',
-        command: 'add',
-        value: {
-          engine: 'Electric',
-          transmission: 'Automatic',
-          gears: 1,
-          dimensions: {
-            height: 1600,
-            width: 2000,
-            length: 4700,
-          },
-        } as Json,
-        origin: 'H45H',
-        acknowledged: false,
+      const carDimensionsCallback = vi.fn();
+      db.registerObserver(
+        Route.fromFlat('/carDimensions'),
+        carDimensionsCallback,
+      );
+
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        height: 1234,
+        width: 4567,
+        length: 8901,
       };
 
-      await db.insert(Insert);
+      inject(tree, path, component);
+
+      //Nested --> Isolate only to first component
+      const insert = isolate(tree, path.slice(0, -3));
+
+      await db.insert(route, insert);
 
       //Get written insertHistory rows
       const {
@@ -1092,41 +1958,89 @@ describe('Db', () => {
         carDimensionsInsertHistory[0],
       );
 
-      expect(callback).toHaveBeenCalledTimes(2);
-      expect(callback).toHaveBeenNthCalledWith(2, carTechnicalInsertHistoryRow);
-      expect(callback).toHaveBeenNthCalledWith(
+      expect(carTechnicalCallback).toHaveBeenCalledTimes(1);
+      expect(carTechnicalCallback).toHaveBeenNthCalledWith(
+        1,
+        carTechnicalInsertHistoryRow,
+      );
+
+      expect(carDimensionsCallback).toHaveBeenCalledTimes(1);
+      expect(carDimensionsCallback).toHaveBeenNthCalledWith(
         1,
         carDimensionsInsertHistoryRow,
       );
     });
     it('notify on nested cake/layer/component route', async () => {
       const callback = vi.fn();
-      const route = Route.fromFlat('/carCake/carGeneralLayer/carGeneral');
+      const sliceId = 'VIN1';
+      const cakeRef = (staticExample().carCake._data[0]._hash ?? '') as string;
+      const route = Route.fromFlat(
+        `/carCake(${sliceId})@${cakeRef}/carGeneralLayer/carGeneral`,
+      );
 
       db.registerObserver(route, callback);
 
-      const Insert: Insert<Json> = {
-        route: '/carCake/carGeneralLayer/carGeneral',
-        command: 'add',
-        value: {
-          carGeneralLayer: {
-            VIN5: {
-              brand: 'Porsche',
-              doors: 2,
-              type: '911 Carrera 4S',
-            } as CarGeneral,
-            VIN6: {
-              brand: 'Mercedes Benz',
-              doors: 4,
-              type: 'EQE 350+',
-            } as CarGeneral,
-          } as Record<string, CarGeneral>,
-        } as Record<string, Record<string, CarGeneral>>,
-        origin: 'H45H',
-        acknowledged: false,
+      const { tree, cell } = await db.get(route, {});
+
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(1);
+
+      const path = paths[0];
+
+      const cake = {
+        _data: [
+          {
+            sliceIdsTable: 'carSliceId',
+            sliceIdsRow: staticExample().carSliceId._data[0]._hash as string,
+            layers: {
+              carGeneralLayer: {
+                _data: [
+                  {
+                    add: {
+                      VIN1: {
+                        carGeneral: {
+                          _data: [
+                            {
+                              brand: 'Toyota',
+                              type: 'Yaris',
+                              doors: 2,
+                              energyConsumption: 8.2,
+                              units: {
+                                energy: 'l/100km',
+                              },
+                              serviceIntervals: [12000, 24000, 36000],
+                              isElectric: false,
+                              meta: {
+                                pressText: 'A reliable subcompact car.',
+                              },
+                            },
+                          ],
+                          _type: 'components',
+                        },
+                      },
+                    },
+                    sliceIdsTable: 'carSliceId',
+                    sliceIdsTableRow: staticExample().carSliceId._data[0]
+                      ._hash as string,
+                    componentsTable: 'carGeneral',
+                  },
+                ],
+                _type: 'layers',
+              },
+              carTechnicalLayer: staticExample().carTechnicalLayer._data[0]
+                ._hash as string,
+              carColorLayer: staticExample().carColorLayer._data[0]
+                ._hash as string,
+            },
+          },
+        ],
+        _type: 'cakes',
       };
 
-      await db.insert(Insert);
+      const insert = isolate(tree, path);
+      inject(insert, ['carCake'], cake);
+
+      await db.insert(route, insert);
 
       //Get written insertHistory rows
       const {
@@ -1134,68 +2048,51 @@ describe('Db', () => {
       } = await db.getInsertHistory('carCake');
       const carCakeInsertHistoryRow = rmhsh(carCakeInsertHistory[0]);
 
-      const {
-        ['carGeneralLayerInsertHistory']: {
-          _data: carGeneralLayerInsertHistory,
-        },
-      } = await db.getInsertHistory('carGeneralLayer');
-      const carGeneralLayerInsertHistoryRow = rmhsh(
-        carGeneralLayerInsertHistory[0],
-      );
-
-      const {
-        ['carGeneralInsertHistory']: { _data: carGeneralInsertHistory },
-      } = await db.getInsertHistory('carGeneral');
-      const carGeneralInsertHistoryRow1 = rmhsh(carGeneralInsertHistory[0]);
-      const carGeneralInsertHistoryRow2 = rmhsh(carGeneralInsertHistory[1]);
-
-      expect(callback).toHaveBeenCalledTimes(4);
-      expect(callback).toHaveBeenNthCalledWith(4, carCakeInsertHistoryRow);
-      expect(callback).toHaveBeenNthCalledWith(
-        3,
-        carGeneralLayerInsertHistoryRow,
-      );
-      //Order of component InsertHistory not guaranteed
-      expect([2, 1]).toContain(
-        (callback.mock.calls[1][0] as InsertHistoryRow<'CarGeneral'>).timeId ===
-          carGeneralInsertHistoryRow1.timeId
-          ? 2
-          : 1,
-      );
-      expect([2, 1]).toContain(
-        (callback.mock.calls[1][0] as InsertHistoryRow<'CarGeneral'>).timeId ===
-          carGeneralInsertHistoryRow2.timeId
-          ? 2
-          : 1,
-      );
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenNthCalledWith(1, carCakeInsertHistoryRow);
     });
     it('skips notification on component route', async () => {
       const callback = vi.fn();
       const route = Route.fromFlat('/carGeneral');
 
       db.registerObserver(route, callback);
+      const { tree, cell } = await db.get(route, {});
 
-      const Insert: Insert<CarGeneral> = {
-        route: '/carGeneral',
-        command: 'add',
-        value: {
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBe(12);
+
+      const path = paths[0];
+
+      const component = {
+        brand: 'Porsche',
+        type: 'Macan Electric',
+        doors: 4,
+        energyConsumption: 2.1,
+        units: {
+          energy: 'kWh/100km',
           _hash: '',
-          brand: 'Porsche',
-          doors: 2,
-          type: 'Macan Electric',
-        } as CarGeneral,
-        origin: 'H45H',
-        acknowledged: false,
-      };
+        },
+        serviceIntervals: [20000, 40000, 60000],
+        isElectric: false,
+        meta: {
+          pressText: 'A sporty electric SUV.',
+          _hash: '',
+        },
+        _type: 'components',
+        _hash: '',
+      } as CarGeneral;
 
-      await db.insert(Insert, { skipNotification: true });
+      const insert = isolate(tree, path);
+      inject(insert, path, component);
+
+      await db.insert(route, insert, { skipNotification: true });
 
       expect(callback).toHaveBeenCalledTimes(0);
     });
   });
   describe('join', () => {
     const cakeKey = 'carCake';
-    const cakeRef = carsExample().carCake._data[0]._hash as string;
+    const cakeRef = staticExample().carCake._data[2]._hash as string;
 
     it('should be defined', () => {
       expect(db.join).toBeDefined();
@@ -1217,9 +2114,11 @@ describe('Db', () => {
       const result = await db.join(columnSelection, cakeKey, cakeRef);
 
       // Build expected data for validation
-      const exampleData = carsExample().carGeneral._data.map((c) => [c.brand]);
+      const exampleData = staticExample().carGeneral._data.map((c) => [
+        c.brand,
+      ]);
 
-      expect(result.rows).toEqual(exampleData);
+      expect(result.rows.flatMap((r) => r)).toEqual(exampleData);
     });
 
     it('should join data with missing/nulled values correctly', async () => {
@@ -1241,12 +2140,12 @@ describe('Db', () => {
 
       // Get slice IDs from carSliceIds layer
       const carSliceIds = (
-        carsExample().carSliceId as SliceIdsTable
+        staticExample().carSliceId as SliceIdsTable
       )._data.flatMap((d) => d.add);
 
       // Get technical layer values to map slice IDs to component refs
       const carTechnicalLayerValues = (
-        carsExample().carTechnicalLayer as LayersTable
+        staticExample().carTechnicalLayer as LayersTable
       )._data.flatMap((l) =>
         Object.entries(l.add).map(([sliceId, compRef]) => ({
           sliceId,
@@ -1262,15 +2161,15 @@ describe('Db', () => {
         );
         if (layerEntry) {
           const compRef = layerEntry.compRef;
-          const comp = carsExample().carTechnical._data.find(
+          const comp = staticExample().carTechnical._data.find(
             (c) => c._hash === compRef,
           );
           if (comp && comp.repairedByWorkshop !== undefined) {
             // Value exists
-            exampleData.push([comp.repairedByWorkshop]);
+            exampleData.push([[comp.repairedByWorkshop]]);
             continue;
           }
-          exampleData.push([null]); // Value missing in component
+          exampleData.push([[null]]); // Value missing in component
         }
       }
 
@@ -1301,71 +2200,21 @@ describe('Db', () => {
       const columnSelection = new ColumnSelection(columnInfos);
       const result = await db.join(columnSelection, cakeKey, cakeRef);
 
-      // Build expected data for validation
-
-      const exampleData = [];
-      // Get slice IDs from carSliceIds layer
-      const carSliceIds = (
-        carsExample().carSliceId as SliceIdsTable
-      )._data.flatMap((d) => d.add);
-
-      // Get general layer values to map slice IDs to general component refs
-      const carGeneralLayerValues = (
-        carsExample().carGeneralLayer as LayersTable
-      )._data.flatMap((l) =>
-        Object.entries(l.add).map(([sliceId, compRef]) => ({
-          sliceId,
-          compRef,
-        })),
-      );
-
-      // Get technical layer values to map slice IDs to technical component refs
-      const carTechnicalLayerValues = (
-        carsExample().carTechnicalLayer as LayersTable
-      )._data.flatMap((l) =>
-        Object.entries(l.add).map(([sliceId, compRef]) => ({
-          sliceId,
-          compRef,
-        })),
-      );
-
-      // Map slice IDs to isElectric and transmission values
-      for (const carSliceId of carSliceIds) {
-        // General Component
-        const generalLayerEntry = carGeneralLayerValues.find(
-          (l) => l.sliceId === carSliceId,
-        );
-        let isElectricValue: boolean | null = null;
-        if (generalLayerEntry) {
-          const generalCompRef = generalLayerEntry.compRef;
-          const generalComp = carsExample().carGeneral._data.find(
-            (c) => c._hash === generalCompRef,
-          );
-          if (generalComp && generalComp.isElectric !== undefined) {
-            isElectricValue = generalComp.isElectric;
-          }
-        }
-
-        // Technical Component
-        const technicalLayerEntry = carTechnicalLayerValues.find(
-          (l) => l.sliceId === carSliceId,
-        );
-        let transmissionValue: string | null = null;
-        if (technicalLayerEntry) {
-          const technicalCompRef = technicalLayerEntry.compRef;
-          const technicalComp = carsExample().carTechnical._data.find(
-            (c) => c._hash === technicalCompRef,
-          );
-          if (technicalComp && technicalComp.transmission !== undefined) {
-            transmissionValue = (technicalComp.transmission as string) ?? null;
-          }
-        }
-
-        exampleData.push([isElectricValue, transmissionValue]);
-      }
-
       // Validate joined data
-      expect(result.rows).toEqual(exampleData);
+      expect(result.rows).toEqual([
+        [[false], ['Manual']],
+        [[false], ['Automatic']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[false], ['Manual']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+        [[true], ['Single-Speed']],
+      ]);
     });
 
     it('throws error if cake ref is not found', async () => {
@@ -1383,9 +2232,7 @@ describe('Db', () => {
       const columnSelection = new ColumnSelection(columnInfos);
       await expect(
         db.join(columnSelection, cakeKey, 'MISSING_CAKE_REF'),
-      ).rejects.toThrow(
-        'Db.join: Cake with ref "MISSING_CAKE_REF" not found in cake table "carCake".',
-      );
+      ).rejects.toThrow('Base cake MISSING_CAKE_REF does not exist.');
     });
   });
 });

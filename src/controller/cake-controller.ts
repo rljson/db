@@ -6,14 +6,26 @@ import { hsh, rmhsh } from '@rljson/hash';
 import { Json, JsonValue } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  Cake, CakesTable, InsertHistoryRow, LayerRef, Ref, Rljson, SliceIdsRef, TableKey, timeId
+  Cake,
+  CakesTable,
+  InsertHistoryRow,
+  LayerRef,
+  Ref,
+  Rljson,
+  SliceIdsRef,
+  TableKey,
+  timeId,
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
-import { Controller, ControllerCommands, ControllerRefs } from './controller.ts';
-
+import {
+  Controller,
+  ControllerChildProperty,
+  ControllerCommands,
+  ControllerRefs,
+} from './controller.ts';
 
 export interface CakeValue extends Json {
   layers: {
@@ -30,9 +42,9 @@ export interface CakeControllerRefs extends Partial<Cake> {
   base?: Ref;
 }
 
-export class CakeController<N extends string>
-  extends BaseController<CakesTable>
-  implements Controller<CakesTable, N>
+export class CakeController<N extends string, C extends Cake>
+  extends BaseController<CakesTable, C>
+  implements Controller<CakesTable, C, N>
 {
   private _table: CakesTable | null = null;
 
@@ -42,6 +54,7 @@ export class CakeController<N extends string>
     private _refs?: CakeControllerRefs,
   ) {
     super(_core, _tableKey);
+    this._contentType = 'cakes';
   }
 
   private _baseLayers: { [layerTable: string]: string } = {};
@@ -64,8 +77,16 @@ export class CakeController<N extends string>
       throw new Error(`Table ${this._tableKey} is not of type cakes.`);
     }
 
+    //Get TableCfg
+    this._tableCfg = await this._core.tableCfg(this._tableKey);
+
     // Validate refs or try to read them from the first row of the table
-    if (this._refs && this._refs.base && this._refs.base.length > 0) {
+    if (
+      this._refs &&
+      this._refs.base &&
+      this._refs.base !== undefined &&
+      this._refs.base.length > 0
+    ) {
       // Validate base cake exists
       const {
         [this._tableKey]: { _data: baseCakes },
@@ -83,24 +104,27 @@ export class CakeController<N extends string>
     } else {
       // Try to read refs from first (latest?) row of cakes table (Fallback)
       const cake = this._table._data[0] as CakeControllerRefs;
-      this._refs = {
-        sliceIdsTable: cake.sliceIdsTable,
-        sliceIdsRow: cake.sliceIdsRow,
-      };
-      this._baseLayers = rmhsh(cake.layers!);
+      /* v8 ignore else -- @preserve */
+      if (!!cake) {
+        this._refs = {
+          sliceIdsTable: cake.sliceIdsTable,
+          sliceIdsRow: cake.sliceIdsRow,
+        };
+        this._baseLayers = rmhsh(cake.layers!);
+      }
     }
   }
 
   async getChildRefs(
     where: string | Json,
     filter?: Json,
-  ): Promise<Array<{ tableKey: TableKey; ref: Ref }>> {
+  ): Promise<ControllerChildProperty[]> {
     /* v8 ignore next -- @preserve */
     if (!this._table) {
       throw new Error(`Controller not initialized.`);
     }
 
-    const childRefs: Array<{ tableKey: TableKey; ref: Ref }> = [];
+    const childRefs: ControllerChildProperty[] = [];
     const { [this._tableKey]: table } = await this.get(where, filter);
 
     const cakes = table._data as Cake[];
@@ -119,7 +143,7 @@ export class CakeController<N extends string>
 
   async insert(
     command: CakeControllerCommands,
-    value: Json,
+    value: C,
     origin?: Ref,
     refs?: ControllerRefs,
   ): Promise<InsertHistoryRow<any>[]> {
@@ -133,7 +157,7 @@ export class CakeController<N extends string>
 
     const normalizedValue: { [layerTable: string]: string } = {};
     for (const [layerTable, layerRef] of Object.entries(
-      value as { [layerTable: string]: string },
+      value.layers as { [layerTable: string]: string },
     )) {
       /* v8 ignore next -- @preserve */
       if (Array.isArray(layerRef) && layerRef.length > 1) {
@@ -142,6 +166,7 @@ export class CakeController<N extends string>
         );
       }
 
+      /* v8 ignore next -- @preserve */
       normalizedValue[layerTable] = Array.isArray(layerRef)
         ? layerRef[0]
         : layerRef;
@@ -149,6 +174,7 @@ export class CakeController<N extends string>
 
     // Overwrite base layers with given layers
     const cake = {
+      ...value,
       layers: { ...this._baseLayers, ...normalizedValue },
       ...(refs || this._refs),
     };
@@ -184,7 +210,7 @@ export class CakeController<N extends string>
     }
   }
 
-  filterRow(row: Json, key: string, value: JsonValue): boolean {
+  async filterRow(row: Json, key: string, value: JsonValue): Promise<boolean> {
     const cake = row as Cake;
     for (const [layerKey, layerRef] of Object.entries(cake.layers)) {
       if (layerKey === key && layerRef === value) {

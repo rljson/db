@@ -6,13 +6,13 @@
 
 import { describe, it } from 'vitest';
 
-import { carsExample } from '../src/cars-example';
+import { staticExample } from '../src/example-static/example-static';
 
 import { expectGolden } from './setup/goldens';
 
-describe('Cars Example', () => {
+describe('Static Example', () => {
   it('should run without error', async () => {
-    const ex = await carsExample();
-    await expectGolden('test/goldens/cars-example.json').toBe(ex);
+    const ex = await staticExample();
+    await expectGolden('test/goldens/static-example.json').toBe(ex);
   });
 });
