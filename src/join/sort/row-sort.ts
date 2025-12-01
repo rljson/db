@@ -115,15 +115,22 @@ export class RowSort {
       let i = 0;
       for (const index of sortIndices) {
         const sort = sortOrders[i++];
-        const vA = rowA[index].insert ?? rowA[index].value;
-        const vB = rowB[index].insert ?? rowB[index].value;
+        //TODO: Make cells holding several values sortable
+        /* v8 ignore next -- @preserve */
+        const vA = rowA[index].inserts
+          ? rowA[index].inserts![0].cell[0].value![0]
+          : rowA[index].value?.cell[0].value![0];
+        /* v8 ignore next -- @preserve */
+        const vB = rowB[index].inserts
+          ? rowB[index].inserts![0].cell[0].value![0]
+          : rowB[index].value?.cell[0].value![0];
         if (vA === vB) {
           continue;
         }
         if (sort === 'asc') {
-          return vA < vB ? -1 : 1;
+          return vA! < vB! ? -1 : 1;
         } else {
-          return vA < vB ? 1 : -1;
+          return vA! < vB! ? 1 : -1;
         }
       }
 

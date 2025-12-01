@@ -9,19 +9,18 @@ import { Route } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { carsExample } from '../../src/cars-example';
 import { Db } from '../../src/db';
+import { staticExample } from '../../src/example-static/example-static';
 import { RowFilter } from '../../src/join/filter/row-filter';
 import { ColumnSelection } from '../../src/join/selection/column-selection';
 import { SetValue } from '../../src/join/set-value/set-value';
 import { RowSort } from '../../src/join/sort/row-sort';
 
-
 describe('Join', () => {
   let db: Db;
 
   const cakeKey = 'carCake';
-  const cakeRef = carsExample().carCake._data[0]._hash as string;
+  const cakeRef = staticExample().carCake._data[2]._hash as string;
 
   const columnSelection: ColumnSelection =
     ColumnSelection.exampleCarsColumnSelection();
@@ -36,12 +35,12 @@ describe('Join', () => {
     db = new Db(io);
 
     //Create Tables for TableCfgs in carsExample
-    for (const tableCfg of carsExample().tableCfgs._data) {
+    for (const tableCfg of staticExample().tableCfgs._data) {
       await db.core.createTableWithInsertHistory(tableCfg);
     }
 
     //Import Data
-    await db.core.import(carsExample());
+    await db.core.import(staticExample());
   });
 
   describe('Constructor', () => {
@@ -80,7 +79,7 @@ describe('Join', () => {
       const rowCount = join.rowCount;
 
       const sliceIds = new Set(
-        carsExample().carSliceId._data.flatMap((s) => s.add),
+        staticExample().carSliceId._data.flatMap((s) => s.add),
       );
 
       expect(rowCount).toBe(sliceIds.size);
@@ -100,7 +99,7 @@ describe('Join', () => {
       const data = join.data;
 
       const sliceIds = new Set(
-        carsExample().carSliceId._data.flatMap((s) => s.add),
+        staticExample().carSliceId._data.flatMap((s) => s.add),
       );
 
       expect(Object.keys(data).length).toBe(sliceIds.size);
@@ -143,7 +142,7 @@ describe('Join', () => {
       const rows = join.rows;
 
       const sliceIds = new Set(
-        carsExample().carSliceId._data.flatMap((s) => s.add),
+        staticExample().carSliceId._data.flatMap((s) => s.add),
       );
 
       expect(rows.length).toBe(sliceIds.size);
@@ -164,7 +163,7 @@ describe('Join', () => {
       };
       const editedJoin = join.setValue(setValue);
 
-      const values = editedJoin.rows.flatMap((r) => r);
+      const values = editedJoin.rows.flatMap((r) => r).flat();
       const uniqueValues = Array.from(new Set(values));
 
       expect(uniqueValues).toEqual(['Opel']);
@@ -190,10 +189,10 @@ describe('Join', () => {
       ];
       const editedJoin = join.setValues(setValues);
 
-      const values = editedJoin.rows.flatMap((r) => r);
+      const values = editedJoin.rows.flatMap((r) => r).flat();
       const uniqueValues = Array.from(new Set(values)).sort();
 
-      expect(uniqueValues).toEqual(['BMW']);
+      expect(uniqueValues).toEqual(['BMW', 'Opel']);
     });
   });
 
@@ -223,8 +222,8 @@ describe('Join', () => {
       const filteredResult = Array.from(
         new Set(filtered.rows.flatMap((r) => r)),
       );
-      expect(filteredResult.length).toBe(1);
-      expect(filteredResult).toEqual(['Audi']);
+      expect(filteredResult.length).toBe(2);
+      expect(filteredResult).toEqual([['Audi'], ['Audi']]);
     });
   });
 
@@ -241,8 +240,21 @@ describe('Join', () => {
         new Set(selected.rows.flatMap((r) => r)),
       );
 
-      expect(selectedResult.length).toBe(4);
-      expect(selectedResult).toEqual(['Volkswagen', 'Audi', 'BMW', 'Tesla']);
+      expect(selectedResult.length).toBe(12);
+      expect(selectedResult.flat()).toEqual([
+        'Volkswagen',
+        'Volkswagen',
+        'Audi',
+        'Audi',
+        'BMW',
+        'BMW',
+        'Tesla',
+        'Tesla',
+        'Ford',
+        'Chevrolet',
+        'Nissan',
+        'Hyundai',
+      ]);
     });
   });
 
@@ -262,12 +274,16 @@ describe('Join', () => {
         'Volkswagen',
         'Tesla',
         'Tesla',
+        'Nissan',
+        'Hyundai',
+        'Ford',
+        'Chevrolet',
         'BMW',
         'BMW',
         'Audi',
         'Audi',
       ];
-      expect(sortedResult).toEqual(expected);
+      expect(sortedResult.flat()).toEqual(expected);
     });
   });
 
@@ -286,18 +302,68 @@ describe('Join', () => {
 
       const inserts = await join.setValue(setValue).insert();
       const insert = inserts[0];
-      const inserteds = await db.insert(insert);
+      const inserteds = await db.insert(insert.route, insert.tree, {
+        skipHistory: true,
+      });
       const inserted = inserteds[0];
 
       const writtenCakeRef = inserted['carCakeRef'] as string;
-      const writtenData = await db.get(
+      const { rljson: writtenData } = await db.get(
         Route.fromFlat(
           `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/brand`,
         ),
         {},
       );
 
-      expect(writtenData['carGeneral']._data.length).toBe(8);
+      expect(writtenData['carGeneral']._data.length).toBe(12);
+      const writtenDataSet = new Set(
+        writtenData['carGeneral']._data.map((d: any) => d['brand']),
+      );
+      expect(writtenDataSet.has('Opel')).toBe(true);
+      expect(writtenDataSet.size).toBe(1);
+    });
+  });
+
+  describe('deeply nested', () => {
+    beforeEach(async () => {});
+    it('should join on deeply nested structures and insert', async () => {
+      const cakeKey = 'catalogCake';
+      const cakeRef = (staticExample().catalogCake._data[0]._hash ??
+        '') as string;
+
+      const route = `${cakeKey}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+
+      const brandColumnSelectionDeeplyNested =
+        ColumnSelection.exampleCarsDeeplyNestedColumnSelection();
+
+      // Initial join for CarGeneral -> Brand
+      const join = await db.join(
+        brandColumnSelectionDeeplyNested,
+        cakeKey,
+        cakeRef,
+      );
+
+      const setValue: SetValue = {
+        route,
+        value: 'Opel',
+      };
+
+      const inserts = await join.setValue(setValue).insert();
+      const insert = inserts[0];
+      const inserteds = await db.insert(insert.route, insert.tree, {
+        skipHistory: true,
+      });
+      const inserted = inserteds[0];
+
+      const writtenCakeRef = inserted['catalogCakeRef'] as string;
+      const { rljson: writtenData } = await db.get(
+        Route.fromFlat(
+          `/${cakeKey}@${writtenCakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral`,
+        ),
+        {},
+      );
+
+      expect(writtenData['carGeneral']._data.length).toBe(12);
       const writtenDataSet = new Set(
         writtenData['carGeneral']._data.map((d: any) => d['brand']),
       );

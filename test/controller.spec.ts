@@ -6,25 +6,41 @@
 
 import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
-import { JsonH } from '@rljson/json';
-import { Layer, SliceId, TableCfg } from '@rljson/rljson';
+import { Json, JsonH } from '@rljson/json';
+import {
+  Cake,
+  CakesTable,
+  Layer,
+  LayersTable,
+  SliceId,
+  SliceIds,
+  TableCfg,
+} from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { CarDimension, CarGeneral, carsExample } from '../src/cars-example';
 import {
   CakeController,
   CakeControllerRefs,
   CakeValue,
 } from '../src/controller/cake-controller';
 import { ComponentController } from '../src/controller/component-controller';
-import { createController } from '../src/controller/controller';
+import { ControllerRefs, createController } from '../src/controller/controller';
 import {
   LayerController,
   LayerControllerRefs,
 } from '../src/controller/layer-controller';
+import {
+  SliceIdController,
+  SliceIdControllerRefs,
+} from '../src/controller/slice-id-controller';
 import { Core } from '../src/core';
 import { Db } from '../src/db';
+import {
+  CarDimension,
+  CarGeneral,
+  staticExample,
+} from '../src/example-static/example-static';
 
 describe('Controller', () => {
   let db: Db;
@@ -41,12 +57,12 @@ describe('Controller', () => {
     core = db.core;
 
     //Create Tables for TableCfgs in carsExample
-    for (const tableCfg of carsExample().tableCfgs._data) {
+    for (const tableCfg of staticExample().tableCfgs._data) {
       await db.core.createTableWithInsertHistory(tableCfg);
     }
 
     //Import Data
-    await db.core.import(carsExample());
+    await db.core.import(staticExample());
   });
 
   describe('createController Factory', () => {
@@ -58,7 +74,7 @@ describe('Controller', () => {
           'carGeneralLayer',
           {
             sliceIdsTable: 'carSliceId',
-            sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+            sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
               '') as string,
             componentsTable: 'carGeneral',
           } as LayerControllerRefs,
@@ -78,7 +94,7 @@ describe('Controller', () => {
       it('Cake', async () => {
         const cakeCtrl = await createController('cakes', core, 'carCake', {
           sliceIdsTable: 'carSliceId',
-          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
         } as CakeControllerRefs);
         expect(cakeCtrl).toBeDefined();
@@ -98,7 +114,7 @@ describe('Controller', () => {
     describe('Basic operation', () => {
       it('Init', async () => {
         //Create ComponentController
-        let componentCtrl: ComponentController<'CarGeneral', CarGeneral>;
+        let componentCtrl: ComponentController<'CarGeneral', Json, CarGeneral>;
 
         //Wrong TableKey
         componentCtrl = new ComponentController(core, '#');
@@ -134,7 +150,7 @@ describe('Controller', () => {
         //Get Child Refs
         const dimensionsRefs = Array.from(
           new Set(
-            carsExample()
+            staticExample()
               .carTechnical._data.map((c) =>
                 Array.isArray(c.dimensions) ? c.dimensions : [c.dimensions],
               )
@@ -154,17 +170,17 @@ describe('Controller', () => {
 
       it('Table', async () => {
         //Create ComponentController
-        const carGeneralComponentController = await createController(
+        const carGeneralComponentController = (await createController(
           'components',
           core,
           'carGeneral',
-        );
+        )) as ComponentController<'CarGeneral', Json, CarGeneral>;
 
         //Read Table
         const table = await carGeneralComponentController.table();
         expect(table).toBeDefined();
         expect(table._data.map((d: JsonH) => d._hash).sort()).toEqual(
-          carsExample()
+          staticExample()
             .carGeneral._data.map((d: JsonH) => d._hash)
             .sort(),
         );
@@ -178,7 +194,8 @@ describe('Controller', () => {
         );
 
         //Read existing Row
-        const firstRowHash = carsExample().carGeneral._data[0]._hash as string;
+        const firstRowHash = staticExample().carGeneral._data[0]
+          ._hash as string;
         const {
           ['carGeneral']: { _data: firstRows },
         } = await carGeneralComponentController.get(firstRowHash);
@@ -205,7 +222,8 @@ describe('Controller', () => {
         );
 
         //Read existing Row with Filter
-        const firstRowHash = carsExample().carGeneral._data[0]._hash as string;
+        const firstRowHash = staticExample().carGeneral._data[0]
+          ._hash as string;
         const filter = { brand: 'Volkswagen' };
         const {
           ['carGeneral']: { _data: firstRows },
@@ -233,7 +251,7 @@ describe('Controller', () => {
         );
 
         //Read existing Row with Filter
-        const where = carsExample().carGeneral._data[0];
+        const where = staticExample().carGeneral._data[0];
         const matchingFilter = { brand: 'Volkswagen' };
         const {
           ['carGeneral']: { _data: firstRows },
@@ -267,7 +285,7 @@ describe('Controller', () => {
 
         //Build where
         const where = {
-          ...carsExample().carDimensions._data[1],
+          ...staticExample().carDimensions._data[1],
         } as Partial<CarDimension>;
 
         const {
@@ -276,8 +294,8 @@ describe('Controller', () => {
 
         expect(resultData.length).toBe(2);
         expect(resultData.map((r) => r._hash)).toEqual([
-          carsExample().carTechnical._data[1]._hash,
-          carsExample().carTechnical._data[2]._hash,
+          staticExample().carTechnical._data[1]._hash,
+          staticExample().carTechnical._data[2]._hash,
         ]);
       });
 
@@ -291,14 +309,16 @@ describe('Controller', () => {
 
         //Build where
         const where = {
-          height: carsExample().carDimensions._data.map((d) => d.height),
+          height: staticExample().carDimensions._data.map((d) => d.height),
         };
 
         const {
           carTechnical: { _data: resultData },
         } = await carTechnicalComponentController.get(rmhsh(where));
 
-        expect(resultData.length).toBe(carsExample().carTechnical._data.length);
+        expect(resultData.length).toBe(
+          staticExample().carTechnical._data.length,
+        );
       });
 
       it('Insert', async () => {
@@ -354,7 +374,7 @@ describe('Controller', () => {
           'carGeneral',
         );
         expect(carGeneralTable?._data.length).toBe(
-          carsExample().carGeneral._data.length + 1,
+          staticExample().carGeneral._data.length + 1,
         );
 
         //Add another Component, with previous
@@ -382,7 +402,7 @@ describe('Controller', () => {
           'carGeneral',
         );
         expect(carGeneralTable2?._data.length).toBe(
-          carsExample().carGeneral._data.length + 2,
+          staticExample().carGeneral._data.length + 2,
         );
       });
     });
@@ -393,13 +413,13 @@ describe('Controller', () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
           componentsTable: 'carGeneral',
         } as LayerControllerRefs;
 
         //Create LayerController
-        let layerCtrl: LayerController<'CarGeneral'>;
+        let layerCtrl: LayerController<'CarGeneral', Layer>;
 
         //Wrong TableKey
         layerCtrl = new LayerController(core, '#', carGeneralLayerRefs);
@@ -417,7 +437,7 @@ describe('Controller', () => {
         // Create a mock table, which is not of type layers
         const mockLayerName = 'mockLayer';
         const mockCfg = {
-          ...carsExample().tableCfgs._data[1],
+          ...staticExample().tableCfgs._data[1],
           ...{ key: mockLayerName },
         } as TableCfg;
         await db.core.createTable(rmhsh(mockCfg) as TableCfg);
@@ -447,7 +467,8 @@ describe('Controller', () => {
 
         //Valid w/ base only
         const carGeneralLayerRefsWithBase = {
-          base: (carsExample().carGeneralLayer._data[0]._hash || '') as string,
+          base: (staticExample().carGeneralLayer._data[0]._hash ||
+            '') as string,
         } as LayerControllerRefs;
         layerCtrl = new LayerController(
           core,
@@ -474,7 +495,7 @@ describe('Controller', () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
           componentsTable: 'carGeneral',
         } as LayerControllerRefs;
@@ -488,7 +509,7 @@ describe('Controller', () => {
         );
 
         //Get Child Refs by Hash
-        const firstRowHash = carsExample().carGeneralLayer._data[0]
+        const firstRowHash = staticExample().carGeneralLayer._data[0]
           ._hash as string;
         const childRefsByHash = await carGeneralLayerController.getChildRefs(
           firstRowHash,
@@ -496,7 +517,7 @@ describe('Controller', () => {
 
         expect(childRefsByHash).toBeDefined();
         expect(childRefsByHash.length).toBe(
-          carsExample().carSliceId._data[0].add.length,
+          staticExample().carSliceId._data[0].add.length,
         );
       });
 
@@ -504,7 +525,7 @@ describe('Controller', () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
           componentsTable: 'carGeneral',
         } as LayerControllerRefs;
@@ -519,11 +540,11 @@ describe('Controller', () => {
 
         const filterKey = '';
         const filterValue = Object.values(
-          carsExample().carGeneralLayer._data[0].add,
+          staticExample().carGeneralLayer._data[0].add,
         )[0];
 
         const positivefilterResult = await carGeneralLayerController.filterRow(
-          carsExample().carGeneralLayer._data[0],
+          staticExample().carGeneralLayer._data[0],
           filterKey,
           filterValue,
         );
@@ -531,7 +552,7 @@ describe('Controller', () => {
         expect(positivefilterResult).toBe(true);
 
         const negativefilterResult = await carGeneralLayerController.filterRow(
-          carsExample().carGeneralLayer._data[0],
+          staticExample().carGeneralLayer._data[0],
           filterKey,
           'NonExistingHash',
         );
@@ -542,7 +563,7 @@ describe('Controller', () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
           componentsTable: 'carGeneral',
         } as LayerControllerRefs;
@@ -556,15 +577,19 @@ describe('Controller', () => {
         );
 
         //Read Table
-        const table = await carGeneralLayerController.table();
+        const table = (await carGeneralLayerController.table()) as LayersTable;
         expect(table).toBeDefined();
-        expect(table).toEqual(carsExample().carGeneralLayer);
+        expect(table._data.map((l) => l._hash).sort()).toEqual(
+          staticExample()
+            .carGeneralLayer._data.map((l) => l._hash)
+            .sort(),
+        );
       });
       it('Get', async () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
           componentsTable: 'carGeneral',
         } as LayerControllerRefs;
@@ -578,7 +603,7 @@ describe('Controller', () => {
         );
 
         //Read existing Row by Hash
-        const firstRowHash = carsExample().carGeneralLayer._data[0]
+        const firstRowHash = staticExample().carGeneralLayer._data[0]
           ._hash as string;
         const {
           ['carGeneralLayer']: { _data: firstRows },
@@ -592,7 +617,7 @@ describe('Controller', () => {
         const {
           ['carGeneralLayer']: { _data: firstRowsByWhere },
         } = await carGeneralLayerController.get(
-          rmhsh(carsExample().carGeneralLayer._data[0]),
+          rmhsh(staticExample().carGeneralLayer._data[0]),
         );
         const firstRowByWhere = firstRowsByWhere[0];
         expect(firstRowByWhere).toBeDefined();
@@ -606,11 +631,60 @@ describe('Controller', () => {
         //Read by empty
       });
 
+      it('resolveBaseLayer', async () => {
+        //LayerController Refs
+        const carGeneralLayerRefs = {
+          sliceIdsTable: 'carSliceId',
+          sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
+            '') as string,
+          componentsTable: 'carGeneral',
+        } as LayerControllerRefs;
+
+        //Create LayerController
+        const carGeneralLayerController = (await createController(
+          'layers',
+          core,
+          'carGeneralLayer',
+          carGeneralLayerRefs,
+        )) as LayerController<'carGeneralLayer', Layer>;
+
+        const layerHash = staticExample().carGeneralLayer._data[2]
+          ._hash as string;
+        const {
+          ['carGeneralLayer']: { _data: layers },
+        } = await carGeneralLayerController.get(layerHash);
+
+        expect(layers.length).toBe(1);
+
+        const layer = layers[0] as Layer;
+        expect(layer).toBeDefined();
+        expect(Object.keys(rmhsh(layer.add))).toEqual(['VIN11', 'VIN12']);
+
+        const resolvedBaseLayer =
+          await carGeneralLayerController.resolveBaseLayer(layer);
+
+        expect(resolvedBaseLayer).toBeDefined();
+        expect(Object.keys(rmhsh(resolvedBaseLayer.add))).toEqual([
+          'VIN1',
+          'VIN2',
+          'VIN3',
+          'VIN4',
+          'VIN5',
+          'VIN6',
+          'VIN7',
+          'VIN8',
+          'VIN9',
+          'VIN10',
+          'VIN11',
+          'VIN12',
+        ]);
+      });
+
       it('Insert -> Invalid Command', async () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
           componentsTable: 'carGeneral',
         } as LayerControllerRefs;
@@ -625,8 +699,8 @@ describe('Controller', () => {
         //Invalid Command
         const origin = 'H45H';
         const layerValue: Partial<Layer> = {
-          VIN1: (carsExample().carGeneral._data[1]._hash as string) || '',
-          VIN2: (carsExample().carGeneral._data[0]._hash as string) || '',
+          VIN1: (staticExample().carGeneral._data[1]._hash as string) || '',
+          VIN2: (staticExample().carGeneral._data[0]._hash as string) || '',
         } as Record<SliceId, string>;
 
         await expect(
@@ -640,7 +714,7 @@ describe('Controller', () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
           componentsTable: 'carGeneral',
         } as LayerControllerRefs;
@@ -657,8 +731,8 @@ describe('Controller', () => {
         const origin = 'H45H';
         const carGeneralLayerValue: Partial<Layer> = {
           add: {
-            VIN1: (carsExample().carGeneral._data[1]._hash as string) || '',
-            VIN2: (carsExample().carGeneral._data[0]._hash as string) || '',
+            VIN1: (staticExample().carGeneral._data[1]._hash as string) || '',
+            VIN2: (staticExample().carGeneral._data[0]._hash as string) || '',
           } as Record<SliceId, string>,
         };
 
@@ -676,12 +750,14 @@ describe('Controller', () => {
         //Check if InsertHistory was written correctly
         const { carGeneralLayer: carGeneralLayerTable } =
           await db.core.dumpTable('carGeneralLayer');
-        expect(carGeneralLayerTable?._data.length).toBe(2); //2 because one row already existed from carsExample
+        expect(carGeneralLayerTable?._data.length).toBe(
+          staticExample().carGeneralLayer._data.length + 1,
+        );
 
         //Add another Layer, with previous
         const carGeneralLayerValueSecond: Partial<Layer> = {
           add: {
-            VIN3: (carsExample().carGeneral._data[1]._hash as string) || '',
+            VIN3: (staticExample().carGeneral._data[1]._hash as string) || '',
           } as Record<SliceId, string>,
         };
 
@@ -699,14 +775,16 @@ describe('Controller', () => {
         //Check if InsertHistory was written correctly
         const { carGeneralLayer: carGeneralLayerTable2 } =
           await db.core.dumpTable('carGeneralLayer');
-        expect(carGeneralLayerTable2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first add
+        expect(carGeneralLayerTable2?._data.length).toBe(
+          staticExample().carGeneralLayer._data.length + 2,
+        );
       });
 
       it('Insert -> Remove Layer', async () => {
         //LayerController Refs
         const carGeneralLayerRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsTableRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsTableRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
           componentsTable: 'carGeneral',
         } as LayerControllerRefs;
@@ -719,13 +797,17 @@ describe('Controller', () => {
         );
         //Remove Layer
         const origin = 'H45H';
-        const removeValue: Partial<Layer> = {
-          VIN1: (carsExample().carGeneral._data[1]._hash as string) || '',
-        } as Record<SliceId, string>;
+        const removeLayer: Partial<Layer> = {
+          remove: {
+            VIN1:
+              (staticExample().carGeneral._data[1]._hash as string) ||
+              ('' as string),
+          },
+        };
 
         const insertHistoryFirstRows = await carGeneralLayerController.insert(
           'remove',
-          removeValue,
+          removeLayer,
           origin,
         );
         const insertHistoryFirstRow = insertHistoryFirstRows[0];
@@ -741,7 +823,336 @@ describe('Controller', () => {
         expect(resultingLayer).toBeDefined();
         expect(resultingLayer.carGeneralLayer._data.length).toBe(1);
         expect(rmhsh(resultingLayer.carGeneralLayer._data[0].remove)).toEqual(
-          removeValue,
+          removeLayer.remove,
+        );
+      });
+    });
+  });
+  describe('SliceIdController', () => {
+    describe('Basic operation', () => {
+      it('Init', async () => {
+        //Create LayerController
+        let sliceIdCtrl: SliceIdController<'SliceId', SliceId[]>;
+
+        //Wrong TableKey
+        sliceIdCtrl = new SliceIdController(
+          core,
+          '#',
+          {} as SliceIdControllerRefs,
+        );
+
+        await expect(sliceIdCtrl.init()).rejects.toThrow(
+          'Table # is not supported by SliceIdController.',
+        );
+
+        //Table not of type layers
+        // Create a mock table, which is not of type layers
+        const mockSliceIdName = 'mockSliceIds';
+        const mockCfg = {
+          ...staticExample().tableCfgs._data[1],
+          ...{ key: mockSliceIdName },
+        } as TableCfg;
+        await db.core.createTable(rmhsh(mockCfg) as TableCfg);
+
+        sliceIdCtrl = new SliceIdController(core, mockSliceIdName, {});
+        await expect(sliceIdCtrl.init()).rejects.toThrow(
+          'Table mockSliceIds is not supported by SliceIdController.',
+        );
+
+        //Valid w/o refs
+        sliceIdCtrl = new SliceIdController(core, 'carSliceId');
+        await sliceIdCtrl.init();
+        expect(sliceIdCtrl).toBeDefined();
+
+        //Valid w/ refs
+        sliceIdCtrl = new SliceIdController(
+          core,
+          'carSliceId',
+          {} as SliceIdControllerRefs,
+        );
+        await sliceIdCtrl.init();
+        expect(sliceIdCtrl).toBeDefined();
+
+        //Valid w/ base only
+        const carSliceIdRefsWithBase = {
+          base: (staticExample().carSliceId._data[0]._hash || '') as string,
+        } as SliceIdControllerRefs;
+        sliceIdCtrl = new SliceIdController(
+          core,
+          'carSliceId',
+          carSliceIdRefsWithBase,
+        );
+        await sliceIdCtrl.init();
+        expect(sliceIdCtrl).toBeDefined();
+
+        //Base not existing
+        const missingBaseLayerRefs = {
+          base: 'NonExisting',
+        } as SliceIdControllerRefs;
+        sliceIdCtrl = new SliceIdController(
+          core,
+          'carSliceId',
+          missingBaseLayerRefs,
+        );
+        await expect(sliceIdCtrl.init()).rejects.toThrow(
+          'Base sliceId NonExisting does not exist.',
+        );
+      });
+
+      it('filterRow', async () => {
+        //SliceIdController Refs
+        const sliceIdControllerRefs = {} as ControllerRefs;
+
+        //Create SliceIdController
+        const carSliceIdController = await createController(
+          'sliceIds',
+          core,
+          'carSliceId',
+          sliceIdControllerRefs,
+        );
+
+        const filterKey = '';
+        const filterValue = Object.values(
+          staticExample().carSliceId._data[0].add,
+        )[0];
+
+        const positivefilterResult = await carSliceIdController.filterRow(
+          staticExample().carSliceId._data[0],
+          filterKey,
+          filterValue,
+        );
+
+        expect(positivefilterResult).toBe(true);
+
+        const negativefilterResult = await carSliceIdController.filterRow(
+          staticExample().carSliceId._data[0],
+          filterKey,
+          'NonExistingHash',
+        );
+        expect(negativefilterResult).toBe(false);
+      });
+
+      it('Table', async () => {
+        //SliceIdController Refs
+        const sliceIdControllerRefs = {} as ControllerRefs;
+
+        //Create SliceIdController
+        const carSliceIdController = await createController(
+          'sliceIds',
+          core,
+          'carSliceId',
+          sliceIdControllerRefs,
+        );
+
+        //Read Table
+        const table = (await carSliceIdController.table()) as LayersTable;
+        expect(table).toBeDefined();
+        expect(table._data.map((l) => l._hash).sort()).toEqual(
+          staticExample()
+            .carSliceId._data.map((l) => l._hash)
+            .sort(),
+        );
+      });
+      it('Get', async () => {
+        //SliceIdController Refs
+        const sliceIdControllerRefs = {} as ControllerRefs;
+
+        //Create SliceIdController
+        const carSliceIdController = await createController(
+          'sliceIds',
+          core,
+          'carSliceId',
+          sliceIdControllerRefs,
+        );
+
+        //Read existing Row by Hash
+        const firstRowHash = staticExample().carSliceId._data[0]
+          ._hash as string;
+        const {
+          ['carSliceId']: { _data: firstRows },
+        } = await carSliceIdController.get(firstRowHash);
+        const firstRow = firstRows[0];
+        expect(firstRow).toBeDefined();
+        expect(firstRow._hash!).toBeDefined();
+        expect(firstRow._hash!).toStrictEqual(firstRowHash);
+
+        //Read existing Row by where object
+        const {
+          ['carSliceId']: { _data: firstRowsByWhere },
+        } = await carSliceIdController.get(
+          rmhsh(staticExample().carSliceId._data[0]),
+        );
+        const firstRowByWhere = firstRowsByWhere[0];
+        expect(firstRowByWhere).toBeDefined();
+        expect(firstRowByWhere._hash!).toBeDefined();
+        expect(firstRowByWhere).toStrictEqual(firstRow);
+
+        //Read non-existing Row
+        const nonExistingRow = await carSliceIdController.get('#');
+        expect(nonExistingRow['carSliceId']._data.length).toBe(0);
+
+        //Read by empty
+      });
+
+      it('resolveBaseSliceIds', async () => {
+        //SliceIdController Refs
+        const sliceIdControllerRefs = {} as ControllerRefs;
+
+        //Create SliceIdController
+        const carSliceIdController = (await createController(
+          'sliceIds',
+          core,
+          'carSliceId',
+          sliceIdControllerRefs,
+        )) as SliceIdController<'carSliceId', SliceId[]>;
+
+        const sliceIdHash = staticExample().carSliceId._data[2]._hash as string;
+        const {
+          ['carSliceId']: { _data: sliceIds },
+        } = await carSliceIdController.get(sliceIdHash);
+
+        expect(sliceIds.length).toBe(1);
+
+        const sliceId = sliceIds[0] as SliceIds;
+        expect(sliceId).toBeDefined();
+        expect(sliceId.add).toEqual(['VIN11', 'VIN12']);
+
+        const resolvedBaseSliceIds =
+          await carSliceIdController.resolveBaseSliceIds(sliceId);
+
+        expect(resolvedBaseSliceIds).toBeDefined();
+        expect(resolvedBaseSliceIds.add).toEqual([
+          'VIN1',
+          'VIN2',
+          'VIN3',
+          'VIN4',
+          'VIN5',
+          'VIN6',
+          'VIN7',
+          'VIN8',
+          'VIN9',
+          'VIN10',
+          'VIN11',
+          'VIN12',
+        ]);
+      });
+
+      it('Insert -> Invalid Command', async () => {
+        //SliceIdController Refs
+        const sliceIdControllerRefs = {} as ControllerRefs;
+
+        //Create SliceIdController
+        const carSliceIdController = (await createController(
+          'sliceIds',
+          core,
+          'carSliceId',
+          sliceIdControllerRefs,
+        )) as SliceIdController<'carSliceId', SliceId[]>;
+
+        //Invalid Command
+        const origin = 'H45H';
+        const sliceIdValue: SliceId[] = ['VIN13', 'VIN14'];
+
+        await expect(
+          carSliceIdController.insert('update' as any, sliceIdValue, origin),
+        ).rejects.toThrow(
+          'Command update is not supported by SliceIdController.',
+        );
+      });
+
+      it('Insert -> Add SliceIds', async () => {
+        //SliceIdController Refs
+        const sliceIdControllerRefs = {} as ControllerRefs;
+
+        //Create SliceIdController
+        const carSliceIdController = (await createController(
+          'sliceIds',
+          core,
+          'carSliceId',
+          sliceIdControllerRefs,
+        )) as SliceIdController<'carSliceId', SliceId[]>;
+
+        //Add SliceIds
+        const origin = 'H45H';
+        const sliceIdValue: SliceId[] = ['VIN13', 'VIN14'];
+
+        const insertHistoryFirstRows = await carSliceIdController.insert(
+          'add',
+          sliceIdValue,
+          origin,
+        );
+        const insertHistoryFirstRow = insertHistoryFirstRows[0];
+
+        expect(insertHistoryFirstRow).toBeDefined();
+        expect(insertHistoryFirstRow.timeId).toBeDefined();
+        expect(insertHistoryFirstRow.carSliceIdRef).toBeDefined();
+
+        //Check if InsertHistory was written correctly
+        const { carSliceId: carSliceIdTable } = await db.core.dumpTable(
+          'carSliceId',
+        );
+        expect(carSliceIdTable?._data.length).toBe(
+          staticExample().carSliceId._data.length + 1,
+        );
+
+        //Add another SliceIds
+        const sliceIdSecondValue: SliceId[] = ['VIN15', 'VIN16'];
+
+        const insertHistorySecondRows = await carSliceIdController.insert(
+          'add',
+          sliceIdSecondValue,
+          origin,
+        );
+        const insertHistorySecondRow = insertHistorySecondRows[0];
+
+        expect(insertHistorySecondRow).toBeDefined();
+        expect(insertHistorySecondRow.timeId).toBeDefined();
+        expect(insertHistorySecondRow.carSliceIdRef).toBeDefined();
+
+        //Check if InsertHistory was written correctly
+        const { carSliceId: carSliceIdTable2 } = await db.core.dumpTable(
+          'carSliceId',
+        );
+        expect(carSliceIdTable2?._data.length).toBe(
+          staticExample().carSliceId._data.length + 2,
+        );
+      });
+
+      it('Insert -> Remove SliceIds', async () => {
+        //SliceIdController Refs
+        const sliceIdControllerRefs = {} as ControllerRefs;
+
+        //Create SliceIdController
+        const carSliceIdController = (await createController(
+          'sliceIds',
+          core,
+          'carSliceId',
+          sliceIdControllerRefs,
+        )) as SliceIdController<'carSliceId', SliceId[]>;
+
+        //Add SliceIds
+        const origin = 'H45H';
+        const sliceIdValue: SliceId[] = ['VIN5', 'VIN6'];
+
+        const insertHistoryFirstRows = await carSliceIdController.insert(
+          'remove',
+          sliceIdValue,
+          origin,
+        );
+        const insertHistoryFirstRow = insertHistoryFirstRows[0];
+
+        expect(insertHistoryFirstRow).toBeDefined();
+        expect(insertHistoryFirstRow.timeId).toBeDefined();
+        expect(insertHistoryFirstRow.carSliceIdRef).toBeDefined();
+
+        const resultingSliceIds = await carSliceIdController.get(
+          insertHistoryFirstRow.carSliceIdRef,
+        );
+
+        expect(resultingSliceIds).toBeDefined();
+        expect(resultingSliceIds.carSliceId._data.length).toBe(1);
+        expect(resultingSliceIds.carSliceId._data[0].remove).toEqual(
+          sliceIdValue,
         );
       });
     });
@@ -752,12 +1163,12 @@ describe('Controller', () => {
         //CakeController Refs
         const carCakeRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
         } as CakeControllerRefs;
 
         //Create CakeController
-        let cakeCtrl: CakeController<'CarCake'>;
+        let cakeCtrl: CakeController<'CarCake', Cake>;
 
         //Wrong TableKey
         cakeCtrl = new CakeController(core, '#', carCakeRefs);
@@ -775,7 +1186,7 @@ describe('Controller', () => {
         // Create a mock table, which is not of type cakes
         const mockCakesName = 'mockCake';
         const mockCfg = {
-          ...carsExample().tableCfgs._data[1],
+          ...staticExample().tableCfgs._data[1],
           ...{ key: mockCakesName },
         } as TableCfg;
         await db.core.createTable(rmhsh(mockCfg) as TableCfg);
@@ -803,7 +1214,7 @@ describe('Controller', () => {
         //Valid, w/ base
         const carCakeRefsWithBase = {
           ...carCakeRefs,
-          ...{ base: (carsExample().carCake._data[0]._hash || '') as string },
+          ...{ base: (staticExample().carCake._data[0]._hash || '') as string },
         } as CakeControllerRefs;
         cakeCtrl = new CakeController(core, 'carCake', carCakeRefsWithBase);
         await cakeCtrl.init();
@@ -819,7 +1230,7 @@ describe('Controller', () => {
         //CakeController Refs
         const carCakeRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
         } as CakeControllerRefs;
 
@@ -833,7 +1244,7 @@ describe('Controller', () => {
 
         //Get Child Refs
         const childRefs = await carCakeController.getChildRefs(
-          carsExample().carCake._data[0]._hash as string,
+          staticExample().carCake._data[0]._hash as string,
         );
 
         expect(childRefs).toBeDefined();
@@ -848,7 +1259,7 @@ describe('Controller', () => {
         //CakeController Refs
         const carCakeRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
         } as CakeControllerRefs;
 
@@ -861,10 +1272,10 @@ describe('Controller', () => {
         );
 
         const filterKey = 'carGeneralLayer';
-        const filterValue = carsExample().carCake._data[0].layers[filterKey];
+        const filterValue = staticExample().carCake._data[0].layers[filterKey];
 
         const positivefilterResult = await carCakeController.filterRow(
-          carsExample().carCake._data[0],
+          staticExample().carCake._data[0],
           filterKey,
           filterValue,
         );
@@ -872,7 +1283,7 @@ describe('Controller', () => {
         expect(positivefilterResult).toBe(true);
 
         const negativefilterResult = await carCakeController.filterRow(
-          carsExample().carCake._data[0],
+          staticExample().carCake._data[0],
           filterKey,
           'NonExistingHash',
         );
@@ -884,7 +1295,7 @@ describe('Controller', () => {
         //CakeController Refs
         const carCakeRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
         } as CakeControllerRefs;
 
@@ -897,16 +1308,20 @@ describe('Controller', () => {
         );
 
         //Read Table
-        const table = await carCakeController.table();
+        const table = (await carCakeController.table()) as CakesTable;
         expect(table).toBeDefined();
-        expect(table).toEqual(carsExample().carCake);
+        expect(table._data.map((c) => c._hash).sort()).toEqual(
+          staticExample()
+            .carCake._data.map((c) => c._hash)
+            .sort(),
+        );
       });
 
       it('Get', async () => {
         //CakeController Refs
         const carCakeRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
         } as CakeControllerRefs;
 
@@ -919,7 +1334,7 @@ describe('Controller', () => {
         );
 
         //Read existing Row By Hash
-        const firstRowHash = carsExample().carCake._data[0]._hash as string;
+        const firstRowHash = staticExample().carCake._data[0]._hash as string;
         const {
           ['carCake']: { _data: firstRows },
         } = await carCakeController.get(firstRowHash);
@@ -954,7 +1369,7 @@ describe('Controller', () => {
         //CakeController Refs
         const carCakeRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
         } as CakeControllerRefs;
 
@@ -971,11 +1386,12 @@ describe('Controller', () => {
         const carCakeValue: CakeValue = {
           layers: {
             carGeneralLayer:
-              (carsExample().carGeneralLayer._data[0]._hash as string) || '',
+              (staticExample().carGeneralLayer._data[0]._hash as string) || '',
             carTechnicalLayer:
-              (carsExample().carTechnicalLayer._data[0]._hash as string) || '',
+              (staticExample().carTechnicalLayer._data[0]._hash as string) ||
+              '',
             carColorLayer:
-              (carsExample().carColorLayer._data[0]._hash as string) || '',
+              (staticExample().carColorLayer._data[0]._hash as string) || '',
           },
           id: 'MyFirstCake',
         };
@@ -992,17 +1408,20 @@ describe('Controller', () => {
 
         //Check if InsertHistory was written correctly
         const { carCake: carCakeTable } = await db.core.dumpTable('carCake');
-        expect(carCakeTable?._data.length).toBe(2); //2 because one row already existed from carsExample
+        expect(carCakeTable?._data.length).toBe(
+          staticExample().carCake._data.length + 1,
+        );
 
         //Add another Cake, with previous
         const carCakeValueSecond: CakeValue = {
           layers: {
             carGeneralLayer:
-              (carsExample().carGeneralLayer._data[0]._hash as string) || '',
+              (staticExample().carGeneralLayer._data[0]._hash as string) || '',
             carTechnicalLayer:
-              (carsExample().carTechnicalLayer._data[0]._hash as string) || '',
+              (staticExample().carTechnicalLayer._data[0]._hash as string) ||
+              '',
             carColorLayer:
-              (carsExample().carColorLayer._data[0]._hash as string) || '',
+              (staticExample().carColorLayer._data[0]._hash as string) || '',
           },
           id: 'MySecondCake',
         };
@@ -1019,14 +1438,16 @@ describe('Controller', () => {
 
         //Check if InsertHistory was written correctly
         const { carCake: carCakeTable2 } = await db.core.dumpTable('carCake');
-        expect(carCakeTable2?._data.length).toBe(3); // 3 because one row already existed from carsExample and one from first add
+        expect(carCakeTable2?._data.length).toBe(
+          staticExample().carCake._data.length + 2,
+        );
       });
 
       it('Invalid Insert command', async () => {
         //CakeController Refs
         const carCakeRefs = {
           sliceIdsTable: 'carSliceId',
-          sliceIdsRow: (carsExample().carSliceId._data[0]._hash ||
+          sliceIdsRow: (staticExample().carSliceId._data[0]._hash ||
             '') as string,
         } as CakeControllerRefs;
 
@@ -1043,11 +1464,12 @@ describe('Controller', () => {
         const carCakeValue: CakeValue = {
           layers: {
             carGeneralLayer:
-              (carsExample().carGeneralLayer._data[0]._hash as string) || '',
+              (staticExample().carGeneralLayer._data[0]._hash as string) || '',
             carTechnicalLayer:
-              (carsExample().carTechnicalLayer._data[0]._hash as string) || '',
+              (staticExample().carTechnicalLayer._data[0]._hash as string) ||
+              '',
             carColorLayer:
-              (carsExample().carColorLayer._data[0]._hash as string) || '',
+              (staticExample().carColorLayer._data[0]._hash as string) || '',
           },
           id: 'MyFirstCake',
         };

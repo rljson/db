@@ -386,7 +386,7 @@
     "_hash": "KS0HqoBEYj0KzQT49k7JXL"
   },
   "carTechnical": {
-    "_tableCfg": "OXvp3M8zt0dWygHTZfTp7I",
+    "_tableCfg": "lem2sCEhtEjKJINATV6-gg",
     "_type": "components",
     "_data": [
       {
@@ -475,7 +475,7 @@
         "_hash": "if6y59aWx09S-ucZB3_E8O"
       }
     ],
-    "_hash": "OkdHY5J39TuKCYBXy9Shgf"
+    "_hash": "2o9lbOVB0GJQJzeTgQfAn9"
   },
   "carColor": {
     "_tableCfg": "ly3011-E3YdeftOYLKqzXd",
@@ -716,148 +716,469 @@
     ],
     "_hash": "GE2ENEvgz0V5or4b5mGUeA"
   },
-  "wheelSliceId": {
-    "_tableCfg": "7P5BllAlgkGxXmu8WbeIqi",
+  "seriesSliceId": {
+    "_tableCfg": "M56UyKNWlKRYjthW4Zz101",
     "_type": "sliceIds",
     "_data": [
       {
         "add": [
-          "BOB37382",
-          "BOB37383"
+          "Serie0",
+          "Serie1",
+          "Serie2",
+          "Serie3"
         ],
-        "_hash": "JPP7A-skpEe1KuDS11mtBH"
+        "_hash": "Jk-uP35jCJskLRRDvmU3qm"
+      },
+      {
+        "add": [
+          "Serie4",
+          "Serie5",
+          "Serie6",
+          "Serie7"
+        ],
+        "base": "Jk-uP35jCJskLRRDvmU3qm",
+        "_hash": "Nl1xBZwwJUvuZ4jeXMMnki"
+      },
+      {
+        "add": [
+          "Serie8",
+          "Serie9",
+          "Serie10",
+          "Serie11"
+        ],
+        "base": "Nl1xBZwwJUvuZ4jeXMMnki",
+        "_hash": "FV2n5CUT7Okidi7b7JqdLx"
       }
     ],
-    "_hash": "T_JEXiOb7A2ebj16wSyBYP"
+    "_hash": "BViqW9FM-DGrvFBa7ZFSj0"
   },
-  "wheelBrand": {
-    "_tableCfg": "ptvTcf77Kjult2RFlE0EaH",
+  "seriesGeneral": {
+    "_tableCfg": "EBGmp7GCkCcwwwForFRStr",
     "_type": "components",
     "_data": [
       {
-        "brand": "Borbet",
-        "_hash": "VQxyOOlL5pVCWUoteV_x8V"
+        "name": "Polo",
+        "_hash": "MXuLul5yC71HnIC2sm5hAo"
       },
       {
-        "brand": "Borbet",
-        "_hash": "VQxyOOlL5pVCWUoteV_x8V"
+        "name": "Golf",
+        "_hash": "JUB_stcVMG7CD3YJIuIdFH"
+      },
+      {
+        "name": "Q4",
+        "_hash": "juCKEWedfoa3ecyPA5-dpn"
+      },
+      {
+        "name": "Q6",
+        "_hash": "IRVJceTb60wqDzU-W3MReA"
+      },
+      {
+        "name": "i4",
+        "_hash": "vI2jZ1R1YyojuEnXcB2wfG"
+      },
+      {
+        "name": "3",
+        "_hash": "OW3jEC0iLwfql5PrLdgkhK"
+      },
+      {
+        "name": "Model 3",
+        "_hash": "YqA7mT1K9xYPWof92yDPUI"
+      },
+      {
+        "name": "Model Y",
+        "_hash": "o3IDEdt3zGq-BuDllc0HOs"
+      },
+      {
+        "name": "Mustang",
+        "_hash": "nFTUXCrFAMlCRoUZOKhfWL"
+      },
+      {
+        "name": "Bolt",
+        "_hash": "nxpdeLEL-HtRHhoxslRuUc"
+      },
+      {
+        "name": "Leaf",
+        "_hash": "pXibV3RQlXDzH_nRLx8wo4"
+      },
+      {
+        "name": "Kona",
+        "_hash": "-gHogxnsal51Yf-K2irCwH"
       }
     ],
-    "_hash": "X7_oPQLjy01BB59tnDMdNe"
+    "_hash": "FiwWE_KOZXuZBnk-PaRnc8"
   },
-  "wheelDimension": {
-    "_tableCfg": "V-bvTaxCZ9nd33Gci9OChR",
+  "seriesCars": {
+    "_tableCfg": "bfDarLaR16GQaLgMceNVef",
     "_type": "components",
     "_data": [
       {
-        "dimension": "185/60 R16",
-        "_hash": "pQB1jQ9uRxoYAcVc25VA20"
+        "cars": [
+          {
+            "ref": "EC-rmNFrV6n5i90b8i9Cfm",
+            "sliceIds": [
+              "VIN1"
+            ],
+            "_hash": "YxOvHgkZLnVWUklq0WTTlO"
+          }
+        ],
+        "_hash": "OAqAmhO1vk5ES-OEmyxBf8"
       },
       {
-        "dimension": "195/55 R16",
-        "_hash": "7G8GafBJu0ohK_1lcTWgEn"
+        "cars": [
+          {
+            "ref": "EC-rmNFrV6n5i90b8i9Cfm",
+            "sliceIds": [
+              "VIN2"
+            ],
+            "_hash": "BJNTqX044UPGZlKdBG0v9E"
+          }
+        ],
+        "_hash": "MzY_x4HtfzsDeBywlBfZ-k"
+      },
+      {
+        "cars": [
+          {
+            "ref": "CDGdGBeIalWNKAVLKw1eRQ",
+            "sliceIds": [
+              "VIN3"
+            ],
+            "_hash": "YMCPI-06sdz4Hl63rNaRgl"
+          }
+        ],
+        "_hash": "HLq3bsj08dhXFYQX_Q1vYR"
+      },
+      {
+        "cars": [
+          {
+            "ref": "CDGdGBeIalWNKAVLKw1eRQ",
+            "sliceIds": [
+              "VIN4"
+            ],
+            "_hash": "UoVDxO8w1BiJV-T3WsKCYy"
+          }
+        ],
+        "_hash": "FvZYV4MT4p83h4_nE2vFgx"
+      },
+      {
+        "cars": [
+          {
+            "ref": "S_JW6rukm6bJqkp4qONlY8",
+            "sliceIds": [
+              "VIN5"
+            ],
+            "_hash": "da0Nibb-yp1GRovQX6Vrnl"
+          }
+        ],
+        "_hash": "Hh93xxSdR0gus2i78TGMGx"
+      },
+      {
+        "cars": [
+          {
+            "ref": "S_JW6rukm6bJqkp4qONlY8",
+            "sliceIds": [
+              "VIN6"
+            ],
+            "_hash": "8a2ZacKzxCOyZdpqzMKdBw"
+          }
+        ],
+        "_hash": "xsGi-6n_IA7BtR5MmZ3Omo"
+      },
+      {
+        "cars": [
+          {
+            "ref": "EC-rmNFrV6n5i90b8i9Cfm",
+            "sliceIds": [
+              "VIN7"
+            ],
+            "_hash": "hgBDPtLLr1QI9-H8unvA8K"
+          }
+        ],
+        "_hash": "txtajGX7A25ZYNaTneASyo"
+      },
+      {
+        "cars": [
+          {
+            "ref": "EC-rmNFrV6n5i90b8i9Cfm",
+            "sliceIds": [
+              "VIN8"
+            ],
+            "_hash": "D6kg0HarWPa8ru40QgLxOV"
+          }
+        ],
+        "_hash": "BuLUtpl1pCvt2XNStf1ZTM"
+      },
+      {
+        "cars": [
+          {
+            "ref": "EC-rmNFrV6n5i90b8i9Cfm",
+            "sliceIds": [
+              "VIN9"
+            ],
+            "_hash": "sVHCgXbOYTyBhZnSDQS9DB"
+          }
+        ],
+        "_hash": "CdwqmhnHVDSojl198NLy9N"
+      },
+      {
+        "cars": [
+          {
+            "ref": "EC-rmNFrV6n5i90b8i9Cfm",
+            "sliceIds": [
+              "VIN10"
+            ],
+            "_hash": "2XyOGOeiFFya6mvlSnyyIl"
+          }
+        ],
+        "_hash": "xZOFvs_smMqn2jeS38IdFX"
+      },
+      {
+        "cars": [
+          {
+            "ref": "EC-rmNFrV6n5i90b8i9Cfm",
+            "sliceIds": [
+              "VIN11"
+            ],
+            "_hash": "T-HLCepw3-dfb6OQ4bqP2T"
+          }
+        ],
+        "_hash": "wfKuN7dCQWU0UmZfv4jIjo"
+      },
+      {
+        "cars": [
+          {
+            "ref": "EC-rmNFrV6n5i90b8i9Cfm",
+            "sliceIds": [
+              "VIN12"
+            ],
+            "_hash": "9k3A7aNVd6ca26Oa7uxwSs"
+          }
+        ],
+        "_hash": "VDy7tZDEOClacTsXKT-NU7"
       }
     ],
-    "_hash": "P7HrJD2nfL3Oo_Ye-Y-9qb"
+    "_hash": "Dxjt9deggHHnktNzZSmi0V"
   },
-  "wheelBrandLayer": {
-    "_tableCfg": "fq2nyVH81Zad-bSLusBBhp",
+  "seriesGeneralLayer": {
+    "_tableCfg": "lp4YvMCgOAP_DQWkYd7k0z",
     "_type": "layers",
     "_data": [
       {
         "add": {
-          "BOB37382": "VQxyOOlL5pVCWUoteV_x8V",
-          "BOB37383": "VQxyOOlL5pVCWUoteV_x8V",
-          "_hash": "Iwr3s5WQxdptlIlbsV6FHu"
+          "Serie0": "MXuLul5yC71HnIC2sm5hAo",
+          "Serie1": "JUB_stcVMG7CD3YJIuIdFH",
+          "Serie2": "juCKEWedfoa3ecyPA5-dpn",
+          "Serie3": "IRVJceTb60wqDzU-W3MReA",
+          "_hash": "jpA8xLOp9L6Dl0Z0rBbr7z"
         },
-        "sliceIdsTable": "wheelSliceId",
-        "sliceIdsTableRow": "JPP7A-skpEe1KuDS11mtBH",
-        "componentsTable": "wheelBrand",
-        "_hash": "QtYdaYaOgULRv2VToNq2td"
+        "sliceIdsTable": "seriesSliceId",
+        "sliceIdsTableRow": "Jk-uP35jCJskLRRDvmU3qm",
+        "componentsTable": "seriesGeneral",
+        "_hash": "t-1b5P68wT-JHGIs-mHzye"
+      },
+      {
+        "add": {
+          "Serie4": "vI2jZ1R1YyojuEnXcB2wfG",
+          "Serie5": "OW3jEC0iLwfql5PrLdgkhK",
+          "Serie6": "YqA7mT1K9xYPWof92yDPUI",
+          "Serie7": "o3IDEdt3zGq-BuDllc0HOs",
+          "_hash": "qEFkUlNAkUQ7bQ0AxbdnKb"
+        },
+        "sliceIdsTable": "seriesSliceId",
+        "sliceIdsTableRow": "Nl1xBZwwJUvuZ4jeXMMnki",
+        "componentsTable": "seriesGeneral",
+        "base": "t-1b5P68wT-JHGIs-mHzye",
+        "_hash": "7R3YHT2oj8S174ITiawmFn"
+      },
+      {
+        "add": {
+          "Serie8": "nFTUXCrFAMlCRoUZOKhfWL",
+          "Serie9": "nxpdeLEL-HtRHhoxslRuUc",
+          "Serie10": "pXibV3RQlXDzH_nRLx8wo4",
+          "Serie11": "-gHogxnsal51Yf-K2irCwH",
+          "_hash": "5g8GfSyN3D-_3jamAMX4dK"
+        },
+        "sliceIdsTable": "seriesSliceId",
+        "sliceIdsTableRow": "FV2n5CUT7Okidi7b7JqdLx",
+        "componentsTable": "seriesGeneral",
+        "base": "7R3YHT2oj8S174ITiawmFn",
+        "_hash": "zlfJamZk_02P5ISMJVV9PA"
       }
     ],
-    "_hash": "gWO1np2hGM2AfMrTglsLyf"
+    "_hash": "tkebnLauuTSdn_pEWAAXJL"
   },
-  "wheelDimensionLayer": {
-    "_tableCfg": "leqVFZksYrc7mAmfGzIMJV",
+  "seriesCarsLayer": {
+    "_tableCfg": "JbQ36jxa4uwXTJK_yfd-tr",
     "_type": "layers",
     "_data": [
       {
         "add": {
-          "BOB37382": "pQB1jQ9uRxoYAcVc25VA20",
-          "BOB37383": "7G8GafBJu0ohK_1lcTWgEn",
-          "_hash": "4bIVTR_l-negIVz-bVhb-L"
+          "Serie0": "OAqAmhO1vk5ES-OEmyxBf8",
+          "Serie1": "MzY_x4HtfzsDeBywlBfZ-k",
+          "Serie2": "HLq3bsj08dhXFYQX_Q1vYR",
+          "Serie3": "FvZYV4MT4p83h4_nE2vFgx",
+          "_hash": "4W7IkxJMSopFdGTyuyVIAB"
         },
-        "sliceIdsTable": "wheelSliceId",
-        "sliceIdsTableRow": "JPP7A-skpEe1KuDS11mtBH",
-        "componentsTable": "wheelDimension",
-        "_hash": "3wKgawhS1yjWlNvS8f85qc"
+        "sliceIdsTable": "seriesSliceId",
+        "sliceIdsTableRow": "Jk-uP35jCJskLRRDvmU3qm",
+        "componentsTable": "seriesCars",
+        "_hash": "hlwBm_IFsnTiTpjX6iTFvF"
+      },
+      {
+        "add": {
+          "Serie4": "Hh93xxSdR0gus2i78TGMGx",
+          "Serie5": "xsGi-6n_IA7BtR5MmZ3Omo",
+          "Serie6": "txtajGX7A25ZYNaTneASyo",
+          "Serie7": "BuLUtpl1pCvt2XNStf1ZTM",
+          "_hash": "KbvXOJIuI7_1RLtpZy9BGB"
+        },
+        "sliceIdsTable": "seriesSliceId",
+        "sliceIdsTableRow": "Nl1xBZwwJUvuZ4jeXMMnki",
+        "componentsTable": "seriesCars",
+        "base": "hlwBm_IFsnTiTpjX6iTFvF",
+        "_hash": "Mtl17mLvqDCTpmzmO1xwPG"
+      },
+      {
+        "add": {
+          "Serie8": "CdwqmhnHVDSojl198NLy9N",
+          "Serie9": "xZOFvs_smMqn2jeS38IdFX",
+          "Serie10": "wfKuN7dCQWU0UmZfv4jIjo",
+          "Serie11": "VDy7tZDEOClacTsXKT-NU7",
+          "_hash": "6Z0K4XszaZP1E32YY_7SZ2"
+        },
+        "sliceIdsTable": "seriesSliceId",
+        "sliceIdsTableRow": "FV2n5CUT7Okidi7b7JqdLx",
+        "componentsTable": "seriesCars",
+        "base": "Mtl17mLvqDCTpmzmO1xwPG",
+        "_hash": "mfV5EJSCR54OQGwpUa5cUl"
       }
     ],
-    "_hash": "yjWOZmziPag9f_Y2oJMqzB"
+    "_hash": "lk_uU65IMpgvSQrJtFp88t"
   },
-  "wheelCake": {
-    "_tableCfg": "Gxm-GLYcPM0yn2bT9LOMh3",
+  "seriesCake": {
+    "_tableCfg": "RV_3YD_kV-43k-fGdbnJWr",
     "_type": "cakes",
     "_data": [
       {
-        "sliceIdsTable": "wheelSliceId",
-        "sliceIdsRow": "JPP7A-skpEe1KuDS11mtBH",
+        "sliceIdsTable": "seriesSliceId",
+        "sliceIdsRow": "Jk-uP35jCJskLRRDvmU3qm",
         "layers": {
-          "wheelBrandLayer": "QtYdaYaOgULRv2VToNq2td",
-          "wheelDimensionLayer": "3wKgawhS1yjWlNvS8f85qc",
-          "_hash": "0cQ10MFnMSiVLmAmlt0x3v"
+          "seriesGeneralLayer": "t-1b5P68wT-JHGIs-mHzye",
+          "seriesCarsLayer": "hlwBm_IFsnTiTpjX6iTFvF",
+          "_hash": "JH2BoEyR1gjmRVnm4hj3me"
         },
-        "_hash": "hGbYKpi_xrKddU6uuDRZhS"
+        "_hash": "eKSiCG1lsWdog0COeNjsZ6"
+      },
+      {
+        "sliceIdsTable": "seriesSliceId",
+        "sliceIdsRow": "Nl1xBZwwJUvuZ4jeXMMnki",
+        "layers": {
+          "seriesGeneralLayer": "7R3YHT2oj8S174ITiawmFn",
+          "seriesCarsLayer": "Mtl17mLvqDCTpmzmO1xwPG",
+          "_hash": "ME-IeHdYxBrh0czBPas_n7"
+        },
+        "_hash": "0slS_F64EY9vArREgRfU6o"
+      },
+      {
+        "sliceIdsTable": "seriesSliceId",
+        "sliceIdsRow": "FV2n5CUT7Okidi7b7JqdLx",
+        "layers": {
+          "seriesGeneralLayer": "zlfJamZk_02P5ISMJVV9PA",
+          "seriesCarsLayer": "mfV5EJSCR54OQGwpUa5cUl",
+          "_hash": "8cALxTE9zlWGUOyYKddg1N"
+        },
+        "_hash": "OSW5AwessmFW6Pzm6Hbc5U"
       }
     ],
-    "_hash": "4YoTh9vwOhlMToJLNfBkQz"
+    "_hash": "O2jWwS-eGh2xgnOxo4MpLZ"
   },
-  "siteSliceId": {
-    "_tableCfg": "w4A5ZhCSi249R-kJ4d1OYj",
+  "catalogSliceId": {
+    "_tableCfg": "RuPnebBhe2zKYEaPl2UQ-B",
     "_type": "sliceIds",
     "_data": [
       {
         "add": [
-          "Site1",
-          "Site2",
-          "Site3"
+          "Catalog0",
+          "Catalog1"
         ],
-        "_hash": "b8QlmpS2kT0_oti-0-6JTI"
+        "_hash": "z_FhXXv4ulNkgPwCOQjWAD"
       }
     ],
-    "_hash": "_oJ3I4Q7uxa01CydxTnmvt"
+    "_hash": "JkpTwE7gXeyuu-PwuuKORf"
   },
-  "siteGeneral": {
-    "_tableCfg": "4ricJTQmnW17WX7OhMHwkD",
+  "catalogSeries": {
+    "_tableCfg": "_wEp6QgGosyILDTgKWSOZU",
     "_type": "components",
     "_data": [
       {
-        "manager": "Alice Johnson",
-        "street": "Maple Street",
-        "houseNr": 12,
-        "postCode": 12345,
-        "city": "Springfield",
-        "_hash": "jzUEP8xW-uuiaigf9PBoLs"
+        "series": [
+          {
+            "ref": "eKSiCG1lsWdog0COeNjsZ6",
+            "sliceIds": [
+              "Serie0",
+              "Serie1",
+              "Serie2",
+              "Serie3"
+            ],
+            "_hash": "f8bsYLUSh1Xg8CWT4BWiNO"
+          },
+          {
+            "ref": "0slS_F64EY9vArREgRfU6o",
+            "sliceIds": [
+              "Serie4",
+              "Serie5",
+              "Serie6",
+              "Serie7"
+            ],
+            "_hash": "SdDgp4_HHOrz6FvPIP6VLZ"
+          }
+        ],
+        "_hash": "3HsCzonozvXyzPO1WfkwCz"
       },
       {
-        "manager": "Bob Smith",
-        "street": "Oak Avenue",
-        "houseNr": 34,
-        "postCode": 67890,
-        "city": "Greenville",
-        "_hash": "QJVwLG9-ncWQG3XQiWy7rF"
-      },
-      {
-        "manager": "Carol Davis",
-        "street": "Pine Lane",
-        "houseNr": 56,
-        "postCode": 11223,
-        "city": "Lakeside",
-        "_hash": "BtE0gKzQ011zq-xz4IoofD"
+        "series": [
+          {
+            "ref": "OSW5AwessmFW6Pzm6Hbc5U",
+            "_hash": "j0fny1P8vYeWEQ0hyfbvKh"
+          }
+        ],
+        "_hash": "ScTq8XEM6D3hH4wcxo65Ob"
       }
     ],
-    "_hash": "-lSo_ug9EOqs7R3Yf5otSn"
+    "_hash": "zrrBJBf_YpYFtOjBhfemf9"
+  },
+  "catalogSeriesLayer": {
+    "_tableCfg": "xuejFdZa6ELvKI-OzJ8C8V",
+    "_type": "layers",
+    "_data": [
+      {
+        "add": {
+          "Catalog0": "3HsCzonozvXyzPO1WfkwCz",
+          "Catalog1": "ScTq8XEM6D3hH4wcxo65Ob",
+          "_hash": "ZQiwIJMOes3dBkENqFiuac"
+        },
+        "sliceIdsTable": "catalogSliceId",
+        "sliceIdsTableRow": "z_FhXXv4ulNkgPwCOQjWAD",
+        "componentsTable": "catalogSeries",
+        "_hash": "efrZ6Ry17t_kVdQweKNFmD"
+      }
+    ],
+    "_hash": "MT1-mZN50hy1Oc9RYi5JJw"
+  },
+  "catalogCake": {
+    "_tableCfg": "qnSyADYpFzJVxFvRjUrodj",
+    "_type": "cakes",
+    "_data": [
+      {
+        "sliceIdsTable": "catalogSliceId",
+        "sliceIdsRow": "z_FhXXv4ulNkgPwCOQjWAD",
+        "layers": {
+          "catalogSeriesLayer": "efrZ6Ry17t_kVdQweKNFmD",
+          "_hash": "u156um_mmfZg_r1OQ5-Faf"
+        },
+        "_hash": "qQeqWokNwOrYJLPK3UBNDm"
+      }
+    ],
+    "_hash": "FY38AvWqJrl_mrOEZRDZ6f"
   },
   "tableCfgs": {
     "_data": [
@@ -1031,9 +1352,10 @@
             "type": "jsonValue",
             "ref": {
               "tableKey": "carDimensions",
-              "_hash": "XCICxBKlpdfihvZILuFLbB"
+              "type": "components",
+              "_hash": "b6PGxGAxXqgCMYPtqSecTv"
             },
-            "_hash": "apQS8aNzHcY3X9XcfXpzxS"
+            "_hash": "_4H6FEX6H-j6nG-JOIG6bz"
           },
           {
             "key": "repairedByWorkshop",
@@ -1044,7 +1366,7 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "OXvp3M8zt0dWygHTZfTp7I"
+        "_hash": "lem2sCEhtEjKJINATV6-gg"
       },
       {
         "key": "carColor",
@@ -1299,7 +1621,7 @@
         "_hash": "5tcrs9FhrPleZv_JXzetfy"
       },
       {
-        "key": "wheelSliceId",
+        "key": "seriesSliceId",
         "type": "sliceIds",
         "columns": [
           {
@@ -1334,50 +1656,63 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "7P5BllAlgkGxXmu8WbeIqi"
+        "_hash": "M56UyKNWlKRYjthW4Zz101"
       },
       {
-        "key": "wheelBrand",
+        "key": "seriesGeneral",
         "type": "components",
         "columns": [
           {
             "key": "_hash",
             "type": "string",
-            "_hash": "df4oYftB-71Njv9FprRCeg"
+            "titleShort": "Hash",
+            "titleLong": "Hash",
+            "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
           },
           {
-            "key": "brand",
+            "key": "name",
             "type": "string",
-            "_hash": "Hdo3c4C9CaIeWO_9FtoJ34"
+            "titleShort": "Name",
+            "titleLong": "Name",
+            "_hash": "DbNwaRf1jQkwpLfpglOsNu"
           }
         ],
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "ptvTcf77Kjult2RFlE0EaH"
+        "_hash": "EBGmp7GCkCcwwwForFRStr"
       },
       {
-        "key": "wheelDimension",
+        "key": "seriesCars",
         "type": "components",
         "columns": [
           {
             "key": "_hash",
             "type": "string",
-            "_hash": "df4oYftB-71Njv9FprRCeg"
+            "titleShort": "Hash",
+            "titleLong": "Hash",
+            "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
           },
           {
-            "key": "dimension",
-            "type": "string",
-            "_hash": "uDPntHnfX38diMUBBUJkcl"
+            "key": "cars",
+            "type": "jsonArray",
+            "titleShort": "Cars",
+            "titleLong": "Cars References",
+            "ref": {
+              "tableKey": "carCake",
+              "type": "cakes",
+              "_hash": "mQtRv2nfRXQY5LQhS175ZH"
+            },
+            "_hash": "FQLdep1p896wDLMppuG6zT"
           }
         ],
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "V-bvTaxCZ9nd33Gci9OChR"
+        "_hash": "bfDarLaR16GQaLgMceNVef"
       },
       {
-        "key": "wheelBrandLayer",
+        "key": "seriesGeneralLayer",
         "type": "layers",
         "columns": [
           {
@@ -1433,10 +1768,10 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "fq2nyVH81Zad-bSLusBBhp"
+        "_hash": "lp4YvMCgOAP_DQWkYd7k0z"
       },
       {
-        "key": "wheelDimensionLayer",
+        "key": "seriesCarsLayer",
         "type": "layers",
         "columns": [
           {
@@ -1492,10 +1827,10 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "leqVFZksYrc7mAmfGzIMJV"
+        "_hash": "JbQ36jxa4uwXTJK_yfd-tr"
       },
       {
-        "key": "wheelCake",
+        "key": "seriesCake",
         "type": "cakes",
         "columns": [
           {
@@ -1537,10 +1872,10 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "Gxm-GLYcPM0yn2bT9LOMh3"
+        "_hash": "RV_3YD_kV-43k-fGdbnJWr"
       },
       {
-        "key": "siteSliceId",
+        "key": "catalogSliceId",
         "type": "sliceIds",
         "columns": [
           {
@@ -1575,11 +1910,40 @@
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "w4A5ZhCSi249R-kJ4d1OYj"
+        "_hash": "RuPnebBhe2zKYEaPl2UQ-B"
       },
       {
-        "key": "siteGeneral",
+        "key": "catalogSeries",
         "type": "components",
+        "columns": [
+          {
+            "key": "_hash",
+            "type": "string",
+            "titleShort": "Hash",
+            "titleLong": "Hash",
+            "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
+          },
+          {
+            "key": "series",
+            "type": "jsonArray",
+            "titleShort": "Series",
+            "titleLong": "Series References",
+            "ref": {
+              "tableKey": "seriesCake",
+              "type": "cakes",
+              "_hash": "XzWqutMvIKlcsowCBY4w4h"
+            },
+            "_hash": "oZh0GtgLwJQ8IuyyHLZAPl"
+          }
+        ],
+        "isHead": false,
+        "isRoot": false,
+        "isShared": true,
+        "_hash": "_wEp6QgGosyILDTgKWSOZU"
+      },
+      {
+        "key": "catalogSeriesLayer",
+        "type": "layers",
         "columns": [
           {
             "key": "_hash",
@@ -1589,54 +1953,97 @@
             "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
           },
           {
-            "key": "manager",
+            "key": "base",
             "type": "string",
-            "titleLong": "Site Manager",
-            "titleShort": "Manager",
-            "_hash": "yF_GQXLH1n6vfV_QRS0JLw"
+            "titleLong": "Base",
+            "titleShort": "Base",
+            "_hash": "EfTZIQZC5xpkbx3LcIDhlS"
           },
           {
-            "key": "street",
+            "key": "sliceIdsTable",
             "type": "string",
-            "titleLong": "Street",
-            "titleShort": "Street",
-            "_hash": "Qn4ukK8iJk2qRu24QrSLRO"
+            "titleLong": "Slice Ids Table",
+            "titleShort": "Slice Ids Table",
+            "_hash": "1k77uzMUkjc7tCJlGN31GI"
           },
           {
-            "key": "houseNr",
-            "type": "number",
-            "titleLong": "House Number",
-            "titleShort": "House Number",
-            "_hash": "Yrb9UOu-uqO_ZQ_NYq9uch"
-          },
-          {
-            "key": "postCode",
-            "type": "number",
-            "titleLong": "Postal Code",
-            "titleShort": "Postal Code",
-            "_hash": "ZilPLNjoddOH3hy3uTr4WN"
-          },
-          {
-            "key": "city",
+            "key": "sliceIdsTableRow",
             "type": "string",
-            "titleLong": "City",
-            "titleShort": "City",
-            "_hash": "1sh5sSvTAh_uHjHzdaMjde"
+            "titleLong": "Slice Ids Table Row",
+            "titleShort": "Slice Ids Table Row",
+            "_hash": "b7tMAXjYmRs96pxCcwt812"
           },
           {
-            "key": "cars",
-            "type": "jsonArray",
-            "ref": {
-              "tableKey": "carCake",
-              "_hash": "2l4mut6PepEq0qxY-e8q_1"
-            },
-            "_hash": "4ZKzYUP1tB_AW5S0mg4Ne6"
+            "key": "componentsTable",
+            "type": "string",
+            "titleLong": "Components Table",
+            "titleShort": "Components Table",
+            "_hash": "8oL-bX7Ty76VQFzuIWBrdg"
+          },
+          {
+            "key": "add",
+            "type": "json",
+            "titleLong": "Add",
+            "titleShort": "Add",
+            "_hash": "FZN1kwlNoq9Cv6qIWvNg-3"
+          },
+          {
+            "key": "remove",
+            "type": "json",
+            "titleLong": "Remove",
+            "titleShort": "Remove",
+            "_hash": "UXIjvdKRUxEq3KTXudtaon"
           }
         ],
         "isHead": false,
         "isRoot": false,
         "isShared": true,
-        "_hash": "4ricJTQmnW17WX7OhMHwkD"
+        "_hash": "xuejFdZa6ELvKI-OzJ8C8V"
+      },
+      {
+        "key": "catalogCake",
+        "type": "cakes",
+        "columns": [
+          {
+            "key": "_hash",
+            "type": "string",
+            "titleLong": "Hash",
+            "titleShort": "Hash",
+            "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
+          },
+          {
+            "key": "sliceIdsTable",
+            "type": "string",
+            "titleLong": "Slice Ids Table",
+            "titleShort": "Slice Ids Table",
+            "_hash": "1k77uzMUkjc7tCJlGN31GI"
+          },
+          {
+            "key": "sliceIdsRow",
+            "type": "string",
+            "titleLong": "Slice Ids Row",
+            "titleShort": "Slice Ids Row",
+            "_hash": "T3yH4vS0oUYRZAFPq0eIkc"
+          },
+          {
+            "key": "layers",
+            "type": "json",
+            "titleLong": "Layers",
+            "titleShort": "Layers",
+            "_hash": "DpUNHLADN7AoClIh7IjdUE"
+          },
+          {
+            "key": "id",
+            "type": "string",
+            "titleLong": "ID",
+            "titleShort": "ID",
+            "_hash": "UmazCpc_m0Ww4a9TQd1MpY"
+          }
+        ],
+        "isHead": false,
+        "isRoot": false,
+        "isShared": true,
+        "_hash": "qnSyADYpFzJVxFvRjUrodj"
       }
     ]
   }

@@ -84,7 +84,8 @@ export class Core {
     // when importing new data
     if (
       (result.hasErrors || (result.base && result.base.hasErrors)) &&
-      !result.base.refsNotFound
+      !result.base.refsNotFound &&
+      !result.base.layerBasesNotFound
     ) {
       throw new Error(
         'The imported rljson data is not valid:\n' +
