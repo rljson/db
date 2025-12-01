@@ -427,7 +427,7 @@ export class ColumnSelection {
       {
         key: 'brand',
         route:
-          'catalogCake/catalogSeriesLayer/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand',
+          'catalogCake/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand',
         alias: 'brand',
         titleLong: 'Car Brand',
         titleShort: 'Brand',

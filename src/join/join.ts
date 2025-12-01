@@ -10,7 +10,7 @@ import { Ref, Route, SliceId } from '@rljson/rljson';
 
 import { traverse } from 'object-traversal';
 
-import { Cell, Container } from '../db.ts';
+import { Container } from '../db.ts';
 import { inject } from '../tools/inject.ts';
 import { isolate } from '../tools/isolate.ts';
 import { mergeTrees } from '../tools/merge-trees.ts';
@@ -24,7 +24,7 @@ import { RowSort } from './sort/row-sort.ts';
 export const joinPreserveKeys = [
   'sliceIdsTable',
   'sliceIdsRow',
-  'base',
+  /*'base',*/
   'sliceIdsTable',
   'sliceIdsTableRow',
   'componentsTable',
@@ -105,7 +105,10 @@ export class Join {
       const cols = [...joinRowH.columns];
       const insertCols = [];
       for (const col of cols) {
-        const insertCol = { ...col };
+        const insertCol = {
+          ...col,
+          //inserts: col.inserts ? [...col.inserts] : [],
+        };
 
         /*v8 ignore else -- @preserve */
         if (Route.fromFlat(setValue.route).equalsWithoutRefs(col.route)) {
@@ -129,26 +132,36 @@ export class Join {
               );
             }
 
-            const insertTree = isolate(
+            const cellInsertTree = isolate(
               { ...col.value.tree },
               cell.path[0],
               joinPreserveKeys,
             );
-            inject({ ...insertTree }, cell.path[0], setValue.value);
+            inject(cellInsertTree, cell.path[0], setValue.value);
 
+            const propertyKey = cell.path[0].slice(-1)[0];
             const insert: Container = {
               cell: [
                 {
                   ...cell,
                   ...{ value: setValue.value },
+                  ...{
+                    row: {
+                      ...cell.row,
+                      ...{ [propertyKey]: setValue.value },
+                    } as any,
+                  },
                 },
               ],
-              tree: insertTree,
+              tree: cellInsertTree,
               rljson: col.value.rljson,
             };
 
             /* v8 ignore next -- @preserve */
-            insertCol.inserts = insert ? [insert] : insertCol.inserts;
+            if (insert) {
+              if (insertCol.inserts) insertCol.inserts.push(insert);
+              else insertCol.inserts = [insert];
+            }
           }
         }
         insertCols.push(insertCol);
@@ -278,74 +291,78 @@ export class Join {
   /**
    * Returns insert Object of the join
    */
-  insert(): { route: Route; tree: Json }[] {
-    const colInserts: Map<
-      number,
-      { route: Route; cell: Cell[]; trees: Json[] }
-    > = new Map();
-    for (const row of Object.values(this.data)) {
-      for (let i = 0; i < this.columnCount; i++) {
+  insert(): {
+    route: Route;
+    tree: Json;
+  }[] {
+    const inserts: {
+      route: Route;
+      tree: Json;
+    }[] = [];
+
+    for (let i = 0; i < this.columnCount; i++) {
+      const colInserts: {
+        route: Route;
+        tree: Json;
+        path: Array<string | number>;
+      }[] = [];
+      for (const row of Object.values(this.data)) {
         const col = row.columns[i];
         if (col.inserts && col.inserts.length > 0) {
-          if (!colInserts.has(i)) {
-            colInserts.set(i, {
-              route: col.route,
-              cell: [],
-              trees: [],
-            });
-          }
           for (const insert of col.inserts) {
-            colInserts.get(i)!.cell.push(...insert.cell);
-            colInserts.get(i)!.trees.push(insert.tree);
+            for (const cell of insert.cell) {
+              const tree = insert.tree;
+              const path = cell.path;
+
+              // Inject the value at the path, inject complete row
+              inject(tree, path[0].slice(0, -1), cell.row);
+
+              colInserts.push({
+                route: col.route,
+                tree,
+                path: path[0],
+              });
+            }
           }
         }
       }
-    }
 
-    const inserts: { route: Route; tree: Json }[] = [];
+      if (colInserts.length === 0) continue;
 
-    for (const [colIndex, colInsert] of colInserts) {
-      const trees = colInsert.trees;
+      //Merge all insert trees into one
+      const routes = colInserts.map((ins) => ins.route.flat);
+      const uniqueRoute = Array.from(new Set(routes));
 
-      traverse(trees, ({ parent, key }) => {
+      /* v8 ignore if -- @preserve */
+      if (uniqueRoute.length > 1) {
+        throw new Error(
+          `Join: Error while generating insert: ` +
+            `Multiple different routes found in inserts: ` +
+            `${uniqueRoute.map((r) => r.toString()).join(', ')}. ` +
+            `Cannot generate single insert object.`,
+        );
+      }
+
+      const merged = mergeTrees(
+        colInserts.map((ins) => ({
+          tree: ins.tree,
+          path: ins.path.slice(0, -1),
+        })),
+      );
+
+      //Delete _hash and filter null values from _data arrays
+      traverse(merged, ({ parent, key, value }) => {
         if (key == '_hash') {
-          delete parent![key];
+          //delete parent![key];
+        }
+        if (key == '_data' && Array.isArray(value) && value.length > 0) {
+          parent![key] = value.filter((v) => !!v);
         }
       });
 
-      const insertPathSet = new Set(
-        colInsert.cell
-          .flatMap((c) => c.path)
-          .map((p) => p.slice(0, 8))
-          .map((v) => JSON.stringify(v)),
-      );
-      const insertPaths = Array.from(insertPathSet).map((v) => JSON.parse(v));
-
-      /* v8 ignore next -- @preserve */
-      if (insertPaths.length > 1) {
-        throw new Error(
-          `Join: Error while getting inserts: ` +
-            `Cannot merge inserts for column at index ${colIndex} ` +
-            `with multiple insert paths: [${Array.from(insertPathSet).join(
-              ', ',
-            )}].`,
-        );
-      }
-
-      const insertPath = insertPaths[0];
-      const insertTree = mergeTrees(trees as any, insertPath, joinPreserveKeys);
-
-      /* v8 ignore next -- @preserve */
-      if (Object.keys(insertTree).length === 0) {
-        throw new Error(
-          `Join: Error while getting inserts: ` +
-            `Merged insert tree for column at index ${colIndex} is empty.`,
-        );
-      }
-
       inserts.push({
-        route: colInsert.route,
-        tree: insertTree,
+        route: Route.fromFlat(uniqueRoute[0]).toRouteWithProperty(),
+        tree: merged,
       });
     }
 

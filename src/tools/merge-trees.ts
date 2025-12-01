@@ -8,132 +8,145 @@ import { Json } from '@rljson/json';
 
 /* v8 ignore next -- @preserve */
 export const mergeTrees = (
-  trees: Json[],
-  path: (string | number)[],
-  preservedKeys: string[] = [],
-): any => {
+  trees: {
+    tree: Json;
+    path: Array<string | number>;
+  }[],
+): Json => {
   // Handle empty trees array
   if (!trees || trees.length === 0) {
     return {};
   }
 
-  // If path is empty, merge all trees at root level
-  if (path.length === 0) {
-    return trees.reduce((merged, tree) => {
-      if (tree == null) return merged;
+  // First, merge all tree structures to preserve all properties along all paths
+  let result: Json = {};
 
-      // Initialize merged based on first non-null tree
-      if (merged === undefined) {
-        merged = Array.isArray(tree) ? [] : {};
-      }
-
-      if (Array.isArray(merged) && Array.isArray(tree)) {
-        return [...merged, ...tree];
-      } else if (!Array.isArray(merged) && !Array.isArray(tree)) {
-        return { ...merged, ...tree };
-      }
-
-      return merged;
-    }, undefined as any);
+  for (const { tree } of trees) {
+    if (tree != null) {
+      result = mergeStructures(result, tree);
+    }
   }
 
-  // Collect structure information along the path from all trees
-  const pathStructure: any[] = new Array(path.length)
-    .fill(null)
-    .map(() => ({}));
+  // Extract values at each specified path
+  const pathValues: { path: Array<string | number>; value: Json }[] = [];
 
-  // Navigate to the path in each tree and collect all values + structure info
-  const valuesAtPath: Json[] = [];
-
-  for (const tree of trees) {
+  for (const { tree, path } of trees) {
     if (tree == null) continue;
 
-    let current = tree;
+    let current: any = tree;
     let pathExists = true;
 
-    // Navigate through the path and collect structure info
-    for (let i = 0; i < path.length; i++) {
-      const key = path[i];
-
+    // Navigate through the path
+    for (const key of path) {
       if (current == null || !(key in current)) {
         pathExists = false;
         break;
       }
-
-      // Before moving to next level, collect any underscore properties and preservedKeys
-      if (current && typeof current === 'object' && !Array.isArray(current)) {
-        for (const prop in current) {
-          if (prop.startsWith('_') || preservedKeys.includes(prop)) {
-            pathStructure[i][prop] = (current as any)[prop];
-          }
-        }
-      }
-
-      current = (current as any)[key];
+      current = current[key];
     }
 
-    // If we successfully navigated the path, collect the value
+    // If we successfully navigated the path, store the path and value
     if (pathExists && current != null) {
-      valuesAtPath.push(current);
+      pathValues.push({ path, value: current });
     }
   }
 
-  // If no values found at path, return empty object
-  if (valuesAtPath.length === 0) {
-    return {};
+  // Group values by their paths
+  const pathGroups = new Map<string, Json[]>();
+
+  for (const { path, value } of pathValues) {
+    const pathKey = JSON.stringify(path);
+    if (!pathGroups.has(pathKey)) {
+      pathGroups.set(pathKey, []);
+    }
+    pathGroups.get(pathKey)!.push(value);
   }
 
-  // Merge all collected values
-  const mergedValue =
-    valuesAtPath.reduce((merged, value) => {
-      if (value == null) return merged;
+  // Merge values for each unique path and set them in the result
+  for (const [pathKey, values] of pathGroups) {
+    const path = JSON.parse(pathKey) as Array<string | number>;
 
-      // Initialize merged based on first non-null value
-      if (merged === undefined) {
-        merged = Array.isArray(value) ? [] : {};
+    // Merge all values at this path
+    let mergedValue: Json | undefined = undefined;
+    for (const value of values) {
+      if (value == null) continue;
+
+      if (mergedValue === undefined) {
+        mergedValue = value;
+        continue;
       }
 
-      if (Array.isArray(merged) && Array.isArray(value)) {
-        return [...merged, ...value];
-      } else if (!Array.isArray(merged) && !Array.isArray(value)) {
-        return { ...merged, ...value };
+      if (Array.isArray(mergedValue) && Array.isArray(value)) {
+        mergedValue = [...mergedValue, ...value] as unknown as Json;
+      } else if (!Array.isArray(mergedValue) && !Array.isArray(value)) {
+        mergedValue = {
+          ...(mergedValue as any),
+          ...(value as any),
+        } as unknown as Json;
       }
-
-      return merged;
-    }, undefined as any) || {};
-
-  // Build the result tree with the merged value at the specified path
-  const result: any = {};
-
-  // Add root level underscore properties and preservedKeys
-  if (pathStructure[0]) {
-    Object.assign(result, pathStructure[0]);
-  }
-
-  // Create the nested structure along the path
-  let current = result;
-  for (let i = 0; i < path.length - 1; i++) {
-    const key = path[i];
-    // Determine if next level should be array or object based on next key type
-    const nextKey = path[i + 1];
-    current[key] = typeof nextKey === 'number' ? [] : {};
-
-    // Add underscore properties and preservedKeys for the next level
-    if (
-      pathStructure[i + 1] &&
-      typeof current[key] === 'object' &&
-      !Array.isArray(current[key])
-    ) {
-      Object.assign(current[key], pathStructure[i + 1]);
+      // If types mismatch, keep the existing mergedValue
     }
 
-    current = current[key];
-  }
+    // Set the merged value at the path in the result
+    let current: any = result;
+    for (let i = 0; i < path.length - 1; i++) {
+      const key = path[i];
+      if (current == null || !(key in current)) {
+        // Path doesn't exist in result, create it
+        current[key] = typeof path[i + 1] === 'number' ? [] : {};
+      }
+      current = current[key];
+    }
 
-  // Set the merged value at the final path location
-  if (path.length > 0) {
-    current[path[path.length - 1]] = mergedValue;
+    if (path.length > 0) {
+      current[path[path.length - 1]] = mergedValue;
+    }
   }
 
   return result;
 };
+
+// Helper function to recursively merge two tree structures
+/* v8 ignore next -- @preserve */
+function mergeStructures(target: Json, source: Json): Json {
+  if (source == null) return target;
+  if (target == null) return source;
+
+  // If both are arrays, merge them
+  if (Array.isArray(target) && Array.isArray(source)) {
+    const result = [...target];
+    for (let i = 0; i < source.length; i++) {
+      if (result[i] === undefined) {
+        result[i] = source[i];
+      } else {
+        result[i] = mergeStructures(result[i], source[i]);
+      }
+    }
+    return result as unknown as Json;
+  }
+
+  // If both are objects, merge their properties
+  if (
+    typeof target === 'object' &&
+    typeof source === 'object' &&
+    !Array.isArray(target) &&
+    !Array.isArray(source) &&
+    target !== null &&
+    source !== null
+  ) {
+    const result = { ...target } as any;
+
+    for (const key in source) {
+      if (key in result) {
+        result[key] = mergeStructures(result[key], (source as any)[key]);
+      } else {
+        result[key] = (source as any)[key];
+      }
+    }
+
+    return result;
+  }
+
+  // For primitive values or type mismatches, return source
+  return source;
+}

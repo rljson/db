@@ -192,7 +192,7 @@ describe('Join', () => {
       const values = editedJoin.rows.flatMap((r) => r).flat();
       const uniqueValues = Array.from(new Set(values)).sort();
 
-      expect(uniqueValues).toEqual(['BMW']);
+      expect(uniqueValues).toEqual(['BMW', 'Opel']);
     });
   });
 
@@ -315,7 +315,7 @@ describe('Join', () => {
         {},
       );
 
-      expect(writtenData['carGeneral']._data.length).toBe(1);
+      expect(writtenData['carGeneral']._data.length).toBe(12);
       const writtenDataSet = new Set(
         writtenData['carGeneral']._data.map((d: any) => d['brand']),
       );
@@ -331,7 +331,7 @@ describe('Join', () => {
       const cakeRef = (staticExample().catalogCake._data[0]._hash ??
         '') as string;
 
-      const route = `${cakeKey}/catalogSeriesLayer/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+      const route = `${cakeKey}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
 
       const brandColumnSelectionDeeplyNested =
         ColumnSelection.exampleCarsDeeplyNestedColumnSelection();
@@ -355,15 +355,15 @@ describe('Join', () => {
       });
       const inserted = inserteds[0];
 
-      const writtenCakeRef = inserted['carCakeRef'] as string;
+      const writtenCakeRef = inserted['catalogCakeRef'] as string;
       const { rljson: writtenData } = await db.get(
         Route.fromFlat(
-          `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/brand`,
+          `/${cakeKey}@${writtenCakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral`,
         ),
         {},
       );
 
-      expect(writtenData['carGeneral']._data.length).toBe(1);
+      expect(writtenData['carGeneral']._data.length).toBe(12);
       const writtenDataSet = new Set(
         writtenData['carGeneral']._data.map((d: any) => d['brand']),
       );

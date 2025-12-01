@@ -317,7 +317,7 @@ describe('MultiEditProcessor', () => {
           },
         );
 
-        expect(writtenData['carDimensions']._data.length).toBe(1);
+        expect(writtenData['carDimensions']._data.length).toBe(6);
         expect(
           writtenData['carDimensions']._data.every(
             (d: any) => d['length'] === 4800,
@@ -505,7 +505,7 @@ describe('MultiEditProcessor', () => {
           {},
         );
 
-        expect(writtenCarGeneral.length).toBe(1);
+        expect(writtenCarGeneral.length).toBe(5);
       });
     });
   });

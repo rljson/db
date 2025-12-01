@@ -47,8 +47,8 @@ export const isolate = (
   // If this is the last key in path, include the full value
   if (remainingPath.length === 0) {
     if (Array.isArray(result)) {
-      // For arrays, push the value to avoid sparse arrays
-      (result as any[]).push(currentValue);
+      // For arrays, preserve the original index
+      (result as any[])[currentKey as number] = currentValue;
     } else {
       (result as any)[currentKey] = currentValue;
     }
@@ -63,8 +63,8 @@ export const isolate = (
 
     if (hasContent || isolatedChild === null) {
       if (Array.isArray(result)) {
-        // For arrays, push the value to avoid sparse arrays
-        (result as any[]).push(isolatedChild);
+        // For arrays, preserve the original index
+        (result as any[])[currentKey as number] = isolatedChild;
       } else {
         (result as any)[currentKey] = isolatedChild;
       }

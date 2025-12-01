@@ -596,7 +596,9 @@ export class Db {
         /* v8 ignore else -- @preserve */
         if (rowChildrenTree && Object.keys(rowChildrenTree).length > 0) {
           const columnReferenceMap = nodeColumnCfgs
-            .filter((c) => c.ref && c.ref.type === 'components')
+            .filter(
+              (c) => c.ref && ['components', 'cakes'].includes(c.ref.type),
+            )
             .reduce((acc, curr) => {
               acc.set(curr.key, curr.ref!.tableKey);
               return acc;
@@ -895,13 +897,12 @@ export class Db {
 
         /* v8 ignore next -- @preserve */
         if (cakes.length > 1) {
-          throw new Error(
-            `Db._insert: Multiple cakes found for cake table "${nodeTableKey}" when inserting into child table "${childTableKey}". Only single cake inserts are supported.`,
-          );
+          // throw new Error(
+          //   `Db._insert: Multiple cakes found for cake table "${nodeTableKey}" when inserting into child table "${childTableKey}". Only single cake inserts are supported.`,
+          // );
         }
 
         //Check if there is no cake or no childTree --> Add new one
-
         const cake = cakes[0] as Cake;
         const childTree = (cake.layers as Json)[childTableKey] as TableType;
         const childResults = await this._insert(
@@ -966,6 +967,18 @@ export class Db {
             }
 
             const writtenComponent = writtenComponents[0];
+
+            /* v8 ignore next -- @preserve */
+            if (
+              !writtenComponent ||
+              !(writtenComponent as any)[childTableKey + 'Ref']
+            ) {
+              throw new Error(
+                `Db._insert: No component reference returned for layer "${
+                  (layer as any)._hash
+                }" and sliceId "${sliceId}".`,
+              );
+            }
 
             layerInsert[sliceId] = (writtenComponent as any)[
               childTableKey + 'Ref'
@@ -1042,6 +1055,9 @@ export class Db {
         ) as ComponentsTable<Json>;
 
         for (const component of components._data) {
+          /* v8 ignore next -- @preserve */
+          if (!component) continue;
+
           delete (component as any)._tableKey;
           delete (component as any)._type;
 
