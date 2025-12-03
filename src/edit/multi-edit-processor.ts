@@ -29,6 +29,7 @@ export type MultiEditRowHashed = JoinRowsHashed;
 export type MultiEditRows = any[][];
 
 export class MultiEditProcessor {
+  private _multiEdit: MultiEdit | null = null;
   private _edits: Edit[] = [];
   private _join: Join | null = null;
 
@@ -60,12 +61,63 @@ export class MultiEditProcessor {
     return this._join;
   }
 
+  get multiEdit(): MultiEdit {
+    /* v8 ignore if -- @preserve */
+    if (!this._multiEdit) {
+      throw new Error('MultiEditProcessor: MultiEdit not resolved yet.');
+    }
+    return this._multiEdit;
+  }
+
+  async edit(edit: Edit): Promise<MultiEditProcessor> {
+    this._edits.push(edit);
+    this._join = await this._process(edit);
+    this._multiEdit = {
+      _hash: '',
+      edit: edit._hash,
+      previous: this._multiEdit ? this._multiEdit._hash : null,
+    };
+    return this;
+  }
+
+  async publish() {
+    const inserts = this.join.insert();
+
+    if (inserts.length === 0) {
+      throw new Error('MultiEditProcessor: No inserts to publish.');
+    }
+    if (inserts.length > 1) {
+      throw new Error(
+        'MultiEditProcessor: Multiple inserts not supported yet.',
+      );
+    }
+
+    const insert = inserts[0];
+    const inserteds = await this.db.insert(insert.route, insert.tree);
+
+    if (inserteds.length === 0) {
+      throw new Error('MultiEditProcessor: No rows inserted.');
+    }
+    if (inserteds.length > 1) {
+      throw new Error(
+        'MultiEditProcessor: Multiple inserted rows not supported yet.',
+      );
+    }
+
+    const inserted = inserteds[0];
+    const writtenCakeRef = (inserted as any)[this.cakeKey + 'Ref'] as string;
+
+    return new MultiEditProcessor(this.db, this.cakeKey, writtenCakeRef);
+  }
+
   private async _resolve(multiEdit: MultiEdit): Promise<void> {
-    const edit = await this.edit(multiEdit.edit);
+    this._multiEdit = multiEdit;
+
+    const edit = await this._getEdit(multiEdit.edit);
     this._edits.push(edit);
 
     if (multiEdit.previous) {
-      const previousMultiEdit = await this.multiEdit(multiEdit.previous!);
+      const previousMultiEdit = await this._getMultiEdit(multiEdit.previous!);
       return this._resolve(previousMultiEdit);
     }
   }
@@ -212,7 +264,7 @@ export class MultiEditProcessor {
     return this._join!;
   }
 
-  private async multiEdit(multiEditRef: string): Promise<MultiEdit> {
+  private async _getMultiEdit(multiEditRef: string): Promise<MultiEdit> {
     const multiEditTableKey = `${this.cakeKey}MultiEdits`;
     const {
       [multiEditTableKey]: { _data: multiEdit },
@@ -221,7 +273,7 @@ export class MultiEditProcessor {
     return multiEdit[0] as MultiEdit;
   }
 
-  private async edit(editRef: string): Promise<Edit> {
+  private async _getEdit(editRef: string): Promise<Edit> {
     const editTableKey = `${this.cakeKey}Edits`;
     const {
       [editTableKey]: { _data: edits },
