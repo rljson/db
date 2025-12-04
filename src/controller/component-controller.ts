@@ -40,6 +40,7 @@ export class ComponentController<
     'edits',
     'editHistory',
     'multiEdits',
+    'head',
   ];
 
   private _resolvedColumns: {

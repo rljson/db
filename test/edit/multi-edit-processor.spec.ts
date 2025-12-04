@@ -4,6 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+import { hip } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { equals } from '@rljson/json';
 import {
@@ -11,12 +12,14 @@ import {
   createEditTableCfg,
   createMultiEditTableCfg,
   Edit,
+  EditHistory,
   EditsTable,
   InsertHistoryRow,
   MultiEdit,
   MultiEditsTable,
   Route,
   TableKey,
+  timeId,
 } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -91,7 +94,7 @@ describe('MultiEditProcessor', () => {
         _hash: '',
       } as MultiEdit;
 
-      const proc = await MultiEditProcessor.fromModel(
+      const proc = await MultiEditProcessor.fromMultiEdit(
         db,
         cakeKey,
         cakeRef,
@@ -103,7 +106,228 @@ describe('MultiEditProcessor', () => {
     });
   });
 
-  describe('fromModel', async () => {
+  describe('edit', async () => {
+    let multiEditProc: MultiEditProcessor;
+    let multiEdit: MultiEdit;
+
+    beforeEach(async () => {
+      const editActionColumnSelection = exampleEditActionColumnSelection();
+      const edit: Edit = {
+        name: 'Select: brand, type, serviceIntervals, isElectric, height, width, length, engine, repairedByWorkshop',
+        action: editActionColumnSelection,
+        _hash: '',
+      } as Edit;
+
+      const editInsertTree = {
+        [`${cakeKey}Edits`]: {
+          _data: [edit],
+          _type: 'edits',
+        } as EditsTable,
+      };
+
+      const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
+        Route.fromFlat(`/${cakeKey}Edits`),
+        editInsertTree,
+        { skipHistory: true },
+      );
+
+      multiEdit = hip<MultiEdit>({
+        previous: null,
+        edit: editRef!,
+        _hash: '',
+      }) as MultiEdit;
+
+      multiEditProc = await MultiEditProcessor.fromMultiEdit(
+        db,
+        cakeKey,
+        cakeRef,
+        multiEdit,
+      );
+    });
+
+    it('should add an Edit to the MultiEditProcessor', async () => {
+      const editActionRowFilter = exampleEditActionRowFilter();
+
+      const edit: Edit = hip<Edit>({
+        name: 'Filter: isElectric = true, length > 4000',
+        action: editActionRowFilter,
+        _hash: '',
+      }) as Edit;
+
+      await multiEditProc.edit(edit);
+
+      expect(multiEditProc.join.rows.length).toBeGreaterThan(0);
+
+      //Check filtered values
+      // isElectric == true
+      expect(
+        multiEditProc.join.rows
+          .flatMap((r) => r[3])
+          .every((isElectric) => isElectric == true),
+      ).toBe(true);
+
+      // length > 4000
+      const lengths = multiEditProc.join.rows.flatMap((r) => r[6]);
+
+      expect(lengths.every((length) => length > 4000)).toBe(true);
+
+      //Check MultiEdit updated
+      expect(multiEditProc.multiEdit.previous).toBe(multiEdit._hash);
+      expect(multiEditProc.multiEdit.edit).toBe(edit._hash);
+    });
+  });
+
+  describe('publish', async () => {
+    let multiEditProc: MultiEditProcessor;
+
+    beforeEach(async () => {
+      const editActionColumnSelection = exampleEditActionColumnSelection();
+      const edit: Edit = {
+        name: 'Select: brand, type, serviceIntervals, isElectric, height, width, length, engine, repairedByWorkshop',
+        action: editActionColumnSelection,
+        _hash: '',
+      } as Edit;
+
+      const editInsertTree = {
+        [`${cakeKey}Edits`]: {
+          _data: [edit],
+          _type: 'edits',
+        } as EditsTable,
+      };
+
+      const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
+        Route.fromFlat(`/${cakeKey}Edits`),
+        editInsertTree,
+        { skipHistory: true },
+      );
+
+      const multiEdit: MultiEdit = hip<MultiEdit>({
+        previous: null,
+        edit: editRef!,
+        _hash: '',
+      });
+
+      multiEditProc = await MultiEditProcessor.fromMultiEdit(
+        db,
+        cakeKey,
+        cakeRef,
+        multiEdit,
+      );
+    });
+
+    it('should publish the MultiEditProcessor changes to the Db', async () => {
+      const editSetValue = exampleEditActionSetValue();
+
+      const edit: Edit = hip<Edit>({
+        name: 'Set: serviceIntervals = [15000,30000,45000,60000]',
+        action: editSetValue,
+        _hash: '',
+      });
+
+      await multiEditProc.edit(edit);
+
+      const multiEdit = { ...multiEditProc.multiEdit };
+
+      const multiEditProcPublished = await multiEditProc.publish();
+
+      expect(multiEditProcPublished.cakeRef).toBeDefined();
+
+      const writtenCakeRef = multiEditProcPublished.cakeRef;
+
+      //Check Data updated
+      const { cell: writtenCarGeneral } = await db.get(
+        Route.fromFlat(
+          `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/serviceIntervals`,
+        ),
+        {},
+      );
+
+      expect(writtenCarGeneral.length).toBe(8);
+      expect(
+        writtenCarGeneral
+          .map((c) => c.value)
+          .every((serviceIntervals: any) =>
+            equals([15000, 30000, 45000, 60000], serviceIntervals),
+          ),
+      ).toBe(true);
+
+      //Check MultiEdit saved
+      const { cell: multiEdits } = await db.get(
+        Route.fromFlat(`${cakeKey}MultiEdits`),
+        multiEdit._hash,
+      );
+
+      expect(multiEdits.length).toBe(1);
+      expect(multiEdits[0].row).toEqual(multiEdit);
+
+      //Check Head updated
+      const { cell: heads } = await db.get(
+        Route.fromFlat(`${cakeKey}Heads/cakeRef`),
+        {},
+      );
+
+      expect(heads.length).toBe(4);
+      expect(heads.some((h) => (h.value as string) === writtenCakeRef)).toBe(
+        true,
+      );
+    });
+  });
+
+  describe('fromEditHistory', () => {
+    let editHistory: EditHistory;
+    let edit: Edit;
+    let multiEdit: MultiEdit;
+
+    beforeEach(async () => {
+      const editActionColumnSelection = exampleEditActionColumnSelection();
+      edit = hip<Edit>({
+        name: 'Select: brand, type, serviceIntervals, isElectric, height, width, length, engine, repairedByWorkshop',
+        action: editActionColumnSelection,
+        _hash: '',
+      });
+
+      const { [cakeKey + 'EditsRef']: editRef } = (
+        await db.addEdit(cakeKey, edit)
+      )[0] as any;
+
+      multiEdit = hip<MultiEdit>({
+        previous: null,
+        edit: editRef!,
+        _hash: '',
+      });
+
+      const { [cakeKey + 'MultiEditsRef']: multiEditRef } = (
+        await db.addMultiEdit(cakeKey, multiEdit)
+      )[0] as any;
+
+      editHistory = hip<EditHistory>({
+        timeId: timeId(),
+        dataRef: cakeRef,
+        multiEditRef: multiEditRef!,
+        previous: [],
+        _hash: '',
+      });
+
+      await db.addEditHistory(cakeKey, editHistory);
+    });
+
+    it('should be defined', async () => {
+      const proc = await MultiEditProcessor.fromEditHistory(
+        db,
+        cakeKey,
+        editHistory,
+      );
+      expect(proc).toBeDefined();
+      expect(proc.join).toBeDefined();
+
+      expect(proc.multiEdit).toBeDefined();
+      expect(proc.multiEdit.edit).toBe(edit._hash);
+
+      expect(proc.join.rows.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('fromMultiEdit', async () => {
     describe('Single Edit', async () => {
       it('ColumnSelection', async () => {
         const editActionColumnSelection = exampleEditActionColumnSelection();
@@ -132,7 +356,7 @@ describe('MultiEditProcessor', () => {
           _hash: '',
         } as MultiEdit;
 
-        const proc = await MultiEditProcessor.fromModel(
+        const proc = await MultiEditProcessor.fromMultiEdit(
           db,
           cakeKey,
           cakeRef,
@@ -169,7 +393,7 @@ describe('MultiEditProcessor', () => {
           _hash: '',
         } as MultiEdit;
 
-        const proc = await MultiEditProcessor.fromModel(
+        const proc = await MultiEditProcessor.fromMultiEdit(
           db,
           cakeKey,
           cakeRef,
@@ -201,13 +425,13 @@ describe('MultiEditProcessor', () => {
           { skipHistory: true },
         );
 
-        const multiEdit: MultiEdit = {
+        const multiEdit: MultiEdit = hip<MultiEdit>({
           previous: null,
           edit: editRef!,
           _hash: '',
-        } as MultiEdit;
+        });
 
-        const proc = await MultiEditProcessor.fromModel(
+        const proc = await MultiEditProcessor.fromMultiEdit(
           db,
           cakeKey,
           cakeRef,
@@ -245,7 +469,7 @@ describe('MultiEditProcessor', () => {
           _hash: '',
         } as MultiEdit;
 
-        const proc = await MultiEditProcessor.fromModel(
+        const proc = await MultiEditProcessor.fromMultiEdit(
           db,
           cakeKey,
           cakeRef,
@@ -281,7 +505,7 @@ describe('MultiEditProcessor', () => {
           _hash: '',
         } as MultiEdit;
 
-        const proc = await MultiEditProcessor.fromModel(
+        const proc = await MultiEditProcessor.fromMultiEdit(
           db,
           cakeKey,
           cakeRef,
@@ -432,7 +656,7 @@ describe('MultiEditProcessor', () => {
           previousMultiEditRef = results[0][`${cakeKey}MultiEditsRef`]!; //Update previous ref
         }
 
-        multiEditProc = await MultiEditProcessor.fromModel(
+        multiEditProc = await MultiEditProcessor.fromMultiEdit(
           db,
           cakeKey,
           cakeRef,

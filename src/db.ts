@@ -13,11 +13,15 @@ import {
   ComponentRef,
   ComponentsTable,
   ContentType,
+  Edit,
+  EditHistory,
+  Head,
   InsertHistoryRow,
   InsertHistoryTimeId,
   isTimeId,
   Layer,
   LayersTable,
+  MultiEdit,
   Ref,
   Rljson,
   Route,
@@ -25,6 +29,7 @@ import {
   SliceId,
   SliceIds,
   TableType,
+  timeId,
 } from '@rljson/rljson';
 
 import {
@@ -43,7 +48,7 @@ import { makeUnique } from './tools/make-unique.ts';
 
 export type Cell = {
   route: Route;
-  value: JsonValue[] | null;
+  value: JsonValue | JsonValue[] | null;
   row: JsonValue[] | null;
   path: Array<Array<string | number>>;
 };
@@ -1210,6 +1215,94 @@ export class Db {
         _type: 'insertHistory',
       },
     });
+  }
+
+  // ...........................................................................
+  /**
+   * Add a head revision for a cake
+   * @param cakeKey - The cake table key
+   * @param cakeRef - The cake reference
+   */
+  public async addHeadRevision(cakeKey: string, cakeRef: Ref) {
+    const cakeHeadKey = cakeKey + 'Heads';
+    const cakeHeadController = await this.getController(cakeHeadKey);
+
+    return await cakeHeadController.insert('add', {
+      cakeRef,
+      timeId: timeId(),
+      _hash: '',
+    } as Head);
+  }
+
+  // ...........................................................................
+  /**
+   * Add a multiEdit
+   * @param cakeKey - The cake table key
+   * @param multiEdit - The multiEdit to add
+   */
+  public async addMultiEdit(cakeKey: string, multiEdit: MultiEdit) {
+    const multiEditController = await this.getController(
+      cakeKey + 'MultiEdits',
+    );
+    return await multiEditController.insert('add', multiEdit);
+  }
+
+  // ...........................................................................
+  /**
+   * Get multiEdits
+   * @param cakeKey - The cake table key
+   * @param where - The where clause to filter multiEdits
+   */
+  public async getMultiEdits(
+    cakeKey: string,
+    where: string | Json,
+  ): Promise<MultiEdit[]> {
+    const multiEditController = await this.getController(
+      cakeKey + 'MultiEdits',
+    );
+    const { [cakeKey + 'MultiEdits']: result } = await multiEditController.get(
+      where,
+    );
+    return result._data as MultiEdit[];
+  }
+
+  // ...........................................................................
+  /**
+   * Add an edit
+   * @param cakeKey - The cake table key
+   * @param edit - The edit to add
+   */
+  public async addEdit(cakeKey: string, edit: Edit) {
+    const editController = await this.getController(cakeKey + 'Edits');
+    return await editController.insert('add', edit);
+  }
+
+  // ...........................................................................
+  /**
+   * Get edits
+   * @param cakeKey - The cake table key
+   * @param where - The where clause to filter edits
+   */
+  public async getEdits(
+    cakeKey: string,
+    where: string | Json,
+  ): Promise<Edit[]> {
+    const editController = await this.getController(cakeKey + 'Edits');
+    const { [cakeKey + 'Edits']: result } = await editController.get(where);
+    return result._data as Edit[];
+  }
+
+  // ...........................................................................
+  /**
+   * Add an edit history entry
+   * @param cakeKey - The cake table key
+   * @param editHistory - The edit history entry to add
+   */
+  public async addEditHistory(cakeKey: string, editHistory: EditHistory) {
+    const editHistoryController = await this.getController(
+      cakeKey + 'EditHistory',
+    );
+    return await editHistoryController.insert('add', editHistory);
   }
 
   // ...........................................................................
