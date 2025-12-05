@@ -8,6 +8,7 @@ import {
   Edit,
   EditHistory,
   InsertHistoryRow,
+  MultiEdit,
   Route,
   timeId,
 } from '@rljson/rljson';
@@ -30,18 +31,41 @@ export class MultiEditManager {
       Route.fromFlat(editHistoryKey),
       (ins: InsertHistoryRow<string>) => {
         const editHistoryRef = (ins as any)[editHistoryKey + 'Ref'] as string;
-        return this._addProcessorFromEditHistoryRef(editHistoryRef);
+        return this.editHistoryRef(editHistoryRef);
       },
     );
   }
 
-  async edit(edit: Edit) {
-    if (!this.head) {
-      throw new Error('No head MultiEditProcessor available.');
+  async edit(edit: Edit, cakeRef?: string) {
+    /* v8 ignore next -- @preserve */
+    if (!this.head && !cakeRef) {
+      throw new Error(
+        'No head MultiEditProcessor available. Provide a cakeRef.',
+      );
+    }
+    /* v8 ignore next -- @preserve */
+    if (this.head && cakeRef) {
+      throw new Error(
+        'Head MultiEditProcessor already exists. Do not provide a cakeRef.',
+      );
     }
 
-    // Create new MultiEditProcessor by applying the edit to the current head
-    const multiEditProc = await this.head.processor.edit(edit);
+    let multiEditProc: MultiEditProcessor;
+    if (!this.head) {
+      const multiEdit: MultiEdit = {
+        _hash: '',
+        edit: edit._hash,
+        previous: null,
+      };
+      multiEditProc = await MultiEditProcessor.fromMultiEdit(
+        this._db,
+        this._cakeKey,
+        cakeRef!,
+        multiEdit,
+      );
+    } else {
+      multiEditProc = await this.head.processor.edit(edit);
+    }
 
     // Store the new Edit
     const { [this._cakeKey + 'EditsRef']: editRef } = (
@@ -68,7 +92,7 @@ export class MultiEditManager {
         dataRef: multiEditProc.cakeRef,
         multiEditRef: multiEditRef,
         timeId: timeId(),
-        previous: [this.head.editHistoryRef],
+        previous: !!this.head ? [this.head.editHistoryRef] : null,
       } as EditHistory)
     )[0] as any;
     /* v8 ignore next -- @preserve */
@@ -84,7 +108,7 @@ export class MultiEditManager {
     };
 
     // Notify listeners about head change
-    this._notifyHeadListener(editHistoryRef);
+    await this._notifyHeadListener(editHistoryRef);
   }
 
   async publish() {
@@ -100,19 +124,17 @@ export class MultiEditManager {
 
   private _notifyHeadListener(editHistoryRef: string) {
     /* v8 ignore next -- @preserve */
-    Promise.all(this._headListener.map((cb) => cb(editHistoryRef))).catch(
-      (err) => {
-        console.error(
-          `Error notifying head observers for editHistoryRef ${editHistoryRef}:`,
-          err,
-        );
-      },
-    );
+    return Promise.all(
+      this._headListener.map((cb) => cb(editHistoryRef)),
+    ).catch((err) => {
+      console.error(
+        `Error notifying head observers for editHistoryRef ${editHistoryRef}:`,
+        err,
+      );
+    });
   }
 
-  private _addProcessorFromEditHistoryRef(
-    editHistoryRef: string,
-  ): Promise<void> {
+  editHistoryRef(editHistoryRef: string): Promise<void> {
     return new Promise((resolve, reject) => {
       this._db
         .getEditHistories(this._cakeKey, editHistoryRef)
@@ -146,8 +168,13 @@ export class MultiEditManager {
                 editHistoryRef,
                 processor,
               };
-              this._notifyHeadListener(editHistoryRef);
-              resolve();
+              this._notifyHeadListener(editHistoryRef)
+                .then(() => {
+                  resolve();
+                })
+                .catch((err) => {
+                  reject(err);
+                });
             })
             .catch((err) => {
               reject(err);
