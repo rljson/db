@@ -147,7 +147,7 @@ export class Join {
                   ...{ value: setValue.value },
                   ...{
                     row: {
-                      ...cell.row,
+                      ...(cell.row as Json),
                       ...{ [propertyKey]: setValue.value },
                     } as any,
                   },

@@ -6,9 +6,9 @@
 
 import { InsertHistoryRow, Route } from '@rljson/rljson';
 
-type NotifyCallback<N extends string> = (
+export type NotifyCallback<N extends string> = (
   InsertHistoryRow: InsertHistoryRow<N>,
-) => void;
+) => Promise<void>;
 
 // ...........................................................................
 /**
@@ -62,9 +62,13 @@ export class Notify {
   ) {
     const callbacks = this._callbacks.get(route.flat);
     if (callbacks) {
-      for (const cb of callbacks) {
-        cb(insertHistoryRow);
-      }
+      /*v8 ignore next -- @preserve */
+      Promise.all(callbacks.map((cb) => cb(insertHistoryRow))).catch((err) => {
+        console.error(
+          `Error notifying callbacks for route ${route.flat}:`,
+          err,
+        );
+      });
     }
   }
 
