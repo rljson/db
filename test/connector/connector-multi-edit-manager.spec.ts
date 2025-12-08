@@ -17,7 +17,10 @@ import {
   createEditTableCfg,
   createMultiEditTableCfg,
   Edit,
+  EditHistory,
+  MultiEdit,
   Route,
+  timeId,
 } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -36,6 +39,7 @@ interface ClientSetup {
   socket: Socket;
   connector: Connector;
   multiEditManager: MultiEditManager;
+  editHistoryRefs: (string | undefined)[];
 }
 
 const cakeKey = 'carCake';
@@ -72,6 +76,30 @@ const generateClientSetup = async (): Promise<ClientSetup> => {
   });
   await db.addEdit(cakeKey, columnSelectionEdit);
 
+  const { [cakeKey + 'EditsRef']: columnSelectionEditRef } = (
+    await db.addEdit(cakeKey, columnSelectionEdit)
+  )[0] as any;
+
+  const columnSelectionMultiEdit: MultiEdit = hip<MultiEdit>({
+    previous: null,
+    edit: columnSelectionEditRef!,
+    _hash: '',
+  });
+
+  const { [cakeKey + 'MultiEditsRef']: columnSelectionMultiEditRef } = (
+    await db.addMultiEdit(cakeKey, columnSelectionMultiEdit)
+  )[0] as any;
+
+  const { [cakeKey + 'EditHistoryRef']: columnSelectionEditHistoryRef } = (
+    await db.addEditHistory(cakeKey, {
+      _hash: '',
+      dataRef: cakeRef,
+      multiEditRef: columnSelectionMultiEditRef,
+      timeId: '1765170151918:USbV',
+      previous: [],
+    } as EditHistory)
+  )[0] as any;
+
   //SetValue Edit
   const setValueEdit = hip<Edit>({
     name: 'Set: Service Intervals to [15000, 30000, 45000, 60000]',
@@ -80,11 +108,34 @@ const generateClientSetup = async (): Promise<ClientSetup> => {
   });
   await db.addEdit(cakeKey, setValueEdit);
 
-  //Instantiate MultiEditManager
-  const helpingMEM = new MultiEditManager(cakeKey, db);
-  helpingMEM.init();
-  await helpingMEM.edit(columnSelectionEdit, cakeRef);
-  await helpingMEM.edit(setValueEdit);
+  const { [cakeKey + 'EditsRef']: setValueEditRef } = (
+    await db.addEdit(cakeKey, setValueEdit)
+  )[0] as any;
+
+  const setValueMultiEdit: MultiEdit = hip<MultiEdit>({
+    previous: columnSelectionMultiEditRef!,
+    edit: setValueEditRef!,
+    _hash: '',
+  });
+
+  const { [cakeKey + 'MultiEditsRef']: setValueMultiEditRef } = (
+    await db.addMultiEdit(cakeKey, setValueMultiEdit)
+  )[0] as any;
+
+  const { [cakeKey + 'EditHistoryRef']: setValueEditHistoryRef } = (
+    await db.addEditHistory(cakeKey, {
+      _hash: '',
+      dataRef: cakeRef,
+      multiEditRef: setValueMultiEditRef,
+      timeId: '1765170151938:c4I6',
+      previous: [columnSelectionEditHistoryRef!],
+    } as EditHistory)
+  )[0] as any;
+
+  const editHistoryRefs = [
+    columnSelectionEditHistoryRef,
+    setValueEditHistoryRef,
+  ];
 
   //Instantiate Socket
   const socket = new SocketMock();
@@ -102,6 +153,7 @@ const generateClientSetup = async (): Promise<ClientSetup> => {
     socket,
     connector,
     multiEditManager,
+    editHistoryRefs,
   };
 };
 
@@ -167,24 +219,64 @@ describe('Connector/MultiEditManager interoperability', () => {
     it('MultiEditManager processes received EditHistoryRefs', async () => {
       const callback = vi.fn();
 
+      //Listen to head changes on b's MultiEditManager
       b.multiEditManager.listenToHeadChanges(callback);
 
-      const { cell: editHistories } = await a.db.get(route, {});
-      for (const editHistory of editHistories) {
-        const editHistoryRef = (editHistory.row as Json)._hash as string;
-        a.connector.send(editHistoryRef);
-      }
+      //Simulate Db write on a --> triggers Connector send
+      a.db.notify.notify(route, {
+        route: route.flat,
+        [cakeKey + 'EditHistoryRef']: a.editHistoryRefs[1] as string,
+        timeId: timeId(),
+      });
 
       // Wait for b's MultiEditManager to process the EditHistories
       await vi.waitUntil(
         () => {
-          return !!b.multiEditManager.head;
+          return (
+            !!b.multiEditManager.head &&
+            !!b.multiEditManager.head.editHistoryRef
+          );
         },
         { timeout: 2000, interval: 100 },
       );
 
+      // Verify that the callback was called with the new head editHistoryRef
+      expect(callback).toHaveBeenCalled();
+      expect(callback).toHaveBeenCalledWith(
+        b.multiEditManager.head?.editHistoryRef,
+      );
+
+      // Verify MultiEditProcessor state on b's MultiEditManager
       expect(b.multiEditManager.head).toBeDefined();
       expect(b.multiEditManager.head?.editHistoryRef).toBeDefined();
+
+      // Check that both processors are present (columnSelection and setValue)
+      expect(
+        b.multiEditManager.processors.has(a.editHistoryRefs[1] as string),
+      ).toBe(true);
+      expect(b.multiEditManager.processors.size).toBe(2);
+
+      // Verify final data state
+      const proc = b.multiEditManager.processors.get(
+        a.editHistoryRefs[1] as string,
+      );
+      expect(proc).toBeDefined();
+
+      // Get Join Result
+      const join = proc?.join;
+      expect(join).toBeDefined();
+
+      // Check Result
+      expect(join?.rows.length).toBe(12);
+      expect(
+        join?.rows
+          .map((r) => r[2])
+          .every(
+            (si) =>
+              JSON.stringify(si) ==
+              JSON.stringify([15000, 30000, 45000, 60000]),
+          ),
+      ).toBe(true);
     });
   });
 });

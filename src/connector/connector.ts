@@ -10,7 +10,7 @@ import { Route, timeId } from '@rljson/rljson';
 import { Db } from '../db.ts';
 
 export type ConnectorPayload = { o: string; r: string };
-export type ConnectorCallback = (ref: string) => Promise<void>;
+export type ConnectorCallback = (ref: string) => Promise<any>;
 
 export class Connector {
   private _origin: string;

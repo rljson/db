@@ -54,6 +54,10 @@ export class MultiEditProcessor {
     cakeKey: string,
     editHistory: EditHistory,
   ): Promise<MultiEditProcessor> {
+    if (!editHistory || !editHistory.multiEditRef) {
+      throw new Error('MultiEditProcessor: Invalid EditHistory provided.');
+    }
+
     const cakeRef = editHistory.dataRef;
     const multiEdits = await db.getMultiEdits(
       cakeKey,
@@ -138,6 +142,36 @@ export class MultiEditProcessor {
     return this;
   }
 
+  async applyEditHistory(
+    editHistory: EditHistory,
+  ): Promise<MultiEditProcessor> {
+    const multiEdits = await this._db.getMultiEdits(
+      this._cakeKey,
+      editHistory.multiEditRef,
+    );
+
+    /* v8 ignore if -- @preserve */
+    if (!multiEdits || multiEdits.length === 0) {
+      throw new Error(
+        `MultiEditProcessor: MultiEdit not found for ref ${editHistory.multiEditRef}`,
+      );
+    }
+
+    /* v8 ignore if -- @preserve */
+    if (multiEdits.length > 1) {
+      throw new Error(
+        `MultiEditProcessor: Multiple MultiEdits found for ref ${editHistory.multiEditRef}`,
+      );
+    }
+
+    const multiEdit = multiEdits[0];
+
+    await this._resolve(multiEdit);
+    await this._processAll();
+
+    return this;
+  }
+
   //...........................................................................
   /**
    * Publish the MultiEditProcessor. Inserts the resulting Join as new data,
@@ -191,6 +225,23 @@ export class MultiEditProcessor {
     }
 
     return new MultiEditProcessor(this._db, this._cakeKey, writtenCakeRef);
+  }
+
+  //...........................................................................
+  /**
+   * Clone the MultiEditProcessor
+   * @returns Cloned MultiEditProcessor
+   */
+  clone(): MultiEditProcessor {
+    const clone = new MultiEditProcessor(
+      this._db,
+      this._cakeKey,
+      this._cakeRef,
+    );
+    clone._multiEdit = this._multiEdit;
+    clone._edits = [...this._edits];
+    clone._join = this._join;
+    return clone;
   }
 
   //...........................................................................

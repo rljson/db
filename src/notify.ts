@@ -8,7 +8,7 @@ import { InsertHistoryRow, Route } from '@rljson/rljson';
 
 export type NotifyCallback<N extends string> = (
   InsertHistoryRow: InsertHistoryRow<N>,
-) => Promise<void>;
+) => Promise<any>;
 
 // ...........................................................................
 /**

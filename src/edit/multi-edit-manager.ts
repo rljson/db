@@ -134,7 +134,7 @@ export class MultiEditManager {
     });
   }
 
-  editHistoryRef(editHistoryRef: string): Promise<void> {
+  editHistoryRef(editHistoryRef: string): Promise<MultiEditProcessor> {
     return new Promise((resolve, reject) => {
       this._db
         .getEditHistories(this._cakeKey, editHistoryRef)
@@ -144,6 +144,7 @@ export class MultiEditManager {
             reject(
               new Error(`EditHistory with ref ${editHistoryRef} not found.`),
             );
+            return;
           }
           /* v8 ignore if -- @preserve */
           if (editHistories.length > 1) {
@@ -152,9 +153,67 @@ export class MultiEditManager {
                 `Multiple EditHistories with ref ${editHistoryRef} found.`,
               ),
             );
+            return;
           }
 
           const editHistory = editHistories[0];
+
+          // Check if processor already exists
+          if (this._processors.has(editHistoryRef)) {
+            // Processor already exists
+            const processor = this._processors.get(editHistoryRef)!;
+            this._head = {
+              editHistoryRef,
+              processor,
+            };
+            this._notifyHeadListener(editHistoryRef)
+              .then(() => {
+                resolve(processor);
+                return;
+              })
+              .catch((err) => {
+                reject(err);
+                return;
+              });
+            return;
+          }
+
+          if (
+            editHistory.previous !== null &&
+            editHistory.previous.length > 0
+          ) {
+            if (editHistory.previous.length > 1) {
+              reject(
+                new Error(
+                  `EditHistory with ref ${editHistoryRef} has multiple previous refs. Not supported.`,
+                ),
+              );
+              return;
+            }
+
+            const previousEditHistoryRef = editHistory.previous[0];
+            this.editHistoryRef(previousEditHistoryRef).then(
+              (previousProcessor) => {
+                const processor = previousProcessor.clone();
+                processor.applyEditHistory(editHistory);
+
+                this._processors.set(editHistoryRef, processor);
+                this._head = {
+                  editHistoryRef,
+                  processor,
+                };
+                this._notifyHeadListener(editHistoryRef)
+                  .then(() => {
+                    resolve(processor);
+                    return;
+                  })
+                  .catch((err) => {
+                    reject(err);
+                    return;
+                  });
+              },
+            );
+          }
 
           /* v8 ignore next -- @preserve */
           MultiEditProcessor.fromEditHistory(
@@ -170,14 +229,17 @@ export class MultiEditManager {
               };
               this._notifyHeadListener(editHistoryRef)
                 .then(() => {
-                  resolve();
+                  resolve(processor);
+                  return;
                 })
                 .catch((err) => {
                   reject(err);
+                  return;
                 });
             })
             .catch((err) => {
               reject(err);
+              return;
             });
         });
     });
