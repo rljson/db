@@ -182,10 +182,7 @@ export class MultiEditManager {
             return;
           }
 
-          if (
-            editHistory.previous !== null &&
-            editHistory.previous.length > 0
-          ) {
+          if (!!editHistory.previous && editHistory.previous.length > 0) {
             /* v8 ignore if -- @preserve */
             if (editHistory.previous.length > 1) {
               reject(
