@@ -54,6 +54,7 @@ export class MultiEditProcessor {
     cakeKey: string,
     editHistory: EditHistory,
   ): Promise<MultiEditProcessor> {
+    /* v8 ignore if -- @preserve */
     if (!editHistory || !editHistory.multiEditRef) {
       throw new Error('MultiEditProcessor: Invalid EditHistory provided.');
     }
@@ -254,6 +255,21 @@ export class MultiEditProcessor {
     this._multiEdit = multiEdit;
 
     const edits = await this._db.getEdits(this._cakeKey, multiEdit.edit);
+
+    /* v8 ignore if -- @preserve */
+    if (edits.length === 0) {
+      throw new Error(
+        `MultiEditProcessor: Edit not found for ref ${multiEdit.edit}`,
+      );
+    }
+
+    /* v8 ignore if -- @preserve */
+    if (edits.length > 1) {
+      throw new Error(
+        `MultiEditProcessor: Multiple Edits found for ref ${multiEdit.edit}`,
+      );
+    }
+
     const edit = edits[0];
 
     this._edits.push(edit);

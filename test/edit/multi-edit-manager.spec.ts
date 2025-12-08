@@ -188,6 +188,51 @@ describe('MultiEditManager', () => {
         multiEditManager.head?.editHistoryRef,
       );
     });
+
+    it('should perform an edit even if head is not provided', async () => {
+      const newMultiEditManager = new MultiEditManager(cakeKey, db);
+      newMultiEditManager.init();
+
+      const callback = vi.fn();
+      newMultiEditManager.listenToHeadChanges(callback);
+
+      const newEdit = hip<Edit>({
+        name: 'Another Test Edit',
+        action: exampleEditActionColumnSelection(),
+        _hash: '',
+      });
+
+      const { [cakeKey + 'EditsRef']: newEditRef } = (
+        await db.addEdit(cakeKey, newEdit)
+      )[0] as any;
+
+      // Verify that the new edit is stored in the database
+      const { cell: newEditAdded } = await db.get(
+        Route.fromFlat(`${cakeKey}Edits`),
+        newEditRef,
+      );
+
+      expect(newEditAdded).toBeDefined();
+      expect(newEditAdded.length).toBe(1);
+
+      // Perform the edit
+      await newMultiEditManager.edit(newEdit, cakeRef);
+
+      expect(newMultiEditManager.head).toBeDefined();
+      expect(newMultiEditManager.head?.editHistoryRef).not.toBe(
+        initialEditHistoryRef,
+      );
+
+      expect(newEditAdded).toBeDefined();
+      expect(newEditAdded.length).toBe(1);
+      expect(newEditAdded[0].row as Edit).toEqual(newEdit);
+
+      // Verify that the callback was called with the new head editHistoryRef
+      expect(callback).toHaveBeenCalled();
+      expect(callback).toHaveBeenCalledWith(
+        newMultiEditManager.head?.editHistoryRef,
+      );
+    });
   });
 
   describe('Publish', () => {

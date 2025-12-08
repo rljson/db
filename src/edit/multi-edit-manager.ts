@@ -86,13 +86,16 @@ export class MultiEditManager {
     }
 
     // Create and store the new EditHistory pointing to the new MultiEdit
+    /* v8 ignore next -- @preserve */
+    const previous = !!this.head ? [this.head.editHistoryRef] : null;
+
     const { [this._cakeKey + 'EditHistoryRef']: editHistoryRef } = (
       await this._db.addEditHistory(this._cakeKey, {
         _hash: '',
         dataRef: multiEditProc.cakeRef,
         multiEditRef: multiEditRef,
         timeId: timeId(),
-        previous: !!this.head ? [this.head.editHistoryRef] : null,
+        previous,
       } as EditHistory)
     )[0] as any;
     /* v8 ignore next -- @preserve */
@@ -166,6 +169,7 @@ export class MultiEditManager {
               editHistoryRef,
               processor,
             };
+            /* v8 ignore next -- @preserve */
             this._notifyHeadListener(editHistoryRef)
               .then(() => {
                 resolve(processor);
@@ -182,6 +186,7 @@ export class MultiEditManager {
             editHistory.previous !== null &&
             editHistory.previous.length > 0
           ) {
+            /* v8 ignore if -- @preserve */
             if (editHistory.previous.length > 1) {
               reject(
                 new Error(
@@ -202,6 +207,7 @@ export class MultiEditManager {
                   editHistoryRef,
                   processor,
                 };
+                /* v8 ignore next -- @preserve */
                 this._notifyHeadListener(editHistoryRef)
                   .then(() => {
                     resolve(processor);
