@@ -116,14 +116,46 @@ export class RowSort {
       for (const index of sortIndices) {
         const sort = sortOrders[i++];
         //TODO: Make cells holding several values sortable
+
         /* v8 ignore next -- @preserve */
-        const vA = rowA[index].inserts
-          ? rowA[index].inserts![0].cell[0].value![0]
-          : rowA[index].value?.cell[0].value![0];
+        const rowAInsertValues = rowA[index].inserts
+          ? Array.isArray(rowA[index].inserts![0].cell[0].value)
+            ? rowA[index].inserts![0].cell[0].value!
+            : [rowA[index].inserts![0].cell[0].value!]
+          : null;
         /* v8 ignore next -- @preserve */
-        const vB = rowB[index].inserts
-          ? rowB[index].inserts![0].cell[0].value![0]
-          : rowB[index].value?.cell[0].value![0];
+        const rowAValue = rowA[index].value.cell[0].value
+          ? Array.isArray(rowA[index].value?.cell[0].value)
+            ? rowA[index].value.cell[0].value!
+            : [rowA[index].value.cell[0].value!]
+          : null;
+        /* v8 ignore next -- @preserve */
+        const rowBInsertValues = rowB[index].inserts
+          ? Array.isArray(rowB[index].inserts![0].cell[0].value)
+            ? rowB[index].inserts![0].cell[0].value!
+            : [rowB[index].inserts![0].cell[0].value!]
+          : null;
+        /* v8 ignore next -- @preserve */
+        const rowBValue = rowB[index].value.cell[0].value
+          ? Array.isArray(rowB[index].value?.cell[0].value)
+            ? rowB[index].value.cell[0].value!
+            : [rowB[index].value.cell[0].value!]
+          : null;
+        /* v8 ignore next -- @preserve */
+        const vA =
+          rowAInsertValues && rowAInsertValues[0]
+            ? rowAInsertValues[0]
+            : rowAValue
+            ? rowAValue[0]
+            : null;
+        /* v8 ignore next -- @preserve */
+        const vB =
+          rowBInsertValues && rowBInsertValues[0]
+            ? rowBInsertValues[0]
+            : rowBValue
+            ? rowBValue[0]
+            : null;
+
         if (vA === vB) {
           continue;
         }

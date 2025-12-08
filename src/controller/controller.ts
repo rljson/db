@@ -103,6 +103,7 @@ export const createController = async (
     case 'edits':
     case 'editHistory':
     case 'multiEdits':
+    case 'head':
       ctrl = new ComponentController(core, tableKey, refs as ControllerRefs);
       break;
     case 'cakes':
