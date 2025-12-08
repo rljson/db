@@ -13,11 +13,18 @@ import {
   ComponentRef,
   ComponentsTable,
   ContentType,
+  Edit,
+  EditHistory,
+  EditHistoryTable,
+  EditsTable,
+  Head,
   InsertHistoryRow,
   InsertHistoryTimeId,
   isTimeId,
   Layer,
   LayersTable,
+  MultiEdit,
+  MultiEditsTable,
   Ref,
   Rljson,
   Route,
@@ -25,6 +32,7 @@ import {
   SliceId,
   SliceIds,
   TableType,
+  timeId,
 } from '@rljson/rljson';
 
 import {
@@ -38,13 +46,13 @@ import { SliceIdController } from './controller/slice-id-controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRow, JoinRows } from './join/join.ts';
 import { ColumnSelection } from './join/selection/column-selection.ts';
-import { Notify } from './notify.ts';
+import { Notify, NotifyCallback } from './notify.ts';
 import { makeUnique } from './tools/make-unique.ts';
 
 export type Cell = {
   route: Route;
-  value: JsonValue[] | null;
-  row: JsonValue[] | null;
+  value: JsonValue | JsonValue[] | null;
+  row: JsonValue | JsonValue[] | null;
   path: Array<Array<string | number>>;
 };
 
@@ -1003,9 +1011,15 @@ export class Db {
         }
       }
       if (
-        (['components', 'edits', 'multiEdits'] as ContentType[]).includes(
-          nodeType,
-        )
+        (
+          [
+            'components',
+            'edits',
+            'multiEdits',
+            'editHistory',
+            'head',
+          ] as ContentType[]
+        ).includes(nodeType)
       ) {
         const runFn = runFns[nodeTableKey];
         const components = (nodeTree as ComponentsTable<Json>)._data;
@@ -1046,9 +1060,15 @@ export class Db {
       const runFn = runFns[nodeTableKey];
 
       if (
-        (['components', 'edits', 'multiEdits'] as ContentType[]).includes(
-          nodeType,
-        )
+        (
+          [
+            'components',
+            'edits',
+            'multiEdits',
+            'editHistory',
+            'head',
+          ] as ContentType[]
+        ).includes(nodeType)
       ) {
         const components = rmhsh(
           (tree as any)[nodeTableKey],
@@ -1120,10 +1140,7 @@ export class Db {
    * @param route - The route to register the callback on
    * @param callback - The callback to be called when an Insert is made
    */
-  registerObserver(
-    route: Route,
-    callback: (InsertHistoryRow: InsertHistoryRow<any>) => void,
-  ) {
+  registerObserver(route: Route, callback: NotifyCallback<any>) {
     this.notify.register(route, callback);
   }
 
@@ -1133,10 +1150,7 @@ export class Db {
    * @param route - The route to unregister the callback from
    * @param callback - The callback to be unregistered
    */
-  unregisterObserver(
-    route: Route,
-    callback: (InsertHistoryRow: InsertHistoryRow<any>) => void,
-  ) {
+  unregisterObserver(route: Route, callback: NotifyCallback<any>) {
     this.notify.unregister(route, callback);
   }
 
@@ -1210,6 +1224,132 @@ export class Db {
         _type: 'insertHistory',
       },
     });
+  }
+
+  // ...........................................................................
+  /**
+   * Add a head revision for a cake
+   * @param cakeKey - The cake table key
+   * @param cakeRef - The cake reference
+   */
+  public async addHeadRevision(cakeKey: string, cakeRef: Ref) {
+    const cakeHeadKey = cakeKey + 'Heads';
+    const cakeHeadController = await this.getController(cakeHeadKey);
+
+    return await cakeHeadController.insert('add', {
+      cakeRef,
+      timeId: timeId(),
+      _hash: '',
+    } as Head);
+  }
+
+  // ...........................................................................
+  /**
+   * Add a multiEdit
+   * @param cakeKey - The cake table key
+   * @param multiEdit - The multiEdit to add
+   */
+  public async addMultiEdit(cakeKey: string, multiEdit: MultiEdit) {
+    return this.insert(
+      Route.fromFlat(cakeKey + 'MultiEdits'),
+      {
+        [cakeKey + 'MultiEdits']: {
+          _data: [multiEdit],
+          _type: 'multiEdits' as ContentType,
+        } as MultiEditsTable,
+      },
+      { skipHistory: true },
+    );
+  }
+
+  // ...........................................................................
+  /**
+   * Get multiEdits
+   * @param cakeKey - The cake table key
+   * @param where - The where clause to filter multiEdits
+   */
+  public async getMultiEdits(
+    cakeKey: string,
+    where: string | Json,
+  ): Promise<MultiEdit[]> {
+    const multiEditController = await this.getController(
+      cakeKey + 'MultiEdits',
+    );
+    const { [cakeKey + 'MultiEdits']: result } = await multiEditController.get(
+      where,
+    );
+    return result._data as MultiEdit[];
+  }
+
+  // ...........................................................................
+  /**
+   * Add an edit
+   * @param cakeKey - The cake table key
+   * @param edit - The edit to add
+   */
+  public async addEdit(cakeKey: string, edit: Edit) {
+    return this.insert(
+      Route.fromFlat(cakeKey + 'Edits'),
+      {
+        [cakeKey + 'Edits']: {
+          _data: [edit],
+          _type: 'edits' as ContentType,
+        } as EditsTable,
+      },
+      { skipHistory: true },
+    );
+  }
+
+  // ...........................................................................
+  /**
+   * Get edits
+   * @param cakeKey - The cake table key
+   * @param where - The where clause to filter edits
+   */
+  public async getEdits(
+    cakeKey: string,
+    where: string | Json,
+  ): Promise<Edit[]> {
+    const editController = await this.getController(cakeKey + 'Edits');
+    const { [cakeKey + 'Edits']: result } = await editController.get(where);
+    return result._data as Edit[];
+  }
+
+  // ...........................................................................
+  /**
+   * Add an edit history entry
+   * @param cakeKey - The cake table key
+   * @param editHistory - The edit history entry to add
+   */
+  public async addEditHistory(cakeKey: string, editHistory: EditHistory) {
+    return this.insert(
+      Route.fromFlat(cakeKey + 'EditHistory'),
+      {
+        [cakeKey + 'EditHistory']: {
+          _data: [editHistory],
+          _type: 'editHistory' as ContentType,
+        } as EditHistoryTable,
+      },
+      { skipHistory: true },
+    );
+  }
+
+  // ...........................................................................
+  /**
+   * Get edit history entries
+   * @param cakeKey - The cake table key
+   * @param where - The where clause to filter edit history entries
+   */
+  public async getEditHistories(
+    cakeKey: string,
+    where: string | Json,
+  ): Promise<EditHistory[]> {
+    const editHistoryController = await this.getController(
+      cakeKey + 'EditHistory',
+    );
+    const { [cakeKey + 'EditHistory']: result } =
+      await editHistoryController.get(where);
+    return result._data as EditHistory[];
   }
 
   // ...........................................................................

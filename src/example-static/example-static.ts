@@ -11,7 +11,9 @@ import {
   CakesTable,
   ColumnCfg,
   ComponentsTable,
+  ContentType,
   createCakeTableCfg,
+  createHeadsTableCfg,
   createLayerTableCfg,
   createSliceIdsTableCfg,
   Layer,
@@ -899,6 +901,31 @@ export const staticExample = (): StaticExample => {
     ],
   }) as CakesTable;
 
+  //CarCakeHead
+  //................................................................
+  const carCakeHeadTableCfg = hip<TableCfg>(
+    createHeadsTableCfg('carCake'),
+  ) as TableCfg;
+
+  const carCakeHeads = hip<any>({
+    _tableCfg: carCakeHeadTableCfg._hash,
+    _type: 'head' as ContentType,
+    _data: [
+      {
+        timeId: '1764756756311:jkCG',
+        cakeRef: carCake._data[0]._hash,
+      },
+      {
+        timeId: '1764756756312:1AGV',
+        cakeRef: carCake._data[1]._hash,
+      },
+      {
+        timeId: '1764756756312:g8nh',
+        cakeRef: carCake._data[2]._hash,
+      },
+    ],
+  }) as CakesTable;
+
   //................................................................
   //Series Data Tables
   //................................................................
@@ -1287,6 +1314,31 @@ export const staticExample = (): StaticExample => {
     ],
   }) as CakesTable;
 
+  //SeriesCakeHead
+  //................................................................
+  const seriesCakeHeadTableCfg = hip<TableCfg>(
+    createHeadsTableCfg('seriesCake'),
+  ) as TableCfg;
+
+  const seriesCakeHeads = hip<any>({
+    _tableCfg: seriesCakeHeadTableCfg._hash,
+    _type: 'head' as ContentType,
+    _data: [
+      {
+        timeId: '1764756756315:L14y',
+        cakeRef: seriesCake._data[0]._hash,
+      },
+      {
+        timeId: '1764756756315:xCXT',
+        cakeRef: seriesCake._data[1]._hash,
+      },
+      {
+        timeId: '1764756756315:fZwA',
+        cakeRef: seriesCake._data[2]._hash,
+      },
+    ],
+  }) as CakesTable;
+
   //................................................................
   //Series Data Tables
   //................................................................
@@ -1412,6 +1464,23 @@ export const staticExample = (): StaticExample => {
     ],
   }) as CakesTable;
 
+  //SeriesCakeHead
+  //................................................................
+  const catalogCakeHeadTableCfg = hip<TableCfg>(
+    createHeadsTableCfg('catalogCake'),
+  ) as TableCfg;
+
+  const catalogCakeHeads = hip<any>({
+    _tableCfg: catalogCakeHeadTableCfg._hash,
+    _type: 'head' as ContentType,
+    _data: [
+      {
+        timeId: '1764756756317:5UTy',
+        cakeRef: catalogCake._data[0]._hash,
+      },
+    ],
+  }) as CakesTable;
+
   //................................................................
   //TablesCfg
   //................................................................
@@ -1426,16 +1495,19 @@ export const staticExample = (): StaticExample => {
       carTechnicalLayerTableCfg,
       carColorLayerTableCfg,
       carCakeTableCfg,
+      carCakeHeadTableCfg,
       seriesSliceIdTableCfg,
       seriesGeneralTableCfg,
       seriesCarsTableCfg,
       seriesGeneralLayerTableCfg,
       seriesCarsLayerTableCfg,
       seriesCakeTableCfg,
+      seriesCakeHeadTableCfg,
       catalogSliceIdTableCfg,
       catalogSeriesTableCfg,
       catalogSeriesLayerTableCfg,
       catalogCakeTableCfg,
+      catalogCakeHeadTableCfg,
     ],
   } as TablesCfgTable;
 
@@ -1449,16 +1521,19 @@ export const staticExample = (): StaticExample => {
     carTechnicalLayer,
     carColorLayer,
     carCake,
+    carCakeHeads,
     seriesSliceId,
     seriesGeneral,
     seriesCars,
     seriesGeneralLayer,
     seriesCarsLayer,
     seriesCake,
+    seriesCakeHeads,
     catalogSliceId,
     catalogSeries,
     catalogSeriesLayer,
     catalogCake,
+    catalogCakeHeads,
     tableCfgs,
   };
 
