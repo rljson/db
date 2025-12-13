@@ -393,7 +393,7 @@ export class Db {
             /* v8 ignore next -- @preserve */
             childrenRefTypes.set(
               childrenRefColumnCfg.key,
-              childrenRefColumnCfg.ref?.type ?? '',
+              childrenRefColumnCfg.ref?.type ?? 'components',
             );
           }
 
@@ -406,19 +406,9 @@ export class Db {
         }
       }
 
-      /* v8 ignore next -- @preserve */
-      if (childrenRefTypes.size > 1) {
-        throw new Error(
-          `Db._get: Multiple reference types found for children of table ${nodeTableKey}.`,
-        );
-      }
-
-      const cakeIsReferenced =
-        childrenRefTypes.size === 1 &&
-        [...childrenRefTypes.values()][0] === 'cakes';
+      const cakeIsReferenced = [...childrenRefTypes.values()][0] === 'cakes';
 
       const componentIsReferenced =
-        childrenRefTypes.size === 1 &&
         nodeType === 'components' &&
         [...childrenRefTypes.values()][0] === 'components';
 
@@ -502,7 +492,11 @@ export class Db {
         const compChildrenTrees = (
           (rowChildrenTree as any)[childrenTableKey]! as ComponentsTable<Json>
         )._data;
-        const compChildrenPaths = rowChildrenCell.map((c) => c.path);
+        const compChildrenPaths = rowChildrenCell
+          .map((c) => c.path)
+          .filter((p) => {
+            return p.length > 0 && p[0][0] === childrenTableKey;
+          });
 
         const components = compChildrenTrees.map((c, idx) => {
           return {
@@ -576,15 +570,17 @@ export class Db {
             ...nodeRowObj,
             add: { ...(nodeRowObj.add as Json), ...layer },
           },
-          cell: rowChildrenCell.map(
-            (c, idx) =>
-              ({
-                ...c,
-                ...{
-                  path: [paths.flat()[idx]],
-                },
-              } as Cell),
-          ),
+          cell: rowChildrenCell
+            .filter((c) => !!c.path && c.path.length > 0)
+            .map(
+              (c, idx) =>
+                ({
+                  ...c,
+                  ...{
+                    path: [paths.flat()[idx]],
+                  },
+                } as Cell),
+            ),
         });
       } else if (nodeType === 'cakes') {
         nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
@@ -605,7 +601,9 @@ export class Db {
         if (rowChildrenTree && Object.keys(rowChildrenTree).length > 0) {
           const columnReferenceMap = nodeColumnCfgs
             .filter(
-              (c) => c.ref && ['components', 'cakes'].includes(c.ref.type),
+              (c) =>
+                c.ref &&
+                (!c.ref.type || ['components', 'cakes'].includes(c.ref.type)),
             )
             .reduce((acc, curr) => {
               acc.set(curr.key, curr.ref!.tableKey);
