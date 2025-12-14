@@ -33,5 +33,7 @@ Thumbs.db
 # Other
 *.lock  # (Optional: for ignoring package-lock.json or yarn.lock if you don't want to version them)
 
-# Catalog
+# Catalog Demonstrator
 src/example-converted/catalog.rljson.json
+src/example-converted/catalog-reduced.rljson.json
+test/demonstrator/demonstrator.spec.ts

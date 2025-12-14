@@ -144,10 +144,9 @@ const generateClientSetup = async (): Promise<ClientSetup> => {
   const connector = new Connector(db, route, socket);
   const multiEditManager = new MultiEditManager(cakeKey, db);
   multiEditManager.init();
-  connector.listen((editHistoryRef: string) =>
-    multiEditManager.editHistoryRef(editHistoryRef),
-  );
-
+  connector.listen(async (editHistoryRef: string) => {
+    await multiEditManager.editHistoryRef(editHistoryRef);
+  });
   return {
     db,
     socket,

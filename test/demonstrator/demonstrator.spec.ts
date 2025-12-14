@@ -112,7 +112,7 @@ describe('Demonstrator', () => {
 
   beforeAll(async () => {
     const catalogFs = readFileSync(
-      'src/example-converted/catalog.rljson.json',
+      'src/example-converted/catalog-reduced.rljson.json',
       'utf-8',
     );
     catalogRljson = JSON.parse(catalogFs);
