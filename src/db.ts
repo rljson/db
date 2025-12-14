@@ -17,6 +17,7 @@ import {
   EditHistory,
   EditHistoryTable,
   EditsTable,
+  getTimeIdTimestamp,
   Head,
   InsertHistoryRow,
   InsertHistoryTimeId,
@@ -1349,7 +1350,10 @@ export class Db {
     );
     const { [cakeKey + 'EditHistory']: result } =
       await editHistoryController.get(where);
-    return result._data as EditHistory[];
+    return result._data.sort(
+      (h1, h2) =>
+        getTimeIdTimestamp(h2.timeId)! - getTimeIdTimestamp(h1.timeId)!,
+    ) as EditHistory[];
   }
 
   // ...........................................................................
@@ -1540,5 +1544,14 @@ export class Db {
    */
   get cache() {
     return this._cache;
+  }
+
+  // ...........................................................................
+  /**
+   * Set the cache of the Db instance
+   * @param cache - The new cache to set
+   */
+  setCache(cache: Map<string, Container>) {
+    this._cache = cache;
   }
 }

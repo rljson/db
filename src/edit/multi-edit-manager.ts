@@ -50,6 +50,9 @@ export class MultiEditManager {
       );
     }
 
+    // Store the new Edit
+    await this._persistEdit(edit);
+
     let multiEditProc: MultiEditProcessor;
     if (!this.head) {
       const multiEdit: MultiEdit = {
@@ -67,41 +70,20 @@ export class MultiEditManager {
       multiEditProc = await this.head.processor.edit(edit);
     }
 
-    // Store the new Edit
-    const { [this._cakeKey + 'EditsRef']: editRef } = (
-      await this._db.addEdit(this._cakeKey, edit)
-    )[0] as any;
-    /* v8 ignore next -- @preserve */
-    if (!editRef) {
-      throw new Error('MultiEditManager: Failed to create EditRef.');
-    }
-
-    // Create and store the new MultiEdit and EditHistory
-    const { [this._cakeKey + 'MultiEditsRef']: multiEditRef } = (
-      await this._db.addMultiEdit(this._cakeKey, multiEditProc.multiEdit)
-    )[0] as any;
-    /* v8 ignore next -- @preserve */
-    if (!multiEditRef) {
-      throw new Error('MultiEditManager: Failed to create MultiEditRef.');
-    }
+    // Store the new MultiEdit
+    const multiEditRef = await this._persistMultiEdit(multiEditProc.multiEdit);
 
     // Create and store the new EditHistory pointing to the new MultiEdit
-    /* v8 ignore next -- @preserve */
-    const previous = !!this.head ? [this.head.editHistoryRef] : null;
-
-    const { [this._cakeKey + 'EditHistoryRef']: editHistoryRef } = (
-      await this._db.addEditHistory(this._cakeKey, {
-        _hash: '',
-        dataRef: multiEditProc.cakeRef,
-        multiEditRef: multiEditRef,
-        timeId: timeId(),
-        previous,
-      } as EditHistory)
-    )[0] as any;
-    /* v8 ignore next -- @preserve */
-    if (!editHistoryRef) {
-      throw new Error('MultiEditManager: Failed to create EditHistoryRef.');
-    }
+    const editHistoryRef = await this._persistEditHistory({
+      _hash: '',
+      dataRef: multiEditProc.cakeRef,
+      multiEditRef: await multiEditRef,
+      timeId: timeId(),
+      previous:
+        !!this.head && this.head.editHistoryRef
+          ? [this.head.editHistoryRef]
+          : null,
+    } as EditHistory);
 
     // Update internal state
     this._processors.set(editHistoryRef, multiEditProc);
@@ -137,115 +119,115 @@ export class MultiEditManager {
     });
   }
 
-  editHistoryRef(editHistoryRef: string): Promise<MultiEditProcessor> {
-    return new Promise((resolve, reject) => {
-      this._db
-        .getEditHistories(this._cakeKey, editHistoryRef)
-        .then((editHistories) => {
-          /* v8 ignore if -- @preserve */
-          if (editHistories.length === 0) {
-            reject(
-              new Error(`EditHistory with ref ${editHistoryRef} not found.`),
-            );
-            return;
-          }
-          /* v8 ignore if -- @preserve */
-          if (editHistories.length > 1) {
-            reject(
-              new Error(
-                `Multiple EditHistories with ref ${editHistoryRef} found.`,
-              ),
-            );
-            return;
-          }
+  async editHistoryRef(editHistoryRef: string): Promise<MultiEditProcessor> {
+    const editHistories = await this._db.getEditHistories(
+      this._cakeKey,
+      editHistoryRef,
+    );
 
-          const editHistory = editHistories[0];
+    /* v8 ignore if -- @preserve */
+    if (editHistories.length === 0) {
+      throw new Error(`EditHistory with ref ${editHistoryRef} not found.`);
+    }
 
-          // Check if processor already exists
-          if (this._processors.has(editHistoryRef)) {
-            // Processor already exists
-            const processor = this._processors.get(editHistoryRef)!;
-            this._head = {
-              editHistoryRef,
-              processor,
-            };
-            /* v8 ignore next -- @preserve */
-            this._notifyHeadListener(editHistoryRef)
-              .then(() => {
-                resolve(processor);
-                return;
-              })
-              .catch((err) => {
-                reject(err);
-                return;
-              });
-            return;
-          }
+    /* v8 ignore if -- @preserve */
+    if (editHistories.length > 1) {
+      throw new Error(
+        `Multiple EditHistories with ref ${editHistoryRef} found.`,
+      );
+    }
 
-          if (!!editHistory.previous && editHistory.previous.length > 0) {
-            /* v8 ignore if -- @preserve */
-            if (editHistory.previous.length > 1) {
-              reject(
-                new Error(
-                  `EditHistory with ref ${editHistoryRef} has multiple previous refs. Not supported.`,
-                ),
-              );
-              return;
-            }
+    const editHistory = editHistories[0];
 
-            const previousEditHistoryRef = editHistory.previous[0];
-            this.editHistoryRef(previousEditHistoryRef).then(
-              (previousProcessor) => {
-                const processor = previousProcessor.clone();
-                processor.applyEditHistory(editHistory);
+    // Check if processor already exists
+    if (this._processors.has(editHistoryRef)) {
+      const processor = this._processors.get(editHistoryRef)!;
+      this._head = {
+        editHistoryRef,
+        processor,
+      };
+      await this._notifyHeadListener(editHistoryRef);
+      return processor;
+    }
 
-                this._processors.set(editHistoryRef, processor);
-                this._head = {
-                  editHistoryRef,
-                  processor,
-                };
-                /* v8 ignore next -- @preserve */
-                this._notifyHeadListener(editHistoryRef)
-                  .then(() => {
-                    resolve(processor);
-                    return;
-                  })
-                  .catch((err) => {
-                    reject(err);
-                    return;
-                  });
-              },
-            );
-          }
+    // Handle case with previous edit history
+    if (editHistory.previous && editHistory.previous.length > 0) {
+      /* v8 ignore if -- @preserve */
+      if (editHistory.previous.length > 1) {
+        throw new Error(
+          `EditHistory with ref ${editHistoryRef} has multiple previous refs. Not supported.`,
+        );
+      }
 
-          /* v8 ignore next -- @preserve */
-          MultiEditProcessor.fromEditHistory(
-            this._db,
-            this._cakeKey,
-            editHistory,
-          )
-            .then((processor) => {
-              this._processors.set(editHistoryRef, processor);
-              this._head = {
-                editHistoryRef,
-                processor,
-              };
-              this._notifyHeadListener(editHistoryRef)
-                .then(() => {
-                  resolve(processor);
-                  return;
-                })
-                .catch((err) => {
-                  reject(err);
-                  return;
-                });
-            })
-            .catch((err) => {
-              reject(err);
-              return;
-            });
-        });
-    });
+      const previousEditHistoryRef = editHistory.previous[0];
+      const previousProcessor = await this.editHistoryRef(
+        previousEditHistoryRef,
+      );
+      const previousProcessorCloned = previousProcessor.clone();
+
+      const processor = await previousProcessorCloned.applyEditHistory(
+        editHistory,
+      );
+
+      this._processors.set(editHistoryRef, processor);
+      this._head = {
+        editHistoryRef,
+        processor,
+      };
+      await this._notifyHeadListener(editHistoryRef);
+      return processor;
+    }
+
+    // Handle case without previous edit history (base case)
+    const processor = await MultiEditProcessor.fromEditHistory(
+      this._db,
+      this._cakeKey,
+      editHistory,
+    );
+
+    this._processors.set(editHistoryRef, processor);
+    this._head = {
+      editHistoryRef,
+      processor,
+    };
+    await this._notifyHeadListener(editHistoryRef);
+    return processor;
+  }
+
+  private async _persistEdit(edit: Edit): Promise<string> {
+    // Store the new Edit
+    const { [this._cakeKey + 'EditsRef']: editRef } = (
+      await this._db.addEdit(this._cakeKey, edit)
+    )[0] as any;
+    /* v8 ignore next -- @preserve */
+    if (!editRef) {
+      throw new Error('MultiEditManager: Failed to create EditRef.');
+    }
+    return editRef;
+  }
+
+  private async _persistMultiEdit(multiEdit: MultiEdit): Promise<string> {
+    // Create and store the new MultiEdit
+    const { [this._cakeKey + 'MultiEditsRef']: multiEditRef } = (
+      await this._db.addMultiEdit(this._cakeKey, multiEdit)
+    )[0] as any;
+    /* v8 ignore next -- @preserve */
+    if (!multiEditRef) {
+      throw new Error('MultiEditManager: Failed to create MultiEditRef.');
+    }
+    return multiEditRef;
+  }
+
+  private async _persistEditHistory(editHistory: EditHistory): Promise<string> {
+    // Create and store the new EditHistory pointing to the new MultiEdit
+    const { [this._cakeKey + 'EditHistoryRef']: editHistoryRef } = (
+      await this._db.addEditHistory(this._cakeKey, editHistory)
+    )[0] as any;
+    /* v8 ignore next -- @preserve */
+    if (!editHistoryRef) {
+      throw new Error('MultiEditManager: Failed to create EditHistoryRef.');
+    }
+    return editHistoryRef;
   }
 
   get processors() {
