@@ -146,6 +146,11 @@ export class MultiEditProcessor {
   async applyEditHistory(
     editHistory: EditHistory,
   ): Promise<MultiEditProcessor> {
+    /* v8 ignore if -- @preserve */
+    if (!editHistory || !editHistory.multiEditRef) {
+      throw new Error('MultiEditProcessor: Invalid EditHistory provided.');
+    }
+
     const multiEdits = await this._db.getMultiEdits(
       this._cakeKey,
       editHistory.multiEditRef,

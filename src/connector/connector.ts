@@ -16,6 +16,9 @@ export class Connector {
   private _origin: string;
   private _callbacks: ConnectorCallback[] = [];
 
+  private _sentRefs: Set<string> = new Set();
+  private _receivedRefs: Set<string> = new Set();
+
   constructor(
     private readonly _db: Db,
     private readonly _route: Route,
@@ -33,8 +36,14 @@ export class Connector {
     } as ConnectorPayload);
   }
 
-  listen(cb: ConnectorCallback) {
-    this._callbacks.push(cb);
+  listen(callback: (editHistoryRef: string) => Promise<void>) {
+    this._socket.on(this._route.flat, async (payload: ConnectorPayload) => {
+      try {
+        await callback(payload.r);
+      } catch (error) {
+        console.error('Error in connector listener callback:', error);
+      }
+    });
   }
 
   private _init() {
@@ -55,6 +64,11 @@ export class Connector {
         return;
       }
 
+      if (this._receivedRefs.has(p.r)) {
+        return;
+      }
+      this._receivedRefs.add(p.r);
+
       this._notifyCallbacks(p.r);
     });
   }
@@ -63,6 +77,12 @@ export class Connector {
     this._db.registerObserver(this._route, (ins) => {
       return new Promise<void>((resolve) => {
         const ref = (ins as any)[this.route.root.tableKey + 'Ref'] as string;
+        if (this._sentRefs.has(ref)) {
+          resolve();
+          return;
+        }
+        this._sentRefs.add(ref);
+
         this.send(ref);
         resolve();
       });

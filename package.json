@@ -29,7 +29,7 @@
     "updateGoldens": "cross-env UPDATE_GOLDENS=true npm test"
   },
   "devDependencies": {
-    "@types/node": "^25.0.1",
+    "@types/node": "^25.0.2",
     "@typescript-eslint/eslint-plugin": "^8.49.0",
     "@typescript-eslint/parser": "^8.49.0",
     "@vitest/coverage-v8": "^4.0.15",
@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@rljson/hash": "^0.0.17",
-    "@rljson/io": "^0.0.62",
+    "@rljson/io": "link:../rljson-io",
     "@rljson/json": "^0.0.23",
     "@rljson/rljson": "^0.0.73",
     "@rljson/validate": "^0.0.11",
@@ -63,6 +63,8 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ],
-    "overrides": {}
+    "overrides": {
+      "@rljson/io": "link:../rljson-io"
+    }
   }
 }

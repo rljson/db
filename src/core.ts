@@ -109,8 +109,7 @@ export class Core {
 
   // ...........................................................................
   async contentType(table: string): Promise<ContentType> {
-    const t = await this._io.dumpTable({ table });
-    const contentType = t[table]?._type as ContentType;
+    const contentType = await this._io.contentType({ table });
     return contentType;
   }
 
