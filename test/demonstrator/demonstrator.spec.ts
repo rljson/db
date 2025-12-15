@@ -112,7 +112,7 @@ describe('Demonstrator', () => {
 
   beforeAll(async () => {
     const catalogFs = readFileSync(
-      'src/example-converted/catalog-reduced.rljson.json',
+      'src/example-converted/catalog.rljson.json',
       'utf-8',
     );
     catalogRljson = JSON.parse(catalogFs);
@@ -200,8 +200,11 @@ describe('Demonstrator', () => {
     //    Abruf von kombinierten Ansichten aus mehreren Schichten
     it('Get complete Layers of Catalog', async () => {
       const articleTextRoute = Route.fromFlat(
-        '/articleCake/articleArticleTextLayer/articleArticleText/articleText',
+        '/catalogCake/catalogSeriessLayer/catalogSeriess' +
+          '/seriesCake/seriesArticlesLayer/seriesArticles' +
+          '/articleCake/articleArticleTextLayer/articleArticleText/articleText',
       );
+
       const articleTexts = await db.get(articleTextRoute, {});
 
       // Get only plain data
@@ -472,29 +475,20 @@ describe('Demonstrator', () => {
       // Apply Selection Edit
       await multiEditManager.edit(selectionEdit, cakeRef);
 
-      const selectedRows = multiEditManager.join.rows;
-      console.log(
-        'Selected Rows:',
-        selectedRows.map((r) => r.flat()),
-      );
+      const selectedRows = multiEditManager.join.rows.map((r) => r.flat());
+      console.log('Selected Rows:', selectedRows);
 
       // Apply Filter Edit
       await multiEditManager.edit(filterEdit);
 
-      const filteredRows = multiEditManager.join.rows;
-      console.log(
-        'Filtered Rows:',
-        filteredRows.map((r) => r.flat()),
-      );
+      const filteredRows = multiEditManager.join.rows.map((r) => r.flat());
+      console.log('Filtered Rows:', filteredRows);
 
       // Apply Set Value Edit
       await multiEditManager.edit(setValueEdit);
 
-      const modifiedRows = multiEditManager.join.rows;
-      console.log(
-        'Modified Rows:',
-        modifiedRows.map((r) => r.flat()),
-      );
+      const modifiedRows = multiEditManager.join.rows.map((r) => r.flat());
+      console.log('Modified Rows:', modifiedRows);
 
       // Get Edit History
       const editHistory = (await db.getEditHistories(cakeKey, {}))[0];
@@ -504,11 +498,8 @@ describe('Demonstrator', () => {
       const newMultiEditManager = new MultiEditManager(cakeKey, db);
       await newMultiEditManager.editHistoryRef(editHistory._hash);
 
-      const latestRows = newMultiEditManager.join.rows;
-      console.log(
-        'Latest EditHistory Rows:',
-        latestRows.map((r) => r.flat()),
-      );
+      const latestRows = newMultiEditManager.join.rows.map((r) => r.flat());
+      console.log('Latest EditHistory Rows:', latestRows);
     });
   });
   describe('High Availability', async () => {
@@ -609,7 +600,7 @@ describe('Demonstrator', () => {
 
       // ......................................................
       // Subsequent Access - Data is now fetched from local Io
-      // AND is cached in local Db
+      // AND is cached in local Db --> OFFLINE CAPABLE
       // ......................................................
       const {
         ['articleArticleText']: { _data: newLocalArticleTexts },
@@ -742,7 +733,6 @@ describe('Demonstrator', () => {
         'Client B Modified Rows after Client A Edits:',
         modifiedRowsB.map((r) => r.flat()),
       );
-      debugger;
     });
   });
 
@@ -866,7 +856,9 @@ describe('Demonstrator', () => {
 
       // Insert Join --> Publish Data
       const { route, tree } = join.insert()[0];
-      await db.insert(route, tree);
+      const { ['articleCakeRef']: newRevision } = (
+        await db.insert(route, tree)
+      )[0];
 
       //Lookup Article Text Insert History
       const articleTextInserts = await io.dumpTable({
@@ -888,6 +880,16 @@ describe('Demonstrator', () => {
         table: 'articleCakeInsertHistory',
       });
       console.log('articleCakeInsertHistory:', articleCakeInserts);
+
+      //Get specific Cake Revision w/ including data
+      const newRevisionRoute = Route.fromFlat(
+        `/articleCake@${newRevision}/articleArticleTextLayer/articleArticleText/articleText`,
+      );
+      const newRevisionData = await db.get(newRevisionRoute, {});
+      console.log(
+        'New Revision Article Text Data:',
+        newRevisionData.cell.flatMap((c) => c.value),
+      );
     });
   });
 });
