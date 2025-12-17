@@ -4,6 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+import { hsh } from '@rljson/hash';
 import {
   Edit,
   EditHistory,
@@ -14,14 +15,18 @@ import {
 } from '@rljson/rljson';
 
 import { Db } from '../db.ts';
+import { Join } from '../join/join.ts';
 
 import { MultiEditProcessor } from './multi-edit-processor.ts';
 
 export class MultiEditManager {
-  _head: { editHistoryRef: string; processor: MultiEditProcessor } | null =
-    null;
-  _headListener: ((editHistoryRef: string) => Promise<void>)[] = [];
-  _processors: Map<string, MultiEditProcessor> = new Map();
+  private _head: {
+    editHistoryRef: string;
+    processor: MultiEditProcessor;
+  } | null = null;
+  private _headListener: ((editHistoryRef: string) => Promise<void>)[] = [];
+  private _processors: Map<string, MultiEditProcessor> = new Map();
+  private _isListening: boolean = false;
 
   constructor(private readonly _cakeKey: string, private readonly _db: Db) {}
 
@@ -34,6 +39,13 @@ export class MultiEditManager {
         return this.editHistoryRef(editHistoryRef);
       },
     );
+    this._isListening = true;
+  }
+
+  tearDown() {
+    const editHistoryKey = `${this._cakeKey}EditHistory`;
+    this._db.unregisterAllObservers(Route.fromFlat(editHistoryKey));
+    this._isListening = false;
   }
 
   async edit(edit: Edit, cakeRef?: string) {
@@ -57,9 +69,12 @@ export class MultiEditManager {
     if (!this.head) {
       const multiEdit: MultiEdit = {
         _hash: '',
-        edit: edit._hash,
+        edit: hsh(edit)._hash,
         previous: null,
       };
+
+      await this._persistMultiEdit(multiEdit);
+
       multiEditProc = await MultiEditProcessor.fromMultiEdit(
         this._db,
         this._cakeKey,
@@ -238,10 +253,14 @@ export class MultiEditManager {
     return this._head;
   }
 
-  get join() {
+  get join(): Join {
     if (!this.head) {
       throw new Error('No head MultiEditProcessor available.');
     }
     return this.head.processor.join;
+  }
+
+  get isListening() {
+    return this._isListening;
   }
 }

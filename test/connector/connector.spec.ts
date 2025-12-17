@@ -97,6 +97,9 @@ describe('Connector', () => {
   });
 
   describe('listen', () => {
+    it('should initialize listening state', () => {
+      expect(connector.isListening).toBe(true);
+    });
     it('should listen for new Socket events', async () => {
       const callback = vi.fn();
       const origin = timeId();
@@ -131,6 +134,36 @@ describe('Connector', () => {
         r: editHistory._hash,
       });
     });
+
+    it('should not send already sent refs', async () => {
+      const callback = vi.fn();
+
+      //Listen for emitted event
+      socket.on(route.flat, callback);
+
+      connector.send(editHistory._hash);
+      connector.send(editHistory._hash); //Send again
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith({
+        o: connector.origin,
+        r: editHistory._hash,
+      });
+    });
+
+    it('should not send received refs', async () => {
+      const callback = vi.fn();
+
+      //Listen for emitted event
+      socket.on(route.flat, callback);
+
+      //Simulate receiving the ref
+      (connector as any)._receivedRefs.add(editHistory._hash);
+
+      connector.send(editHistory._hash);
+
+      expect(callback).not.toHaveBeenCalled();
+    });
   });
 
   describe('registerDbObserver', () => {
@@ -146,6 +179,14 @@ describe('Connector', () => {
         o: connector.origin,
         r: editHistory._hash,
       });
+    });
+  });
+
+  describe('teardown', () => {
+    it('should teardown connector and stop listening', () => {
+      connector.teardown();
+
+      expect(connector.isListening).toBe(false);
     });
   });
 });

@@ -1157,6 +1157,14 @@ export class Db {
 
   // ...........................................................................
   /**
+   * Unregisters all observers from all routes
+   */
+  unregisterAllObservers(route: Route) {
+    this.notify.unregisterAll(route);
+  }
+
+  // ...........................................................................
+  /**
    * Get a controller for a specific table
    * @param tableKey - The key of the table to get the controller for
    * @param refs - Optional references required by some controllers
@@ -1350,6 +1358,8 @@ export class Db {
     );
     const { [cakeKey + 'EditHistory']: result } =
       await editHistoryController.get(where);
+
+    /* v8 ignore next -- @preserve */
     return result._data.sort(
       (h1, h2) =>
         getTimeIdTimestamp(h2.timeId)! - getTimeIdTimestamp(h1.timeId)!,
@@ -1536,6 +1546,18 @@ export class Db {
       };
     }
     return result;
+  }
+
+  // ...........................................................................
+  /**
+   * Clone the Db instance with a new Io instance
+   * @param io - The new Io instance
+   * @returns A new Db instance with the same cache as the current instance
+   */
+  clone(io: Io): Db {
+    const newDb = new Db(io);
+    newDb.setCache(new Map(this._cache));
+    return newDb;
   }
 
   // ...........................................................................

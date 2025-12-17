@@ -52,6 +52,15 @@ export class Notify {
 
   // ...........................................................................
   /**
+   * Unregisters all callbacks for a specific route.
+   * @param route   The route to unregister all callbacks from.
+   */
+  unregisterAll(route: Route) {
+    this._callbacks.delete(route.flat);
+  }
+
+  // ...........................................................................
+  /**
    * Notifies all registered callbacks for a specific route with the provided edit protocol row.
    * @param route   The route to notify callbacks for.
    * @param insertHistoryRow  The edit protocol row to pass to the callbacks.

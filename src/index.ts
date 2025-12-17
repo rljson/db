@@ -10,5 +10,14 @@ export type {
   ConnectorPayload,
 } from './connector/connector.ts';
 export { Db } from './db.ts';
+export {
+  exampleEditActionColumnSelection,
+  exampleEditActionColumnSelectionOnlySomeColumns,
+  exampleEditActionRowFilter,
+  exampleEditActionRowSort,
+  exampleEditActionSetValue,
+  exampleEditSetValueReferenced,
+} from './edit/edit-action.ts';
 export { MultiEditManager } from './edit/multi-edit-manager.ts';
 export { staticExample } from './example-static/example-static.ts';
+export { Join } from './join/join.ts';
