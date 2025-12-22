@@ -9,7 +9,7 @@ export default defineConfig({
   build: {
     copyPublicDir: false,
     minify: false,
-    // sourcemap: 'inline',
+    sourcemap: true,
 
     lib: {
       entry: resolve(__dirname, 'src/index.ts'),
@@ -29,6 +29,10 @@ export default defineConfig({
       ],
       output: {
         globals: {},
+        sourcemapPathTransform: (relativeSourcePath) => {
+          // Make paths absolute so VS Code can find them
+          return relativeSourcePath.replace('../src/', resolve(__dirname, 'src') + '/');
+        },
       },
     },
   },
