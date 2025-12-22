@@ -8,40 +8,14 @@ import { hsh, rmhsh } from '@rljson/hash';
 import { Io } from '@rljson/io';
 import { Json, JsonValue, merge } from '@rljson/json';
 import {
-  Cake,
-  CakesTable,
-  ComponentRef,
-  ComponentsTable,
-  ContentType,
-  Edit,
-  EditHistory,
-  EditHistoryTable,
-  EditsTable,
-  getTimeIdTimestamp,
-  Head,
-  InsertHistoryRow,
-  InsertHistoryTimeId,
-  isTimeId,
-  Layer,
-  LayersTable,
-  MultiEdit,
-  MultiEditsTable,
-  Ref,
-  Rljson,
-  Route,
-  RouteSegment,
-  SliceId,
-  SliceIds,
-  TableType,
-  timeId,
+  Cake, CakesTable, ComponentRef, ComponentsTable, ContentType, Edit, EditHistory, EditHistoryTable,
+  EditsTable, getTimeIdTimestamp, Head, InsertHistoryRow, InsertHistoryTimeId, isTimeId, Layer,
+  LayersTable, MultiEdit, MultiEditsTable, Ref, Rljson, Route, RouteSegment, SliceId, SliceIds,
+  TableType, timeId
 } from '@rljson/rljson';
 
 import {
-  Controller,
-  ControllerChildProperty,
-  ControllerRefs,
-  ControllerRunFn,
-  createController,
+  Controller, ControllerChildProperty, ControllerRefs, ControllerRunFn, createController
 } from './controller/controller.ts';
 import { SliceIdController } from './controller/slice-id-controller.ts';
 import { Core } from './core.ts';
@@ -49,6 +23,7 @@ import { Join, JoinColumn, JoinRow, JoinRows } from './join/join.ts';
 import { ColumnSelection } from './join/selection/column-selection.ts';
 import { Notify, NotifyCallback } from './notify.ts';
 import { makeUnique } from './tools/make-unique.ts';
+
 
 export type Cell = {
   route: Route;
@@ -850,7 +825,6 @@ export class Db {
     for (const [tableKey, controller] of Object.entries(controllers)) {
       runFns[tableKey] = controller.insert.bind(controller);
     }
-
     return this._insert(route, tree, runFns, options);
   }
 
@@ -1192,6 +1166,7 @@ export class Db {
     // Create Controllers
     const controllers: Record<string, Controller<any, any, any>> = {};
     const isolatedRoute = await this.isolatePropertyKeyFromRoute(route);
+
     for (let i = 0; i < isolatedRoute.segments.length; i++) {
       const segment = isolatedRoute.segments[i];
       const tableKey = segment.tableKey;
@@ -1356,6 +1331,7 @@ export class Db {
     const editHistoryController = await this.getController(
       cakeKey + 'EditHistory',
     );
+
     const { [cakeKey + 'EditHistory']: result } =
       await editHistoryController.get(where);
 

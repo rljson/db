@@ -7,13 +7,9 @@
 import { Io, IoMem } from '@rljson/io';
 import { JsonValue } from '@rljson/json';
 import {
-  BaseValidator,
-  ContentType,
-  createInsertHistoryTableCfg,
-  Rljson,
-  TableCfg,
-  Validate,
+  BaseValidator, ContentType, createInsertHistoryTableCfg, Rljson, TableCfg, Validate
 } from '@rljson/rljson';
+
 
 /** Implements core functionalities like importing data, setting tables  */
 export class Core {
@@ -63,8 +59,8 @@ export class Core {
    * @returns a dump of a table.
    * @throws when table name does not exist
    */
-  dumpTable(table: string): Promise<Rljson> {
-    return this._io.dumpTable({ table });
+  async dumpTable(table: string): Promise<Rljson> {
+    return await this._io.dumpTable({ table });
   }
 
   // ...........................................................................
@@ -135,15 +131,15 @@ export class Core {
 
   // ...........................................................................
   /** Reads a specific row from a database table */
-  readRow(table: string, rowHash: string): Promise<Rljson> {
-    return this._io.readRows({ table, where: { _hash: rowHash } });
+  async readRow(table: string, rowHash: string): Promise<Rljson> {
+    return await this._io.readRows({ table, where: { _hash: rowHash } });
   }
 
   // ...........................................................................
-  readRows(
+  async readRows(
     table: string,
     where: { [column: string]: JsonValue },
   ): Promise<Rljson> {
-    return this._io.readRows({ table, where });
+    return await this._io.readRows({ table, where });
   }
 }

@@ -5,19 +5,13 @@
 // found in the LICENSE file in the root of this package.
 
 import { hsh } from '@rljson/hash';
-import {
-  Edit,
-  EditHistory,
-  InsertHistoryRow,
-  MultiEdit,
-  Route,
-  timeId,
-} from '@rljson/rljson';
+import { Edit, EditHistory, InsertHistoryRow, MultiEdit, Route, timeId } from '@rljson/rljson';
 
 import { Db } from '../db.ts';
 import { Join } from '../join/join.ts';
 
 import { MultiEditProcessor } from './multi-edit-processor.ts';
+
 
 export class MultiEditManager {
   private _head: {
@@ -214,6 +208,7 @@ export class MultiEditManager {
     const { [this._cakeKey + 'EditsRef']: editRef } = (
       await this._db.addEdit(this._cakeKey, edit)
     )[0] as any;
+
     /* v8 ignore next -- @preserve */
     if (!editRef) {
       throw new Error('MultiEditManager: Failed to create EditRef.');
