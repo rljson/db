@@ -6,23 +6,14 @@
 
 import { equals, Json, JsonValue } from '@rljson/json';
 import {
-  ContentType,
-  InsertHistoryRow,
-  Ref,
-  Rljson,
-  TableCfg,
-  TableKey,
-  TableType,
+  ContentType, InsertHistoryRow, Ref, Rljson, TableCfg, TableKey, TableType
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { CakeControllerCommands } from './cake-controller.ts';
-import {
-  Controller,
-  ControllerChildProperty,
-  ControllerRefs,
-} from './controller.ts';
+import { Controller, ControllerChildProperty, ControllerRefs } from './controller.ts';
+
 
 export abstract class BaseController<T extends TableType, C extends JsonValue>
   implements Controller<T, C, string>

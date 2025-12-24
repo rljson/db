@@ -6,15 +6,7 @@
 
 import { Json, JsonValue } from '@rljson/json';
 import {
-  ContentType,
-  InsertCommand,
-  InsertHistoryRow,
-  Ref,
-  Rljson,
-  SliceId,
-  TableCfg,
-  TableKey,
-  TableType,
+  ContentType, InsertCommand, InsertHistoryRow, Ref, Rljson, SliceId, TableCfg, TableKey, TableType
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
@@ -22,10 +14,8 @@ import { Core } from '../core.ts';
 import { CakeController, CakeControllerRefs } from './cake-controller.ts';
 import { ComponentController } from './component-controller.ts';
 import { LayerController, LayerControllerRefs } from './layer-controller.ts';
-import {
-  SliceIdController,
-  SliceIdControllerRefs,
-} from './slice-id-controller.ts';
+import { SliceIdController, SliceIdControllerRefs } from './slice-id-controller.ts';
+
 
 export type ControllerRefs = CakeControllerRefs | LayerControllerRefs;
 
@@ -119,6 +109,7 @@ export const createController = async (
     default:
       throw new Error(`Controller for type ${type} is not implemented yet.`);
   }
+
   await ctrl.init();
   return ctrl;
 };

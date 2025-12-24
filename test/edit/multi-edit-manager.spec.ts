@@ -111,12 +111,22 @@ describe('MultiEditManager', () => {
 
       const processorAdded = await vi.waitUntil(
         () => {
-          return multiEditManager._processors.has(editHistoryRef);
+          return multiEditManager.processors.has(editHistoryRef);
         },
         { timeout: 2000, interval: 100 },
       );
 
       expect(processorAdded).toBe(true);
+    });
+  });
+
+  describe('tearDown', () => {
+    it('should be defined', async () => {
+      multiEditManager.init();
+      multiEditManager.tearDown();
+
+      expect(multiEditManager).toBeDefined();
+      expect(multiEditManager.isListening).toBe(false);
     });
   });
 
@@ -134,7 +144,7 @@ describe('MultiEditManager', () => {
       // Wait for the processor to be added
       await vi.waitUntil(
         () => {
-          return multiEditManager._processors.has(
+          return multiEditManager.processors.has(
             initialEditHistoryRef as string,
           );
         },
@@ -247,7 +257,7 @@ describe('MultiEditManager', () => {
       // Wait for the processor to be added
       await vi.waitUntil(
         () => {
-          return multiEditManager._processors.has(
+          return multiEditManager.processors.has(
             initialEditHistoryHash as string,
           );
         },
@@ -320,7 +330,7 @@ describe('MultiEditManager', () => {
       // Wait for the processor to be added
       await vi.waitUntil(
         () => {
-          return multiEditManager._processors.has(
+          return multiEditManager.processors.has(
             initialEditHistoryHash as string,
           );
         },

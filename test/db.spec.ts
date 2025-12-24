@@ -19,7 +19,7 @@ import {
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { Db } from '../src/db';
+import { Container, Db } from '../src/db';
 import {
   CarGeneral,
   staticExample,
@@ -55,6 +55,34 @@ describe('Db', () => {
   describe('core', () => {
     it('should be defined', () => {
       expect(db.core).toBeDefined();
+    });
+  });
+
+  describe('clone', () => {
+    it('should clone a db to a given Io', () => {
+      db.setCache(
+        new Map([
+          [
+            'test',
+            {
+              rljson: {
+                test: { _data: [{ _type: 'test', _hash: '' }] },
+              } as Json,
+            } as Container,
+          ],
+        ]),
+      );
+      const io2 = new IoMem();
+      const db2 = db.clone(io2);
+
+      expect(db2).toBeDefined();
+      expect(db2).not.toBe(db);
+      expect(db2.cache.size).toBe(1);
+      expect(db2.cache.get('test')).toEqual({
+        rljson: {
+          test: { _data: [{ _type: 'test', _hash: '' }] },
+        } as Json,
+      });
     });
   });
 
@@ -573,6 +601,10 @@ describe('Db', () => {
       const { rljson: secondGet } = await db.get(Route.fromFlat(route), where);
       expect(secondGet).toEqual(firstGet);
       expect(cache.size).toBe(7);
+
+      //Reset cache
+      db.setCache(new Map());
+      expect(db.cache.size).toBe(0);
     });
 
     it('get component property by ref', async () => {
@@ -1781,6 +1813,7 @@ describe('Db', () => {
       const route = Route.fromFlat('/carGeneral');
       expect(db.notify.getCallBacksForRoute(route).length).toBe(0);
     });
+
     it('register/unregister a callback', async () => {
       const callback = vi.fn();
       const route = Route.fromFlat('/carGeneral');
@@ -1789,6 +1822,17 @@ describe('Db', () => {
       expect(db.notify.callbacks.size).toBe(1);
 
       db.unregisterObserver(route, callback);
+      expect(db.notify.getCallBacksForRoute(route).length).toBe(0);
+    });
+
+    it('unregisterAllObservers', async () => {
+      const callback = vi.fn();
+      const route = Route.fromFlat('/carGeneral');
+
+      db.registerObserver(route, callback);
+      expect(db.notify.callbacks.size).toBe(1);
+
+      db.unregisterAllObservers(route);
       expect(db.notify.getCallBacksForRoute(route).length).toBe(0);
     });
 
