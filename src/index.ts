@@ -4,4 +4,20 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-export { Db as RljsonDb } from './db.ts';
+export { Connector } from './connector/connector.ts';
+export type {
+  ConnectorCallback,
+  ConnectorPayload,
+} from './connector/connector.ts';
+export { Db } from './db.ts';
+export {
+  exampleEditActionColumnSelection,
+  exampleEditActionColumnSelectionOnlySomeColumns,
+  exampleEditActionRowFilter,
+  exampleEditActionRowSort,
+  exampleEditActionSetValue,
+  exampleEditSetValueReferenced,
+} from './edit/edit-action.ts';
+export { MultiEditManager } from './edit/multi-edit-manager.ts';
+export { staticExample } from './example-static/example-static.ts';
+export { Join } from './join/join.ts';

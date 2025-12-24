@@ -1,6 +1,6 @@
 {
   "name": "@rljson/db",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "packageManager": "pnpm@10.6.3+sha512.bb45e34d50a9a76e858a95837301bfb6bd6d35aea2c5d52094fa497a467c43f5c440103ce2511e9e0a2f89c3d6071baac3358fc68ac6fb75e2ceb3d2736065e6",
   "description": "A high level interface to read and write RLJSON data from and into a database",
   "homepage": "https://github.com/rljson/db",
@@ -29,29 +29,29 @@
     "updateGoldens": "cross-env UPDATE_GOLDENS=true npm test"
   },
   "devDependencies": {
-    "@types/node": "^24.10.1",
-    "@typescript-eslint/eslint-plugin": "^8.48.1",
-    "@typescript-eslint/parser": "^8.48.1",
-    "@vitest/coverage-v8": "^4.0.15",
+    "@types/node": "^25.0.3",
+    "@typescript-eslint/eslint-plugin": "^8.50.1",
+    "@typescript-eslint/parser": "^8.50.1",
+    "@vitest/coverage-v8": "^4.0.16",
     "cross-env": "^10.1.0",
-    "eslint": "^9.39.1",
+    "eslint": "^9.39.2",
     "eslint-plugin-jsdoc": "^61.5.0",
     "eslint-plugin-tsdoc": "^0.5.0",
     "globals": "^16.5.0",
     "jsdoc": "^4.0.5",
     "read-pkg": "^10.0.0",
     "typescript": "~5.9.3",
-    "typescript-eslint": "^8.48.1",
-    "vite": "^7.2.7",
+    "typescript-eslint": "^8.50.1",
+    "vite": "^7.3.0",
     "vite-node": "^5.2.0",
     "vite-plugin-dts": "^4.5.4",
-    "vite-tsconfig-paths": "^5.1.4",
-    "vitest": "^4.0.15",
+    "vite-tsconfig-paths": "^6.0.3",
+    "vitest": "^4.0.16",
     "vitest-dom": "^0.1.1"
   },
   "dependencies": {
     "@rljson/hash": "^0.0.17",
-    "@rljson/io": "^0.0.61",
+    "@rljson/io": "^0.0.63",
     "@rljson/json": "^0.0.23",
     "@rljson/rljson": "^0.0.73",
     "@rljson/validate": "^0.0.11",
@@ -62,7 +62,6 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ],
-    "overrides": {}
+    ]
   }
 }

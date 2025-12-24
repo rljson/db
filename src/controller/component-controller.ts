@@ -6,26 +6,17 @@ import { hsh } from '@rljson/hash';
 import { equals, Json, JsonValue, merge } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  CakeReference,
-  ColumnCfg,
-  ComponentsTable,
-  ContentType,
-  InsertHistoryRow,
-  Ref,
-  Rljson,
-  TableKey,
-  timeId,
+  CakeReference, ColumnCfg, ComponentsTable, ContentType, InsertHistoryRow, Ref, Rljson, TableKey,
+  timeId
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
 
 import { BaseController } from './base-controller.ts';
 import {
-  Controller,
-  ControllerChildProperty,
-  ControllerCommands,
-  ControllerRefs,
+  Controller, ControllerChildProperty, ControllerCommands, ControllerRefs
 } from './controller.ts';
+
 
 export class ComponentController<
     N extends string,
@@ -67,6 +58,7 @@ export class ComponentController<
 
     // Table must be of type components
     const rljson = await this._core.dumpTable(this._tableKey);
+
     const table = rljson[this._tableKey];
     if (this._allowedContentTypes.indexOf(table._type) === -1) {
       throw new Error(`Table ${this._tableKey} is not of type components.`);

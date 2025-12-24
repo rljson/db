@@ -16,6 +16,11 @@ export class Connector {
   private _origin: string;
   private _callbacks: ConnectorCallback[] = [];
 
+  private _isListening: boolean = false;
+
+  private _sentRefs: Set<string> = new Set();
+  private _receivedRefs: Set<string> = new Set();
+
   constructor(
     private readonly _db: Db,
     private readonly _route: Route,
@@ -27,19 +32,39 @@ export class Connector {
   }
 
   send(ref: string) {
+    if (this._sentRefs.has(ref) || this._receivedRefs.has(ref)) return;
+
+    this._sentRefs.add(ref);
+
     this.socket.emit(this.route.flat, {
       o: this._origin,
       r: ref,
     } as ConnectorPayload);
   }
 
-  listen(cb: ConnectorCallback) {
-    this._callbacks.push(cb);
+  listen(callback: (editHistoryRef: string) => Promise<void>) {
+    this._socket.on(this._route.flat, async (payload: ConnectorPayload) => {
+      /* v8 ignore next -- @preserve */
+      try {
+        await callback(payload.r);
+      } catch (error) {
+        console.error('Error in connector listener callback:', error);
+      }
+    });
   }
 
   private _init() {
     this._registerSocketObserver();
     this._registerDbObserver();
+
+    this._isListening = true;
+  }
+
+  public teardown() {
+    this._socket.removeAllListeners(this._route.flat);
+    this._db.unregisterAllObservers(this._route);
+
+    this._isListening = false;
   }
 
   private _notifyCallbacks(ref: string) {
@@ -55,6 +80,14 @@ export class Connector {
         return;
       }
 
+      const ref = p.r;
+      /* v8 ignore next -- @preserve */
+      if (this._receivedRefs.has(ref)) {
+        return;
+      }
+
+      this._receivedRefs.add(p.r);
+
       this._notifyCallbacks(p.r);
     });
   }
@@ -63,6 +96,11 @@ export class Connector {
     this._db.registerObserver(this._route, (ins) => {
       return new Promise<void>((resolve) => {
         const ref = (ins as any)[this.route.root.tableKey + 'Ref'] as string;
+        /* v8 ignore next -- @preserve */
+        if (this._sentRefs.has(ref)) {
+          resolve();
+          return;
+        }
         this.send(ref);
         resolve();
       });
@@ -79,5 +117,9 @@ export class Connector {
 
   get origin() {
     return this._origin;
+  }
+
+  get isListening() {
+    return this._isListening;
   }
 }
