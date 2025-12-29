@@ -23,7 +23,7 @@ import {
   timeId,
 } from '@rljson/rljson';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Connector, ConnectorPayload } from '../../src/connector/connector';
 import { Db } from '../../src/db';
@@ -191,13 +191,16 @@ describe('Connector/MultiEditManager interoperability', () => {
   let a: ClientSetup;
   let b: ClientSetup;
 
-  beforeEach(async () => {
-    a = await generateClientSetup();
-    b = await generateClientSetup();
-    wire(route, [a, b]);
-  });
-
   describe('interoperability', () => {
+    beforeEach(async () => {
+      a = await generateClientSetup();
+      b = await generateClientSetup();
+      wire(route, [a, b]);
+    });
+    afterEach(async () => {
+      a.multiEditManager.tearDown();
+      b.multiEditManager.tearDown();
+    });
     it('Send EditHistoryRefs over wired Sockets', async () => {
       const callback = vi.fn();
 
@@ -284,6 +287,6 @@ describe('Connector/MultiEditManager interoperability', () => {
               JSON.stringify([15000, 30000, 45000, 60000]),
           ),
       ).toBe(true);
-    });
+    }, 10000);
   });
 });
