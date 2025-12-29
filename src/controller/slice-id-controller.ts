@@ -55,11 +55,9 @@ export class SliceIdController<N extends string, C extends SliceId[]>
     }
 
     // Table must be of type sliceIds
-    const rljson = await this._core.dumpTable(this._tableKey);
-    const table = rljson[this._tableKey] as SliceIdsTable;
-
+    const contentType = await this._core.contentType(this._tableKey);
     /* v8 ignore next -- @preserve */
-    if (table._type !== 'sliceIds') {
+    if (contentType !== 'sliceIds') {
       throw new Error(`Table ${this._tableKey} is not of type sliceIds.`);
     }
 
@@ -76,16 +74,6 @@ export class SliceIdController<N extends string, C extends SliceId[]>
       // Base sliceId must exist
       if (SliceIds.length === 0) {
         throw new Error(`Base sliceId ${this._refs.base} does not exist.`);
-      }
-    } else {
-      // Try to read refs from first row of sliceIds table (Fallback)
-      // TODO: THIS MUST BE TIME CONSIDERED!!!
-      const sliceId = table._data[0] as SliceIdControllerRefs;
-      /* v8 ignore else -- @preserve */
-      if (!!sliceId) {
-        this._refs = {
-          base: sliceId.base,
-        };
       }
     }
   }

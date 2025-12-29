@@ -62,9 +62,8 @@ export class LayerController<N extends string, C extends Layer>
     }
 
     // Table must be of type layers
-    const rljson = await this._core.dumpTable(this._tableKey);
-    const table = rljson[this._tableKey] as LayersTable;
-    if (table._type !== 'layers') {
+    const contentType = await this._core.contentType(this._tableKey);
+    if (contentType !== 'layers') {
       throw new Error(`Table ${this._tableKey} is not of type layers.`);
     }
 
@@ -96,18 +95,6 @@ export class LayerController<N extends string, C extends Layer>
           sliceIdsTable: baseLayer.sliceIdsTable,
           sliceIdsTableRow: baseLayer.sliceIdsTableRow,
           componentsTable: baseLayer.componentsTable,
-        };
-      }
-    } else {
-      // Try to read refs from first row of layers table (Fallback)
-      // TODO: THIS MUST BE TIME CONSIDERED!!!
-      const layer = table._data[0] as LayerControllerRefs;
-      /* v8 ignore else -- @preserve */
-      if (!!layer) {
-        this._refs = {
-          sliceIdsTable: layer.sliceIdsTable,
-          sliceIdsTableRow: layer.sliceIdsTableRow,
-          componentsTable: layer.componentsTable,
         };
       }
     }
