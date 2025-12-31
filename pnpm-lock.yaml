@@ -4,9 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  '@rljson/converter': link:../rljson-converter
-
 importers:
 
   .:
@@ -37,8 +34,8 @@ importers:
         version: 7.8.2
     devDependencies:
       '@rljson/converter':
-        specifier: link:../rljson-converter
-        version: link:../rljson-converter
+        specifier: ^0.0.33
+        version: 0.0.33
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
@@ -402,6 +399,10 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
+
+  '@rljson/converter@0.0.33':
+    resolution: {integrity: sha512-EKrfcLjd7I6gK9LtxMcsFoiKA8BCZMXflvlThyTYqmYOyBrkpUaw2CkVQ/0xnxpKNaE12mjrQTzmUgP54IQ0Jg==}
+    engines: {node: '>=22.14.0'}
 
   '@rljson/hash@0.0.16':
     resolution: {integrity: sha512-RbMQUEP4uhSTVArvRRXR73bXyQRbghuYzhzQiJyDyTsyFJiDbEcSKEyU1VYbJ3PPEu6HUklRx6ieZC0kPGDEcQ==}
@@ -2074,6 +2075,13 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
+
+  '@rljson/converter@0.0.33':
+    dependencies:
+      '@rljson/hash': 0.0.17
+      '@rljson/json': 0.0.23
+      '@rljson/rljson': 0.0.73
+      object-traversal: 1.0.1
 
   '@rljson/hash@0.0.16':
     dependencies:

@@ -29,7 +29,7 @@
     "updateGoldens": "cross-env UPDATE_GOLDENS=true npm test"
   },
   "devDependencies": {
-    "@rljson/converter": "link:../rljson-converter",
+    "@rljson/converter": "^0.0.33",
     "@types/node": "^25.0.3",
     "@typescript-eslint/eslint-plugin": "^8.51.0",
     "@typescript-eslint/parser": "^8.51.0",
@@ -63,9 +63,6 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild"
-    ],
-    "overrides": {
-      "@rljson/converter": "link:../rljson-converter"
-    }
+    ]
   }
 }

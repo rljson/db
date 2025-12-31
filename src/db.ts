@@ -364,9 +364,6 @@ export class Db {
     } as Rljson;
 
     // Return if is root node (deepest level, base case)
-    const nodeValue = node[nodeTableKey]._data.filter(
-      (v) => v !== undefined && v !== null,
-    );
     if (route.isRoot) {
       // Pre-compute common route string to avoid repeated concatenation
       const baseRouteStr =
@@ -391,7 +388,7 @@ export class Db {
             : { [nodeTableKey]: node[nodeTableKey] },
           cell: opts.skipCell
             ? ([] as Cell[])
-            : (nodeValue.map(
+            : (nodeRowsFiltered.map(
                 (v, idx) =>
                   ({
                     value: v[route.propertyKey!] ?? null,
@@ -417,7 +414,7 @@ export class Db {
           : { [nodeTableKey]: node[nodeTableKey] },
         cell: opts.skipCell
           ? ([] as Cell[])
-          : (nodeValue.map(
+          : (nodeRowsFiltered.map(
               (v, idx) =>
                 ({
                   value: v[route.propertyKey!] ?? null,
@@ -560,7 +557,11 @@ export class Db {
       );
 
       // No Children found for where + route => skip
-      if (rowChildrenRljson[childrenTableKey]._data.length === 0) continue;
+      if (
+        !rowChildrenRljson[childrenTableKey] ||
+        rowChildrenRljson[childrenTableKey]._data.length === 0
+      )
+        continue;
 
       nodeChildrenArray.push(rowChildrenRljson);
 
@@ -629,6 +630,11 @@ export class Db {
         resolvedChildrenHashSet.has(cr.ref),
       );
 
+      // Build ref map for O(1) lookups
+      const matchingRefsMap = new Map(
+        matchingChildrenRefs.map((cr) => [cr.ref, cr]),
+      );
+
       // If Layer, construct layer objects with sliceIds relations
       /* v8 ignore else -- @preserve */
       if (nodeType === 'layers') {
@@ -645,9 +651,8 @@ export class Db {
         });
 
         const layerTreesAndPaths = components.map(({ tree: comp, path }) => {
-          const sliceIds = matchingChildrenRefs.find(
-            (cr) => cr.ref === comp._hash,
-          )?.sliceIds;
+          const matchedRef = matchingRefsMap.get(comp._hash as string);
+          const sliceIds = matchedRef?.sliceIds;
 
           /* v8 ignore next -- @preserve */
           if (!sliceIds || sliceIds.length === 0) {
@@ -668,15 +673,11 @@ export class Db {
 
           const sliceId = sliceIds[0];
 
-          const pathsForSliceId = [
-            ...path
-              .map((p) => p[0])
-              .map((p) => {
-                const newPath = [...p];
-                newPath[2] = 0;
-                return ['add', sliceId, ...newPath];
-              }),
-          ];
+          const pathsForSliceId = path.map((p) => {
+            const newPath = [...p[0]];
+            newPath[2] = 0;
+            return ['add', sliceId, ...newPath];
+          });
 
           return {
             [sliceId]: {
@@ -695,10 +696,11 @@ export class Db {
         const paths: any[] = [];
 
         for (const ltap of layerTreesAndPaths) {
-          const [[sliceId, { tree, path }]] = Object.entries(ltap);
-          layer[sliceId] = tree;
-          if (!opts.skipCell) {
-            paths.push(path);
+          for (const [sliceId, value] of Object.entries(ltap)) {
+            layer[sliceId] = value.tree;
+            if (!opts.skipCell) {
+              paths.push(value.path);
+            }
           }
         }
 
@@ -798,16 +800,10 @@ export class Db {
         ? ({} as Rljson)
         : ({
             ...node,
-            ...{
-              [nodeTableKey]: {
-                ...{
-                  _data: matchedNodeRows.map((mr) => mr.rljson),
-                  _type: nodeType,
-                },
-                ...{
-                  ...(nodeHash ? { _hash: nodeHash } : {}),
-                },
-              },
+            [nodeTableKey]: {
+              _data: matchedNodeRows.map((mr) => mr.rljson),
+              _type: nodeType,
+              ...(nodeHash ? { _hash: nodeHash } : {}),
             },
             ...nodeChildren,
           } as Rljson),
@@ -815,27 +811,37 @@ export class Db {
         ? ({} as Json)
         : {
             [nodeTableKey]: {
-              ...{
-                _data: matchedNodeRows.map((mr) => mr.tree),
-                _type: nodeType,
-              },
-              ...{
-                ...(nodeHash ? { _hash: nodeHash } : {}),
-              },
+              _data: matchedNodeRows.map((mr) => mr.tree),
+              _type: nodeType,
+              ...(nodeHash ? { _hash: nodeHash } : {}),
             },
           },
-      cell: options?.skipCell
-        ? ([] as Cell[])
-        : matchedNodeRows
-            .map((mr, idx) =>
-              mr.cell.map((c) => ({
-                ...c,
-                ...{
-                  path: c.path.map((p) => [nodeTableKey, '_data', idx, ...p]),
-                },
-              })),
-            )
-            .flat(),
+      cell: opts.skipCell
+        ? []
+        : (() => {
+            // Pre-calculate total size and build array directly
+            let totalSize = 0;
+            for (const mr of matchedNodeRows) {
+              totalSize += mr.cell.length;
+            }
+            const cells: Cell[] = new Array(totalSize);
+            let cellIdx = 0;
+            for (let rowIdx = 0; rowIdx < matchedNodeRows.length; rowIdx++) {
+              const mr = matchedNodeRows[rowIdx];
+              for (const c of mr.cell) {
+                cells[cellIdx++] = {
+                  ...c,
+                  path: c.path.map((p) => [
+                    nodeTableKey,
+                    '_data',
+                    rowIdx,
+                    ...p,
+                  ]),
+                };
+              }
+            }
+            return cells;
+          })(),
     };
     //Set Cache
     this._cache.set(cacheHash, result);
@@ -879,7 +885,13 @@ export class Db {
   ): Promise<Join> {
     const {
       tree: { [cakeKey]: cakesTable },
-    } = await this.get(Route.fromFlat(`${cakeKey}@${cakeRef}`), {});
+    } = await this.get(
+      Route.fromFlat(`${cakeKey}@${cakeRef}`),
+      {},
+      undefined,
+      undefined,
+      { skipCell: true, skipRljson: true },
+    );
 
     const cakes = (cakesTable as CakesTable)._data;
 
