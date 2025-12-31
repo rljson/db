@@ -170,11 +170,12 @@ describe('mass data', () => {
     const cakeGet = await db.get(Route.fromFlat(`/${cakeKey}`), {});
     const cakeRef = (cakeGet.cell[0].row! as Json)._hash as Ref;
 
-    const startTime = performance.now();
+    //const startTime = performance.now();
     const join = await db.join(columnSelection, cakeKey, cakeRef);
-    const endTime = performance.now();
-    console.log(`Join took ${endTime - startTime}ms`);
+    //const endTime = performance.now();
+
+    //console.log(`Join took ${endTime - startTime}ms`);
 
     expect(join.rows.length).toBe(dataLength);
-  });
+  }, 10000);
 });

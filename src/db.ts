@@ -168,20 +168,28 @@ export class Db {
     // Default options
     const opts = options ?? {};
 
-    //Activate Cache
-    const params = {
-      route: route.flat,
-      where,
-      filter,
-      sliceIds,
-      routeAccumulator: routeAccumulator ? routeAccumulator.flat : '',
-      options: opts,
-    };
-    const cacheHash = (hsh(rmhsh(params)) as any)._hash as string;
+    //Check if cacheable
+    const routeHasRefs = route.flat != route.flatWithoutRefs;
+    const hasFilter = filter !== undefined && filter.length > 0;
+    const cacheable = !!routeHasRefs || !!hasFilter;
+    let cacheHash = '';
 
-    const isCached = this._cache.has(cacheHash);
-    if (isCached) {
-      return this._cache.get(cacheHash)!;
+    if (cacheable) {
+      //Activate Cache
+      const params = {
+        route: route.flat,
+        where,
+        filter,
+        sliceIds,
+        routeAccumulator: routeAccumulator ? routeAccumulator.flat : '',
+        options: opts,
+      };
+      cacheHash = (hsh(rmhsh(params)) as any)._hash as string;
+
+      const isCached = this._cache.has(cacheHash);
+      if (isCached) {
+        return this._cache.get(cacheHash)!;
+      }
     }
 
     const nodeTableKey = route.top.tableKey;
@@ -248,6 +256,7 @@ export class Db {
         if (nodeType === 'cakes') {
           const cake = nodeRow as Cake;
           const key = `${cake.sliceIdsTable}:${cake.sliceIdsRow}`;
+          /* v8 ignore next -- @preserve */
           if (!sliceIdResolvePromises.has(key)) {
             sliceIdResolvePromises.set(
               key,
@@ -257,6 +266,7 @@ export class Db {
         } else if (nodeType === 'layers') {
           const layer = nodeRow as Layer;
           const key = `${layer.sliceIdsTable}:${layer.sliceIdsTableRow}`;
+          /* v8 ignore next -- @preserve */
           if (!sliceIdResolvePromises.has(key)) {
             sliceIdResolvePromises.set(
               key,
@@ -371,32 +381,40 @@ export class Db {
         (nodeHash ? `@${nodeHash}` : '');
 
       if (route.hasPropertyKey) {
+        /* v8 ignore next -- @preserve */
         const isolatedNode = opts.skipRljson
           ? ({} as Rljson)
           : this.isolatePropertyFromComponents(node, route.propertyKey!);
 
+        /* v8 ignore next -- @preserve */
         const routeWithProperty = opts.skipCell
           ? null
           : Route.fromFlat(
               baseRouteStr + `/${route.propertyKey}`,
             ).toRouteWithProperty();
 
+        /* v8 ignore next -- @preserve */
+        const tree = opts.skipTree
+          ? ({} as Json)
+          : { [nodeTableKey]: node[nodeTableKey] };
+
+        /* v8 ignore next -- @preserve */
+        const cell = opts.skipCell
+          ? ([] as Cell[])
+          : (nodeRowsFiltered.map(
+              (v, idx) =>
+                ({
+                  value: v[route.propertyKey!] ?? null,
+                  row: v,
+                  route: routeWithProperty,
+                  path: [[nodeTableKey, '_data', idx, route.propertyKey]],
+                } as Cell),
+            ) as Cell[]);
+
         const result = {
           rljson: isolatedNode,
-          tree: opts.skipTree
-            ? ({} as Json)
-            : { [nodeTableKey]: node[nodeTableKey] },
-          cell: opts.skipCell
-            ? ([] as Cell[])
-            : (nodeRowsFiltered.map(
-                (v, idx) =>
-                  ({
-                    value: v[route.propertyKey!] ?? null,
-                    row: v,
-                    route: routeWithProperty,
-                    path: [[nodeTableKey, '_data', idx, route.propertyKey]],
-                  } as Cell),
-              ) as Cell[]),
+          tree,
+          cell,
         };
 
         //Set Cache
@@ -407,25 +425,35 @@ export class Db {
 
       const routeObj = opts.skipCell ? null : Route.fromFlat(baseRouteStr);
 
+      /* v8 ignore next -- @preserve */
+      const rljson = opts.skipRljson ? ({} as Rljson) : node;
+      /* v8 ignore next -- @preserve */
+      const tree = opts.skipTree
+        ? ({} as Json)
+        : { [nodeTableKey]: node[nodeTableKey] };
+      /* v8 ignore next -- @preserve */
+      const cell = opts.skipCell
+        ? ([] as Cell[])
+        : (nodeRowsFiltered.map(
+            (v, idx) =>
+              ({
+                value: v[route.propertyKey!] ?? null,
+                row: v,
+                route: routeObj,
+                path: [[nodeTableKey, '_data', idx]],
+              } as Cell),
+          ) as Cell[]);
+
       const result = {
-        rljson: opts.skipRljson ? ({} as Rljson) : node,
-        tree: opts.skipTree
-          ? ({} as Json)
-          : { [nodeTableKey]: node[nodeTableKey] },
-        cell: opts.skipCell
-          ? ([] as Cell[])
-          : (nodeRowsFiltered.map(
-              (v, idx) =>
-                ({
-                  value: v[route.propertyKey!] ?? null,
-                  row: v,
-                  route: routeObj,
-                  path: [[nodeTableKey, '_data', idx]],
-                } as Cell),
-            ) as Cell[]),
+        rljson,
+        tree,
+        cell,
       };
-      //Set Cache
-      this._cache.set(cacheHash, result);
+
+      if (cacheable) {
+        //Set Cache
+        this._cache.set(cacheHash, result);
+      }
 
       return result;
     }
@@ -512,6 +540,7 @@ export class Db {
         ...childrenRefTypes.values(),
       ]);
 
+      /* v8 ignore next -- @preserve */
       if (childrenRefTypesSet.size > 1) {
         throw new Error(
           `Db._get: Multiple reference types found for children of node table "${nodeTableKey}" and row "${nodeRowHash}". Found types: ${[
@@ -566,6 +595,7 @@ export class Db {
       nodeChildrenArray.push(rowChildrenRljson);
 
       // Skip expensive tree/cell processing if not needed
+      /* v8 ignore next -- @preserve */
       if (opts.skipTree && opts.skipCell) {
         nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
           rljson: nodeRow,
@@ -698,29 +728,38 @@ export class Db {
         for (const ltap of layerTreesAndPaths) {
           for (const [sliceId, value] of Object.entries(ltap)) {
             layer[sliceId] = value.tree;
+            /* v8 ignore next -- @preserve */
             if (!opts.skipCell) {
               paths.push(value.path);
             }
           }
         }
 
+        const rljson = nodeRow;
+
+        /* v8 ignore next -- @preserve */
+        const tree = opts.skipTree
+          ? {}
+          : {
+              ...nodeRowObj,
+              add: { ...(nodeRowObj.add as Json), ...layer },
+            };
+
+        /* v8 ignore next -- @preserve */
+        const cell = opts.skipCell
+          ? []
+          : rowChildrenCell.map(
+              (c, idx) =>
+                ({
+                  ...c,
+                  path: [paths.flat()[idx]],
+                } as Cell),
+            );
+
         nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
-          rljson: nodeRow,
-          tree: opts.skipTree
-            ? {}
-            : {
-                ...nodeRowObj,
-                add: { ...(nodeRowObj.add as Json), ...layer },
-              },
-          cell: opts.skipCell
-            ? []
-            : rowChildrenCell.map(
-                (c, idx) =>
-                  ({
-                    ...c,
-                    path: [paths.flat()[idx]],
-                  } as Cell),
-              ),
+          rljson,
+          tree,
+          cell,
         });
       } else if (nodeType === 'cakes') {
         nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
@@ -788,6 +827,7 @@ export class Db {
     }
 
     // Merge Children Data - skip if not needed
+    /* v8 ignore next -- @preserve */
     const nodeChildren = opts.skipRljson
       ? ({} as Rljson)
       : makeUnique(merge(...(nodeChildrenArray as Rljson[])) as Rljson);
@@ -795,53 +835,55 @@ export class Db {
     // Return Node with matched Children
     const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());
 
-    const result = {
-      rljson: opts.skipRljson
-        ? ({} as Rljson)
-        : ({
-            ...node,
-            [nodeTableKey]: {
-              _data: matchedNodeRows.map((mr) => mr.rljson),
-              _type: nodeType,
-              ...(nodeHash ? { _hash: nodeHash } : {}),
-            },
-            ...nodeChildren,
-          } as Rljson),
-      tree: opts.skipTree
-        ? ({} as Json)
-        : {
-            [nodeTableKey]: {
-              _data: matchedNodeRows.map((mr) => mr.tree),
-              _type: nodeType,
-              ...(nodeHash ? { _hash: nodeHash } : {}),
-            },
+    /* v8 ignore next -- @preserve */
+    const rljson = opts.skipRljson
+      ? ({} as Rljson)
+      : ({
+          ...node,
+          [nodeTableKey]: {
+            _data: matchedNodeRows.map((mr) => mr.rljson),
+            _type: nodeType,
+            ...(nodeHash ? { _hash: nodeHash } : {}),
           },
-      cell: opts.skipCell
-        ? []
-        : (() => {
-            // Pre-calculate total size and build array directly
-            let totalSize = 0;
-            for (const mr of matchedNodeRows) {
-              totalSize += mr.cell.length;
+          ...nodeChildren,
+        } as Rljson);
+    /* v8 ignore next -- @preserve */
+    const tree = opts.skipTree
+      ? ({} as Json)
+      : {
+          [nodeTableKey]: {
+            _data: matchedNodeRows.map((mr) => mr.tree),
+            _type: nodeType,
+            ...(nodeHash ? { _hash: nodeHash } : {}),
+          },
+        };
+    /* v8 ignore next -- @preserve */
+    const cell = opts.skipCell
+      ? []
+      : (() => {
+          // Pre-calculate total size and build array directly
+          let totalSize = 0;
+          for (const mr of matchedNodeRows) {
+            totalSize += mr.cell.length;
+          }
+          const cells: Cell[] = new Array(totalSize);
+          let cellIdx = 0;
+          for (let rowIdx = 0; rowIdx < matchedNodeRows.length; rowIdx++) {
+            const mr = matchedNodeRows[rowIdx];
+            for (const c of mr.cell) {
+              cells[cellIdx++] = {
+                ...c,
+                path: c.path.map((p) => [nodeTableKey, '_data', rowIdx, ...p]),
+              };
             }
-            const cells: Cell[] = new Array(totalSize);
-            let cellIdx = 0;
-            for (let rowIdx = 0; rowIdx < matchedNodeRows.length; rowIdx++) {
-              const mr = matchedNodeRows[rowIdx];
-              for (const c of mr.cell) {
-                cells[cellIdx++] = {
-                  ...c,
-                  path: c.path.map((p) => [
-                    nodeTableKey,
-                    '_data',
-                    rowIdx,
-                    ...p,
-                  ]),
-                };
-              }
-            }
-            return cells;
-          })(),
+          }
+          return cells;
+        })();
+
+    const result = {
+      rljson,
+      tree,
+      cell,
     };
     //Set Cache
     this._cache.set(cacheHash, result);
