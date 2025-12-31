@@ -7,9 +7,13 @@
 import { Io, IoMem } from '@rljson/io';
 import { JsonValue } from '@rljson/json';
 import {
-  BaseValidator, ContentType, createInsertHistoryTableCfg, Rljson, TableCfg, Validate
+  BaseValidator,
+  ContentType,
+  createInsertHistoryTableCfg,
+  Rljson,
+  TableCfg,
+  Validate,
 } from '@rljson/rljson';
-
 
 /** Implements core functionalities like importing data, setting tables  */
 export class Core {
@@ -111,21 +115,8 @@ export class Core {
 
   // ...........................................................................
   async tableCfg(table: string): Promise<TableCfg> {
-    //TODO: Avoid dumping the whole table just to get the tableCfg ref
-    const { [table]: dump } = await this._io.dumpTable({ table });
-    const tableCfgRef = dump._tableCfg;
     const tableCfgs = await this._io.rawTableCfgs();
-
-    let tableCfg: TableCfg;
-    /* v8 ignore if -- @preserve */
-    if (!tableCfgRef) {
-      tableCfg = tableCfgs.find((tc) => tc.key === table) as TableCfg;
-    } else {
-      tableCfg = tableCfgs.find(
-        (tc) => tc.key === table && tc._hash === tableCfgRef,
-      ) as TableCfg;
-    }
-
+    const tableCfg = tableCfgs.find((tc) => tc.key === table) as TableCfg;
     return tableCfg;
   }
 

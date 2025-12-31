@@ -23,7 +23,7 @@ import {
   timeId,
 } from '@rljson/rljson';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Connector, ConnectorPayload } from '../../src/connector/connector';
 import { Db } from '../../src/db';
@@ -144,9 +144,9 @@ const generateClientSetup = async (): Promise<ClientSetup> => {
   const connector = new Connector(db, route, socket);
   const multiEditManager = new MultiEditManager(cakeKey, db);
   multiEditManager.init();
-  connector.listen((editHistoryRef: string) =>
-    multiEditManager.editHistoryRef(editHistoryRef),
-  );
+  connector.listen(async (editHistoryRef: string) => {
+    await multiEditManager.editHistoryRef(editHistoryRef);
+  });
 
   return {
     db,
@@ -191,13 +191,16 @@ describe('Connector/MultiEditManager interoperability', () => {
   let a: ClientSetup;
   let b: ClientSetup;
 
-  beforeEach(async () => {
-    a = await generateClientSetup();
-    b = await generateClientSetup();
-    wire(route, [a, b]);
-  });
-
   describe('interoperability', () => {
+    beforeEach(async () => {
+      a = await generateClientSetup();
+      b = await generateClientSetup();
+      wire(route, [a, b]);
+    });
+    afterEach(async () => {
+      a.multiEditManager.tearDown();
+      b.multiEditManager.tearDown();
+    });
     it('Send EditHistoryRefs over wired Sockets', async () => {
       const callback = vi.fn();
 
@@ -256,14 +259,21 @@ describe('Connector/MultiEditManager interoperability', () => {
       ).toBe(true);
       expect(b.multiEditManager.processors.size).toBe(2);
 
+      const firstProc = b.multiEditManager.processors.get(
+        a.editHistoryRefs[0] as string,
+      );
+      expect(firstProc).toBeDefined();
+      expect(firstProc?.edits.length).toBe(1); // ColumnSelection Edit
+
       // Verify final data state
-      const proc = b.multiEditManager.processors.get(
+      const secondProc = b.multiEditManager.processors.get(
         a.editHistoryRefs[1] as string,
       );
-      expect(proc).toBeDefined();
+      expect(secondProc).toBeDefined();
+      expect(secondProc?.edits.length).toBe(2); // ColumnSelection + SetValue Edit
 
       // Get Join Result
-      const join = proc?.join;
+      const join = secondProc?.join;
       expect(join).toBeDefined();
 
       // Check Result
@@ -277,6 +287,6 @@ describe('Connector/MultiEditManager interoperability', () => {
               JSON.stringify([15000, 30000, 45000, 60000]),
           ),
       ).toBe(true);
-    });
+    }, 10000);
   });
 });
