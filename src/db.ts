@@ -382,21 +382,28 @@ export class Db {
         }
       }
 
-      /* v8 ignore next -- @preserve */
-      if (childrenRefTypes.size > 1) {
+      const childrenRefTypesSet = new Set<string>([
+        ...childrenRefTypes.values(),
+      ]);
+
+      if (childrenRefTypesSet.size > 1) {
         throw new Error(
-          `Db._get: Multiple reference types found for children of table ${nodeTableKey}.`,
+          `Db._get: Multiple reference types found for children of node table "${nodeTableKey}" and row "${
+            (nodeRow as any)._hash
+          }". Found types: ${[...childrenRefTypesSet].join(', ')}.`,
         );
       }
 
+      const childrenRefType =
+        childrenRefTypesSet.size > 0 ? [...childrenRefTypesSet][0] : null;
+
       const cakeIsReferenced =
-        childrenRefTypes.size === 1 &&
-        [...childrenRefTypes.values()][0] === 'cakes';
+        childrenRefTypes.size > 0 && childrenRefType === 'cakes';
 
       const componentIsReferenced =
-        childrenRefTypes.size === 1 &&
+        childrenRefTypes.size > 0 &&
         nodeType === 'components' &&
-        [...childrenRefTypes.values()][0] === 'components';
+        childrenRefType === 'components';
 
       const childrenSliceIds = cakeIsReferenced
         ? [...childrenRefSliceIds]
@@ -580,6 +587,7 @@ export class Db {
         /* v8 ignore else -- @preserve */
         if (rowChildrenTree && Object.keys(rowChildrenTree).length > 0) {
           const columnReferenceMap = nodeColumnCfgs
+            .filter((c) => c.ref?.tableKey === childrenTableKey)
             .filter(
               (c) => c.ref && ['components', 'cakes'].includes(c.ref.type),
             )

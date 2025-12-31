@@ -3,6 +3,7 @@ import { resolve } from 'path';
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
 
+
 export default defineConfig({
   plugins: [dts({ include: ['src/**/*'] })],
 
@@ -23,6 +24,8 @@ export default defineConfig({
         '@rljson/io',
         '@rljson/io-mem',
         '@rljson/json',
+        '@rljson/converter',
+        'node:fs',
         'object-traversal',
         'filtrex',
         'rxjs',
@@ -31,7 +34,10 @@ export default defineConfig({
         globals: {},
         sourcemapPathTransform: (relativeSourcePath) => {
           // Make paths absolute so VS Code can find them
-          return relativeSourcePath.replace('../src/', resolve(__dirname, 'src') + '/');
+          return relativeSourcePath.replace(
+            '../src/',
+            resolve(__dirname, 'src') + '/',
+          );
         },
       },
     },
