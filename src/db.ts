@@ -8,14 +8,40 @@ import { hsh, rmhsh } from '@rljson/hash';
 import { Io } from '@rljson/io';
 import { Json, JsonValue, merge } from '@rljson/json';
 import {
-  Cake, CakesTable, ComponentRef, ComponentsTable, ContentType, Edit, EditHistory, EditHistoryTable,
-  EditsTable, getTimeIdTimestamp, Head, InsertHistoryRow, InsertHistoryTimeId, isTimeId, Layer,
-  LayersTable, MultiEdit, MultiEditsTable, Ref, Rljson, Route, RouteSegment, SliceId, SliceIds,
-  TableType, timeId
+  Cake,
+  CakesTable,
+  ComponentRef,
+  ComponentsTable,
+  ContentType,
+  Edit,
+  EditHistory,
+  EditHistoryTable,
+  EditsTable,
+  getTimeIdTimestamp,
+  Head,
+  InsertHistoryRow,
+  InsertHistoryTimeId,
+  isTimeId,
+  Layer,
+  LayersTable,
+  MultiEdit,
+  MultiEditsTable,
+  Ref,
+  Rljson,
+  Route,
+  RouteSegment,
+  SliceId,
+  SliceIds,
+  TableType,
+  timeId,
 } from '@rljson/rljson';
 
 import {
-  Controller, ControllerChildProperty, ControllerRefs, ControllerRunFn, createController
+  Controller,
+  ControllerChildProperty,
+  ControllerRefs,
+  ControllerRunFn,
+  createController,
 } from './controller/controller.ts';
 import { SliceIdController } from './controller/slice-id-controller.ts';
 import { Core } from './core.ts';
@@ -23,7 +49,6 @@ import { Join, JoinColumn, JoinRow, JoinRows } from './join/join.ts';
 import { ColumnSelection } from './join/selection/column-selection.ts';
 import { Notify, NotifyCallback } from './notify.ts';
 import { makeUnique } from './tools/make-unique.ts';
-
 
 export type Cell = {
   route: Route;
@@ -179,11 +204,68 @@ export class Db {
     } = await nodeController.get(nodeWhere);
     const nodeColumnCfgs = nodeController.tableCfg().columns;
 
+    const filterActive = filter && filter.length > 0;
+    const sliceIdActive = nodeSliceIds && nodeSliceIds.length > 0;
+
+    // Pre-build filter map for O(1) lookups instead of O(n) searches
+    const filterMap = filterActive
+      ? new Map<string, ControllerChildProperty[]>()
+      : null;
+
+    if (filterActive) {
+      for (const f of filter) {
+        if (f.tableKey === nodeTableKey) {
+          if (!filterMap!.has(f.ref)) {
+            filterMap!.set(f.ref, []);
+          }
+          filterMap!.get(f.ref)!.push(f);
+        }
+      }
+    }
+
+    // Batch resolve all sliceIds at once instead of awaiting sequentially
+    const sliceIdResolvePromises = new Map<string, Promise<SliceId[]>>();
+    const nodeSliceIdSet = sliceIdActive ? new Set(nodeSliceIds) : null;
+
+    if (sliceIdActive) {
+      for (const nodeRow of nodeRows) {
+        if (nodeType === 'cakes') {
+          const cake = nodeRow as Cake;
+          const key = `${cake.sliceIdsTable}:${cake.sliceIdsRow}`;
+          if (!sliceIdResolvePromises.has(key)) {
+            sliceIdResolvePromises.set(
+              key,
+              this._resolveSliceIds(cake.sliceIdsTable, cake.sliceIdsRow),
+            );
+          }
+        } else if (nodeType === 'layers') {
+          const layer = nodeRow as Layer;
+          const key = `${layer.sliceIdsTable}:${layer.sliceIdsTableRow}`;
+          if (!sliceIdResolvePromises.has(key)) {
+            sliceIdResolvePromises.set(
+              key,
+              this._resolveSliceIds(
+                layer.sliceIdsTable,
+                layer.sliceIdsTableRow,
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    // Wait for all sliceId resolutions in parallel
+    const resolvedSliceIds = new Map<string, Set<SliceId>>();
+    if (sliceIdResolvePromises.size > 0) {
+      const entries = Array.from(sliceIdResolvePromises.entries());
+      const results = await Promise.all(entries.map(([, p]) => p));
+      entries.forEach(([key], idx) => {
+        resolvedSliceIds.set(key, new Set(results[idx]));
+      });
+    }
+
     const nodeRowsFiltered: Json[] = [];
     for (const nodeRow of nodeRows) {
-      const filterActive = filter && filter.length > 0;
-      const sliceIdActive = nodeSliceIds && nodeSliceIds.length > 0;
-
       if (!filterActive && !sliceIdActive) {
         nodeRowsFiltered.push(nodeRow);
         continue;
@@ -193,12 +275,10 @@ export class Db {
       let filterResult = false;
       const filterProperties: ControllerChildProperty[] = [];
       if (filterActive) {
-        for (const f of filter) {
-          if (f.tableKey !== nodeTableKey) continue;
-          if (nodeRow._hash === f.ref) {
-            filterProperties.push(f);
-            filterResult = true;
-          }
+        const rowFilters = filterMap!.get(nodeRow._hash);
+        if (rowFilters) {
+          filterProperties.push(...rowFilters);
+          filterResult = true;
         }
       } else {
         filterResult = true;
@@ -210,37 +290,39 @@ export class Db {
         switch (nodeType) {
           case 'cakes':
             const cake = nodeRow as Cake;
-            const cakeSliceIds = await this._resolveSliceIds(
-              cake.sliceIdsTable,
-              cake.sliceIdsRow,
-            );
-            const cakeMatchesSliceIds = nodeSliceIds.filter((sId) =>
-              cakeSliceIds.includes(sId),
-            );
-            if (cakeMatchesSliceIds.length > 0) sliceIdResult = true;
+            const cakeKey = `${cake.sliceIdsTable}:${cake.sliceIdsRow}`;
+            const cakeSliceIdSet = resolvedSliceIds.get(cakeKey)!;
+            // Use Set intersection for O(n) instead of filter+includes O(n*m)
+            for (const sId of nodeSliceIdSet!) {
+              if (cakeSliceIdSet.has(sId)) {
+                sliceIdResult = true;
+                break;
+              }
+            }
             break;
 
           case 'layers':
             const layer = nodeRow as Layer;
-            const layerSliceIds = await this._resolveSliceIds(
-              layer.sliceIdsTable,
-              layer.sliceIdsTableRow,
-            );
-            const layerMatchesSliceIds = nodeSliceIds.filter((sId) =>
-              layerSliceIds.includes(sId),
-            );
-            if (layerMatchesSliceIds.length > 0) sliceIdResult = true;
+            const layerKey = `${layer.sliceIdsTable}:${layer.sliceIdsTableRow}`;
+            const layerSliceIdSet = resolvedSliceIds.get(layerKey)!;
+            for (const sId of nodeSliceIdSet!) {
+              if (layerSliceIdSet.has(sId)) {
+                sliceIdResult = true;
+                break;
+              }
+            }
             break;
           case 'components':
             if (filterProperties.length > 0) {
-              const componentSliceIds = filterProperties.flatMap(
-                (f) => f.sliceIds,
+              // Use Set for faster lookups
+              const componentSliceIdSet = new Set(
+                filterProperties.flatMap((f) => f.sliceIds),
               );
-              const componentMatchesSliceIds = nodeSliceIds.filter((sId) =>
-                componentSliceIds.includes(sId),
-              );
-              if (componentMatchesSliceIds.length > 0) {
-                sliceIdResult = true;
+              for (const sId of nodeSliceIdSet!) {
+                if (componentSliceIdSet.has(sId)) {
+                  sliceIdResult = true;
+                  break;
+                }
               }
             }
             break;
@@ -270,11 +352,20 @@ export class Db {
       (v) => v !== undefined && v !== null,
     );
     if (route.isRoot) {
+      // Pre-compute common route string to avoid repeated concatenation
+      const baseRouteStr =
+        (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
+        (nodeHash ? `@${nodeHash}` : '');
+
       if (route.hasPropertyKey) {
         const isolatedNode = this.isolatePropertyFromComponents(
           node,
           route.propertyKey!,
         );
+
+        const routeWithProperty = Route.fromFlat(
+          baseRouteStr + `/${route.propertyKey}`,
+        ).toRouteWithProperty();
 
         const result = {
           rljson: isolatedNode,
@@ -284,11 +375,7 @@ export class Db {
               ({
                 value: v[route.propertyKey!] ?? null,
                 row: v,
-                route: Route.fromFlat(
-                  (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
-                    (nodeHash ? `@${nodeHash}` : '') +
-                    `/${route.propertyKey}`,
-                ).toRouteWithProperty(),
+                route: routeWithProperty,
                 path: [[nodeTableKey, '_data', idx, route.propertyKey]],
               } as Cell),
           ) as Cell[],
@@ -300,6 +387,8 @@ export class Db {
         return result;
       }
 
+      const routeObj = Route.fromFlat(baseRouteStr);
+
       const result = {
         rljson: node,
         tree: { [nodeTableKey]: node[nodeTableKey] },
@@ -308,10 +397,7 @@ export class Db {
             ({
               value: v[route.propertyKey!] ?? null,
               row: v,
-              route: Route.fromFlat(
-                (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
-                  (nodeHash ? `@${nodeHash}` : ''),
-              ),
+              route: routeObj,
               path: [[nodeTableKey, '_data', idx]],
             } as Cell),
         ) as Cell[],
@@ -343,15 +429,33 @@ export class Db {
       }
     >();
 
+    // Pre-build column reference map outside the loop
+    const columnReferenceMap =
+      nodeType === 'components'
+        ? nodeColumnCfgs
+            .filter((c) => c.ref?.tableKey === childrenTableKey)
+            .filter(
+              (c) => c.ref && ['components', 'cakes'].includes(c.ref.type),
+            )
+            .reduce((acc, curr) => {
+              acc.set(curr.key, curr.ref!.tableKey);
+              return acc;
+            }, new Map<string, string>())
+        : null;
+
+    // Batch fetch all childRefs in parallel for better performance
+    const childRefsPromises = nodeRowsFiltered.map((nodeRow) =>
+      nodeController.getChildRefs((nodeRow as any)._hash),
+    );
+    const allChildRefs = await Promise.all(childRefsPromises);
+
     // Iterate over Node Rows to get Children
     for (let i = 0; i < nodeRowsFiltered.length; i++) {
       const nodeRow = nodeRowsFiltered[i];
-      const nodeRowObj = { ...{}, ...nodeRow } as Json;
+      const nodeRowHash = (nodeRow as any)._hash;
 
       // Child References of this Node Row = Filter for Children
-      const childrenRefs = await nodeController.getChildRefs(
-        (nodeRow as any)._hash,
-      );
+      const childrenRefs = allChildRefs[i];
 
       // If cake is referenced, we have to collect all sliceIds from
       // childrenRefs and switch to them
@@ -388,9 +492,9 @@ export class Db {
 
       if (childrenRefTypesSet.size > 1) {
         throw new Error(
-          `Db._get: Multiple reference types found for children of node table "${nodeTableKey}" and row "${
-            (nodeRow as any)._hash
-          }". Found types: ${[...childrenRefTypesSet].join(', ')}.`,
+          `Db._get: Multiple reference types found for children of node table "${nodeTableKey}" and row "${nodeRowHash}". Found types: ${[
+            ...childrenRefTypesSet,
+          ].join(', ')}.`,
         );
       }
 
@@ -429,6 +533,9 @@ export class Db {
         ),
       );
 
+      // Create nodeRowObj only when needed (after we know children exist)
+      const nodeRowObj = { ...nodeRow } as Json;
+
       if (cakeIsReferenced) {
         const refKey = [...childrenRefTypes.keys()][0] as string;
         nodeRowObj[refKey] = rowChildrenTree;
@@ -441,28 +548,30 @@ export class Db {
 
       // Add Children as ThroughProperty value to Object representation
       if (childrenThroughProperty) {
-        const resolvedChildrenHashes = rowChildrenRljson[
-          childrenTableKey
-        ]._data.map((rc) => rc._hash as string);
-        for (const nr of nodeRowsFiltered) {
-          {
-            const throughHashesInRowCouldBeArray = (nr as any)[
-              childrenThroughProperty
-            ];
-            const throughHashesInRow = Array.isArray(
-              throughHashesInRowCouldBeArray,
-            )
-              ? throughHashesInRowCouldBeArray
-              : [throughHashesInRowCouldBeArray];
+        const resolvedChildrenHashesSet = new Set(
+          rowChildrenRljson[childrenTableKey]._data.map(
+            (rc) => rc._hash as string,
+          ),
+        );
 
-            for (const th of throughHashesInRow) {
-              if (resolvedChildrenHashes.includes(th)) {
-                //Add Child as ThroughProperty value
-                nodeRowObj[childrenThroughProperty] = {
-                  ...(rowChildrenTree as any)[childrenTableKey],
-                  ...{ _tableKey: childrenTableKey },
-                };
-              }
+        for (const nr of nodeRowsFiltered) {
+          const throughHashesInRowCouldBeArray = (nr as any)[
+            childrenThroughProperty
+          ];
+          const throughHashesInRow = Array.isArray(
+            throughHashesInRowCouldBeArray,
+          )
+            ? throughHashesInRowCouldBeArray
+            : [throughHashesInRowCouldBeArray];
+
+          for (const th of throughHashesInRow) {
+            if (resolvedChildrenHashesSet.has(th)) {
+              //Add Child as ThroughProperty value
+              nodeRowObj[childrenThroughProperty] = {
+                ...(rowChildrenTree as any)[childrenTableKey],
+                _tableKey: childrenTableKey,
+              };
+              break; // Exit early once matched
             }
           }
         }
@@ -475,8 +584,13 @@ export class Db {
         (cr) => cr.tableKey == childrenTableKey,
       );
 
-      const matchingChildrenRefs = childrenRefsOfRow.filter(
-        (cr) => !!resolvedChildren.find((ch) => cr.ref === ch._hash),
+      // Build hash set for faster lookups
+      const resolvedChildrenHashSet = new Set(
+        resolvedChildren.map((ch) => ch._hash),
+      );
+
+      const matchingChildrenRefs = childrenRefsOfRow.filter((cr) =>
+        resolvedChildrenHashSet.has(cr.ref),
       );
 
       // If Layer, construct layer objects with sliceIds relations
@@ -532,8 +646,8 @@ export class Db {
             [sliceId]: {
               tree: {
                 [childrenTableKey]: {
-                  ...{ _data: [comp] },
-                  ...{ _type: 'components' },
+                  _data: [comp],
+                  _type: 'components',
                 },
               },
               path: pathsForSliceId,
@@ -541,19 +655,16 @@ export class Db {
           };
         });
 
-        const layer = layerTreesAndPaths
-          .flatMap((ltap) =>
-            Object.entries(ltap).map(([sliceId, { tree }]) => ({
-              [sliceId]: tree,
-            })),
-          )
-          .reduce((a, b) => ({ ...a, ...b }), {});
+        const layer: Record<string, any> = {};
+        const paths: any[] = [];
 
-        const paths = layerTreesAndPaths.map(
-          (ltap) => Object.values(ltap)[0].path,
-        );
+        for (const ltap of layerTreesAndPaths) {
+          const [[sliceId, { tree, path }]] = Object.entries(ltap);
+          layer[sliceId] = tree;
+          paths.push(path);
+        }
 
-        nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+        nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
           rljson: nodeRow,
           tree: {
             ...nodeRowObj,
@@ -563,14 +674,12 @@ export class Db {
             (c, idx) =>
               ({
                 ...c,
-                ...{
-                  path: [paths.flat()[idx]],
-                },
+                path: [paths.flat()[idx]],
               } as Cell),
           ),
         });
       } else if (nodeType === 'cakes') {
-        nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+        nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
           rljson: nodeRow,
           tree: {
             ...nodeRowObj,
@@ -578,64 +687,49 @@ export class Db {
           },
           cell: rowChildrenCell.map((c) => ({
             ...c,
-            ...{
-              path: c.path.map((p) => ['layers', ...p]),
-            },
+            path: c.path.map((p) => ['layers', ...p]),
           })),
         });
       } else if (nodeType === 'components') {
         /* v8 ignore else -- @preserve */
         if (rowChildrenTree && Object.keys(rowChildrenTree).length > 0) {
-          const columnReferenceMap = nodeColumnCfgs
-            .filter((c) => c.ref?.tableKey === childrenTableKey)
-            .filter(
-              (c) => c.ref && ['components', 'cakes'].includes(c.ref.type),
-            )
-            .reduce((acc, curr) => {
-              acc.set(curr.key, curr.ref!.tableKey);
-              return acc;
-            }, new Map<string, string>());
-
           const resolvedRefs: Record<string, { tree: Json; cell: Cell[] }> = {};
-          for (const [colKey, childTableKey] of columnReferenceMap) {
+
+          for (const [colKey, childTableKey] of columnReferenceMap!) {
             const tree = {
               ...(rowChildrenTree[childTableKey] as Json),
-              ...{ _tableKey: childTableKey },
+              _tableKey: childTableKey,
             };
             const cell = rowChildrenCell.map((c) => ({
               ...c,
-              ...{
-                path: c.path
-                  .filter((p) => p[0] === childTableKey)
-                  .map((p) => [colKey, ...p.slice(1)]),
-              },
+              path: c.path
+                .filter((p) => p[0] === childTableKey)
+                .map((p) => [colKey, ...p.slice(1)]),
             }));
 
             resolvedRefs[colKey] = { tree, cell };
           }
 
-          const resolvedProperties = Object.entries(resolvedRefs)
-            .map(([colKey, { tree }]) => ({
-              [colKey]: tree,
-            }))
-            .reduce((a, b) => ({ ...a, ...b }), {});
+          const resolvedProperties: Record<string, Json> = {};
+          const allCells: Cell[] = [];
+
+          for (const [colKey, { tree, cell }] of Object.entries(resolvedRefs)) {
+            resolvedProperties[colKey] = tree;
+            allCells.push(...cell);
+          }
 
           const resolvedTree = {
             ...nodeRowObj,
             ...resolvedProperties,
           };
 
-          const resolvedCell = Object.values(resolvedRefs)
-            .map((r) => r.cell)
-            .flat();
-
-          nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+          nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
             rljson: nodeRow,
             tree: resolvedTree,
-            cell: resolvedCell,
+            cell: allCells,
           });
         } else {
-          nodeRowsMatchingChildrenRefs.set((nodeRow as any)._hash, {
+          nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
             rljson: nodeRow,
             tree: { ...nodeRowObj },
             cell: rowChildrenCell,
