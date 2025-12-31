@@ -1,0 +1,2450 @@
+[
+  {
+    "VIN": "W0L0SDL48J4112345",
+    "carGeneral:brand": "Opel",
+    "carGeneral:type": "Astra",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 5.6,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Opel Astra is a compact car (C-segment) engineered and manufactured by the German automaker Opel since 1991."
+    },
+    "carDimensions:length": 4372,
+    "carDimensions:width": 1804,
+    "carDimensions:height": 1485,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "green",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "1HGBH41JXMN109186",
+    "carGeneral:brand": "Honda",
+    "carGeneral:type": "Civic",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 6.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Honda Civic is a line of cars manufactured by Honda. Originally a subcompact, the Civic has gone through several generational changes."
+    },
+    "carDimensions:length": 4649,
+    "carDimensions:width": 1799,
+    "carDimensions:height": 1416,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "blue",
+    "carColors:roof": "blue",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WBAFW31040LM28646",
+    "carGeneral:brand": "BMW",
+    "carGeneral:type": "3 Series",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.1,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The BMW 3 Series is a compact executive car manufactured by the German automaker BMW since May 1975."
+    },
+    "carDimensions:length": 4709,
+    "carDimensions:width": 1827,
+    "carDimensions:height": 1442,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "5YJSA1E14HF177003",
+    "carGeneral:brand": "Tesla",
+    "carGeneral:type": "Model S",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 18.5,
+    "carGeneral:units": {
+      "energyConsumption": "kWh:100km"
+    },
+    "carGeneral:serviceIntervals": [20000, 40000, 60000],
+    "carGeneral:isElectric": true,
+    "carGeneral:meta": {
+      "pressText": "The Tesla Model S is a battery-powered liftback car serving as the flagship model of Tesla, Inc."
+    },
+    "carDimensions:length": 4979,
+    "carDimensions:width": 1964,
+    "carDimensions:height": 1445,
+    "carTechnical:engine": "Electric",
+    "carTechnical:transmission": "Single-speed",
+    "carTechnical:gears": 1,
+    "carColors:sides": "white",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WVWZZZ1KZ9W001234",
+    "carGeneral:brand": "Volkswagen",
+    "carGeneral:type": "Golf",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 5.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Volkswagen Golf is a compact car:small family car produced by the German automotive manufacturer Volkswagen since 1974."
+    },
+    "carDimensions:length": 4284,
+    "carDimensions:width": 1789,
+    "carDimensions:height": 1456,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "red",
+    "carColors:roof": "red",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "JM1BL1SA8A1234567",
+    "carGeneral:brand": "Mazda",
+    "carGeneral:type": "3",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 6.0,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mazda3 or Mazda 3 is a compact car manufactured by Mazda, a Japanese automaker."
+    },
+    "carDimensions:length": 4662,
+    "carDimensions:width": 1797,
+    "carDimensions:height": 1445,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 6,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "WAUZZZ8V9DA123456",
+    "carGeneral:brand": "Audi",
+    "carGeneral:type": "A4",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 6.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Audi A4 is a line of compact executive cars produced since 1994 by the German car manufacturer Audi."
+    },
+    "carDimensions:length": 4762,
+    "carDimensions:width": 1847,
+    "carDimensions:height": 1428,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "JTDKARFP1J3567890",
+    "carGeneral:brand": "Toyota",
+    "carGeneral:type": "Corolla",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 5.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Toyota Corolla is a series of compact cars manufactured and marketed globally by Toyota Motor Corporation."
+    },
+    "carDimensions:length": 4630,
+    "carDimensions:width": 1780,
+    "carDimensions:height": 1435,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "white",
+    "carColors:roof": "white",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "WBA3A5C50DF123456",
+    "carGeneral:brand": "BMW",
+    "carGeneral:type": "X3",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The BMW X3 is a compact luxury crossover SUV manufactured by German automaker BMW since 2003."
+    },
+    "carDimensions:length": 4708,
+    "carDimensions:width": 1891,
+    "carDimensions:height": 1676,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "blue",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "1FA6P8CF5L5123456",
+    "carGeneral:brand": "Ford",
+    "carGeneral:type": "Mustang",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 10.5,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000, 48000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Ford Mustang is a series of American automobiles manufactured by Ford. In continuous production since 1964."
+    },
+    "carDimensions:length": 4788,
+    "carDimensions:width": 1916,
+    "carDimensions:height": 1381,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 10,
+    "carColors:sides": "red",
+    "carColors:roof": "red",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "5YJ3E1EA4MF123456",
+    "carGeneral:brand": "Tesla",
+    "carGeneral:type": "Model 3",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 15.2,
+    "carGeneral:units": {
+      "energyConsumption": "kWh:100km"
+    },
+    "carGeneral:serviceIntervals": [20000, 40000, 60000],
+    "carGeneral:isElectric": true,
+    "carGeneral:meta": {
+      "pressText": "The Tesla Model 3 is a battery electric mid-size sedan with a fastback body style built by Tesla, Inc."
+    },
+    "carDimensions:length": 4694,
+    "carDimensions:width": 1849,
+    "carDimensions:height": 1443,
+    "carTechnical:engine": "Electric",
+    "carTechnical:transmission": "Single-speed",
+    "carTechnical:gears": 1,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "SALGS2VF5HA123456",
+    "carGeneral:brand": "Land Rover",
+    "carGeneral:type": "Range Rover Sport",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 9.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [16000, 32000, 48000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Range Rover Sport is a mid-size luxury SUV produced by British manufacturer Land Rover."
+    },
+    "carDimensions:length": 4946,
+    "carDimensions:width": 2073,
+    "carDimensions:height": 1803,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "KNDJT2A21H7123456",
+    "carGeneral:brand": "Kia",
+    "carGeneral:type": "Sportage",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 6.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Kia Sportage is a compact SUV manufactured by the South Korean automaker Kia since 1993."
+    },
+    "carDimensions:length": 4515,
+    "carDimensions:width": 1865,
+    "carDimensions:height": 1650,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "orange",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "KMHCT4AE5HU123456",
+    "carGeneral:brand": "Hyundai",
+    "carGeneral:type": "Tucson",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Hyundai Tucson is a compact crossover SUV produced by the South Korean manufacturer Hyundai since 2004."
+    },
+    "carDimensions:length": 4630,
+    "carDimensions:width": 1865,
+    "carDimensions:height": 1660,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "blue",
+    "carColors:roof": "blue",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "WP0AA2A78KS123456",
+    "carGeneral:brand": "Porsche",
+    "carGeneral:type": "911",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 9.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [20000, 40000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Porsche 911 is a two-door, 2+2 high performance rear-engined sports car introduced in September 1964 by Porsche AG."
+    },
+    "carDimensions:length": 4519,
+    "carDimensions:width": 1852,
+    "carDimensions:height": 1298,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "yellow",
+    "carColors:roof": "yellow",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "WVGZZZ5NZLW123456",
+    "carGeneral:brand": "Volkswagen",
+    "carGeneral:type": "Tiguan",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.5,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Volkswagen Tiguan is a compact crossover vehicle manufactured by German automaker Volkswagen."
+    },
+    "carDimensions:length": 4509,
+    "carDimensions:width": 1859,
+    "carDimensions:height": 1674,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "white",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "ZFA25000005123456",
+    "carGeneral:brand": "Fiat",
+    "carGeneral:type": "500",
+    "carGeneral:door": 3,
+    "carGeneral:energyConsumption": 4.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Fiat 500 is a city car produced by the Italian manufacturer Fiat since 2007."
+    },
+    "carDimensions:length": 3571,
+    "carDimensions:width": 1627,
+    "carDimensions:height": 1488,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 5,
+    "carColors:sides": "mint",
+    "carColors:roof": "white",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WMWZC3C50FW123456",
+    "carGeneral:brand": "Mini",
+    "carGeneral:type": "Cooper",
+    "carGeneral:door": 3,
+    "carGeneral:energyConsumption": 5.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mini Cooper is a small economy car produced by the British Motor Corporation and its successors."
+    },
+    "carDimensions:length": 3821,
+    "carDimensions:width": 1727,
+    "carDimensions:height": 1414,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "red",
+    "carColors:roof": "white",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "2T1BURHE5JC123456",
+    "carGeneral:brand": "Toyota",
+    "carGeneral:type": "RAV4",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Toyota RAV4 is a compact crossover SUV produced by the Japanese automobile manufacturer Toyota."
+    },
+    "carDimensions:length": 4600,
+    "carDimensions:width": 1855,
+    "carDimensions:height": 1685,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "WDDWJ8EB9KF123456",
+    "carGeneral:brand": "Mercedes-Benz",
+    "carGeneral:type": "C-Class",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mercedes-Benz C-Class is a line of compact executive cars produced by Mercedes-Benz Group AG."
+    },
+    "carDimensions:length": 4751,
+    "carDimensions:width": 1820,
+    "carDimensions:height": 1438,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 9,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "3MW5R1J01N8123456",
+    "carGeneral:brand": "BMW",
+    "carGeneral:type": "M3",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 10.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The BMW M3 is a high-performance version of the BMW 3 Series, developed by BMW's in-house motorsport division, BMW M GmbH."
+    },
+    "carDimensions:length": 4794,
+    "carDimensions:width": 1903,
+    "carDimensions:height": 1433,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "blue",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "1G1YY22G965123456",
+    "carGeneral:brand": "Chevrolet",
+    "carGeneral:type": "Corvette",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 12.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Chevrolet Corvette is a two-door, two-passenger sports car manufactured and marketed by Chevrolet since 1953."
+    },
+    "carDimensions:length": 4630,
+    "carDimensions:width": 1934,
+    "carDimensions:height": 1234,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "red",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "WAUZZZ4G5DN123456",
+    "carGeneral:brand": "Audi",
+    "carGeneral:type": "Q5",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.1,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Audi Q5 is a series of compact luxury crossover SUVs produced by the German luxury car manufacturer Audi."
+    },
+    "carDimensions:length": 4663,
+    "carDimensions:width": 1893,
+    "carDimensions:height": 1659,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "JN1AZ4EH2FM123456",
+    "carGeneral:brand": "Nissan",
+    "carGeneral:type": "Leaf",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 17.0,
+    "carGeneral:units": {
+      "energyConsumption": "kWh:100km"
+    },
+    "carGeneral:serviceIntervals": [20000, 40000, 60000],
+    "carGeneral:isElectric": true,
+    "carGeneral:meta": {
+      "pressText": "The Nissan Leaf is a compact five-door hatchback battery electric vehicle produced by Nissan."
+    },
+    "carDimensions:length": 4490,
+    "carDimensions:width": 1788,
+    "carDimensions:height": 1540,
+    "carTechnical:engine": "Electric",
+    "carTechnical:transmission": "Single-speed",
+    "carTechnical:gears": 1,
+    "carColors:sides": "white",
+    "carColors:roof": "white",
+    "carColors:highlights": "blue"
+  },
+  {
+    "VIN": "ZFFCU57A570123456",
+    "carGeneral:brand": "Ferrari",
+    "carGeneral:type": "F8 Tributo",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 13.5,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [20000, 40000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Ferrari F8 Tributo is a mid-engine sports car produced by the Italian automobile manufacturer Ferrari."
+    },
+    "carDimensions:length": 4611,
+    "carDimensions:width": 1979,
+    "carDimensions:height": 1206,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "red",
+    "carColors:roof": "red",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "SCFFDCBD9LG123456",
+    "carGeneral:brand": "Lamborghini",
+    "carGeneral:type": "Huracán",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 14.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Lamborghini Huracán is a sports car manufactured by Italian automotive manufacturer Lamborghini."
+    },
+    "carDimensions:length": 4520,
+    "carDimensions:width": 1933,
+    "carDimensions:height": 1165,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "orange",
+    "carColors:roof": "orange",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "WBAJE5C50JG123456",
+    "carGeneral:brand": "BMW",
+    "carGeneral:type": "i3",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 13.6,
+    "carGeneral:units": {
+      "energyConsumption": "kWh:100km"
+    },
+    "carGeneral:serviceIntervals": [24000, 48000, 72000],
+    "carGeneral:isElectric": true,
+    "carGeneral:meta": {
+      "pressText": "The BMW i3 is a B-segment, high-roof hatchback manufactured and marketed by BMW with an electric powertrain."
+    },
+    "carDimensions:length": 4011,
+    "carDimensions:width": 1775,
+    "carDimensions:height": 1578,
+    "carTechnical:engine": "Electric",
+    "carTechnical:transmission": "Single-speed",
+    "carTechnical:gears": 1,
+    "carColors:sides": "blue",
+    "carColors:roof": "white",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "VNKKKTD30LA123456",
+    "carGeneral:brand": "Renault",
+    "carGeneral:type": "Clio",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 5.1,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Renault Clio is a supermini car, produced by French automobile manufacturer Renault."
+    },
+    "carDimensions:length": 4050,
+    "carDimensions:width": 1798,
+    "carDimensions:height": 1440,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "yellow",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "VF7SBRFNE12123456",
+    "carGeneral:brand": "Peugeot",
+    "carGeneral:type": "208",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 4.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Peugeot 208 is a supermini car produced by the French manufacturer Peugeot."
+    },
+    "carDimensions:length": 4055,
+    "carDimensions:width": 1745,
+    "carDimensions:height": 1430,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "white",
+    "carColors:roof": "black",
+    "carColors:highlights": "red"
+  },
+  {
+    "VIN": "TMBJM6NW6K0123456",
+    "carGeneral:brand": "Skoda",
+    "carGeneral:type": "Octavia",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 5.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Škoda Octavia is a small family car produced by the Czech car manufacturer Škoda Auto since 1996."
+    },
+    "carDimensions:length": 4689,
+    "carDimensions:width": 1829,
+    "carDimensions:height": 1469,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "YV1DZ8256D2123456",
+    "carGeneral:brand": "Volvo",
+    "carGeneral:type": "XC60",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Volvo XC60 is a compact luxury crossover SUV manufactured and marketed by Swedish automaker Volvo Cars since 2008."
+    },
+    "carDimensions:length": 4688,
+    "carDimensions:width": 1902,
+    "carDimensions:height": 1658,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "silver",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "JF1ZNAA19K8123456",
+    "carGeneral:brand": "Subaru",
+    "carGeneral:type": "Impreza",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.3,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Subaru Impreza is a compact car manufactured by the Japanese automaker Subaru since 1992."
+    },
+    "carDimensions:length": 4475,
+    "carDimensions:width": 1777,
+    "carDimensions:height": 1455,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "blue",
+    "carColors:roof": "blue",
+    "carColors:highlights": "gold"
+  },
+  {
+    "VIN": "SAJAA01J48F123456",
+    "carGeneral:brand": "Jaguar",
+    "carGeneral:type": "XE",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 6.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [16000, 32000, 48000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Jaguar XE is a compact executive car manufactured by British automotive company Jaguar Land Rover."
+    },
+    "carDimensions:length": 4672,
+    "carDimensions:width": 1850,
+    "carDimensions:height": 1416,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "white",
+    "carColors:roof": "white",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "VF3LCKFUC5S123456",
+    "carGeneral:brand": "Citroën",
+    "carGeneral:type": "C3",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 5.3,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Citroën C3 is a supermini car produced by French manufacturer Citroën since 2002."
+    },
+    "carDimensions:length": 3996,
+    "carDimensions:width": 1749,
+    "carDimensions:height": 1470,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 5,
+    "carColors:sides": "red",
+    "carColors:roof": "white",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "YS2R4X20005123456",
+    "carGeneral:brand": "Saab",
+    "carGeneral:type": "9-3",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.6,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Saab 9-3 is a compact executive car produced by the Swedish automaker Saab Automobile."
+    },
+    "carDimensions:length": 4635,
+    "carDimensions:width": 1762,
+    "carDimensions:height": 1450,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "4T1BF1FK9HU123456",
+    "carGeneral:brand": "Toyota",
+    "carGeneral:type": "Camry",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 6.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Toyota Camry is an automobile sold internationally by the Japanese auto manufacturer Toyota since 1982."
+    },
+    "carDimensions:length": 4885,
+    "carDimensions:width": 1840,
+    "carDimensions:height": 1445,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "1C4RJFBG5KC123456",
+    "carGeneral:brand": "Jeep",
+    "carGeneral:type": "Grand Cherokee",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 10.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000, 48000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Jeep Grand Cherokee is a range of mid-size SUVs produced by the American manufacturer Jeep."
+    },
+    "carDimensions:length": 4828,
+    "carDimensions:width": 1943,
+    "carDimensions:height": 1792,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "green",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "19UUA9F50HA123456",
+    "carGeneral:brand": "Acura",
+    "carGeneral:type": "TLX",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 8.5,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Acura TLX is a four-door entry-level luxury sedan sold by Acura, a luxury division of Honda."
+    },
+    "carDimensions:length": 4919,
+    "carDimensions:width": 1862,
+    "carDimensions:height": 1436,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 10,
+    "carColors:sides": "white",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WP0CB2A88HS123456",
+    "carGeneral:brand": "Porsche",
+    "carGeneral:type": "Cayenne",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 9.7,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [20000, 40000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Porsche Cayenne is a mid-size luxury crossover SUV produced by the German manufacturer Porsche since 2002."
+    },
+    "carDimensions:length": 4918,
+    "carDimensions:width": 1983,
+    "carDimensions:height": 1696,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "WAULT68E15A123456",
+    "carGeneral:brand": "Audi",
+    "carGeneral:type": "TT",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 6.5,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Audi TT is a 2-door production sports car made by Audi since 1998, and currently in its third generation."
+    },
+    "carDimensions:length": 4191,
+    "carDimensions:width": 1832,
+    "carDimensions:height": 1353,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "yellow",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "WVWZZZ3CZ9E123456",
+    "carGeneral:brand": "Volkswagen",
+    "carGeneral:type": "Passat",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 6.3,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Volkswagen Passat is a series of large family cars manufactured and marketed by Volkswagen since 1973."
+    },
+    "carDimensions:length": 4767,
+    "carDimensions:width": 1832,
+    "carDimensions:height": 1456,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "blue",
+    "carColors:roof": "blue",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WDDGF8AB1AR123456",
+    "carGeneral:brand": "Mercedes-Benz",
+    "carGeneral:type": "E-Class",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mercedes-Benz E-Class is a range of executive cars manufactured by German automaker Mercedes-Benz."
+    },
+    "carDimensions:length": 4923,
+    "carDimensions:width": 1852,
+    "carDimensions:height": 1468,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 9,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WBA8E9G50HN123456",
+    "carGeneral:brand": "BMW",
+    "carGeneral:type": "5 Series",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.5,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The BMW 5 Series is an executive car manufactured and marketed by BMW since 1972."
+    },
+    "carDimensions:length": 4963,
+    "carDimensions:width": 1868,
+    "carDimensions:height": 1479,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "KNDPM3AC4L7123456",
+    "carGeneral:brand": "Hyundai",
+    "carGeneral:type": "Elantra",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 6.1,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Hyundai Elantra, also known as the Hyundai Avante, is a compact car produced by the South Korean manufacturer Hyundai."
+    },
+    "carDimensions:length": 4620,
+    "carDimensions:width": 1800,
+    "carDimensions:height": 1415,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 6,
+    "carColors:sides": "white",
+    "carColors:roof": "white",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "5NPE24AF9JH123456",
+    "carGeneral:brand": "Hyundai",
+    "carGeneral:type": "Sonata",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Hyundai Sonata is a mid-size car that has been manufactured by Hyundai since 1985."
+    },
+    "carDimensions:length": 4900,
+    "carDimensions:width": 1860,
+    "carDimensions:height": 1445,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "red",
+    "carColors:roof": "red",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "3KPA24AD0LE123456",
+    "carGeneral:brand": "Kia",
+    "carGeneral:type": "Optima",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.1,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Kia Optima is a mid-size car manufactured by Kia since 2000."
+    },
+    "carDimensions:length": 4855,
+    "carDimensions:width": 1860,
+    "carDimensions:height": 1465,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 6,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "JN8AS5MV0EW123456",
+    "carGeneral:brand": "Nissan",
+    "carGeneral:type": "Rogue",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.3,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Nissan Rogue is a compact crossover SUV produced by the Japanese automaker Nissan."
+    },
+    "carDimensions:length": 4648,
+    "carDimensions:width": 1839,
+    "carDimensions:height": 1699,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "blue",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "3N1AB7AP9FY123456",
+    "carGeneral:brand": "Nissan",
+    "carGeneral:type": "Altima",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.6,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Nissan Altima is a mid-size car that has been manufactured by Nissan since 1992."
+    },
+    "carDimensions:length": 4901,
+    "carDimensions:width": 1850,
+    "carDimensions:height": 1444,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "white",
+    "carColors:roof": "white",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "JM1BN1U78K1123456",
+    "carGeneral:brand": "Mazda",
+    "carGeneral:type": "CX-5",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mazda CX-5 is a compact crossover SUV produced by Mazda since 2012."
+    },
+    "carDimensions:length": 4575,
+    "carDimensions:width": 1842,
+    "carDimensions:height": 1680,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 6,
+    "carColors:sides": "red",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "JM3KFBDM4L0123456",
+    "carGeneral:brand": "Mazda",
+    "carGeneral:type": "6",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 6.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mazda6 or Mazda 6 is a mid-size car produced by Mazda since 2002."
+    },
+    "carDimensions:length": 4865,
+    "carDimensions:width": 1840,
+    "carDimensions:height": 1450,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 6,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "2HGFC2F59KH123456",
+    "carGeneral:brand": "Honda",
+    "carGeneral:type": "Accord",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.3,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Honda Accord is a series of automobiles manufactured by Honda since 1976."
+    },
+    "carDimensions:length": 4906,
+    "carDimensions:width": 1862,
+    "carDimensions:height": 1450,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 10,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "5YFBURHE6HP123456",
+    "carGeneral:brand": "Toyota",
+    "carGeneral:type": "Corolla Hybrid",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 4.3,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Toyota Corolla Hybrid combines efficient hybrid technology with the reliability of the Corolla nameplate."
+    },
+    "carDimensions:length": 4630,
+    "carDimensions:width": 1780,
+    "carDimensions:height": 1435,
+    "carTechnical:engine": "Hybrid",
+    "carTechnical:transmission": "CVT",
+    "carTechnical:gears": 1,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "WАУZZZ4L9DA123456",
+    "carGeneral:brand": "Audi",
+    "carGeneral:type": "A6",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Audi A6 is an executive car made by the German automaker Audi, now in its fifth generation."
+    },
+    "carDimensions:length": 4939,
+    "carDimensions:width": 1886,
+    "carDimensions:height": 1457,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "white",
+    "carColors:roof": "white",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WBA5A5C50FD123456",
+    "carGeneral:brand": "BMW",
+    "carGeneral:type": "2 Series",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 6.7,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The BMW 2 Series is a range of subcompact executive cars manufactured by BMW since 2013."
+    },
+    "carDimensions:length": 4461,
+    "carDimensions:width": 1774,
+    "carDimensions:height": 1418,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "orange",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "WDDUG8CB7EA123456",
+    "carGeneral:brand": "Mercedes-Benz",
+    "carGeneral:type": "S-Class",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 8.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mercedes-Benz S-Class is a series of full-size luxury sedans, limousines and armored sedans produced by Mercedes-Benz."
+    },
+    "carDimensions:length": 5179,
+    "carDimensions:width": 1921,
+    "carDimensions:height": 1498,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 9,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "ZHWGU5BH8GLA123456",
+    "carGeneral:brand": "Lotus",
+    "carGeneral:type": "Evora",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 9.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Lotus Evora is a sports car produced by British manufacturer Lotus Cars."
+    },
+    "carDimensions:length": 4342,
+    "carDimensions:width": 1848,
+    "carDimensions:height": 1229,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "green",
+    "carColors:roof": "green",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "SCFRMFAW5KGD12345",
+    "carGeneral:brand": "Aston Martin",
+    "carGeneral:type": "Vantage",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 11.7,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Aston Martin Vantage is a series of hand-built sports cars from the British automotive manufacturer Aston Martin."
+    },
+    "carDimensions:length": 4465,
+    "carDimensions:width": 1942,
+    "carDimensions:height": 1273,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "SCA664D55GU123456",
+    "carGeneral:brand": "Rolls-Royce",
+    "carGeneral:type": "Phantom",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 15.3,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [16000, 32000, 48000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Rolls-Royce Phantom is a full-sized luxury saloon manufactured by Rolls-Royce Motor Cars."
+    },
+    "carDimensions:length": 5982,
+    "carDimensions:width": 2018,
+    "carDimensions:height": 1656,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "burgundy",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "SCBFR7ZA2HC123456",
+    "carGeneral:brand": "Bentley",
+    "carGeneral:type": "Continental GT",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 12.6,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [16000, 32000, 48000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Bentley Continental GT is a grand tourer manufactured and marketed by British automaker Bentley Motors."
+    },
+    "carDimensions:length": 4850,
+    "carDimensions:width": 1966,
+    "carDimensions:height": 1405,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "blue",
+    "carColors:roof": "blue",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "VF3VJAHZKLS123456",
+    "carGeneral:brand": "Renault",
+    "carGeneral:type": "Zoe",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 16.5,
+    "carGeneral:units": {
+      "energyConsumption": "kWh:100km"
+    },
+    "carGeneral:serviceIntervals": [30000, 60000, 90000],
+    "carGeneral:isElectric": true,
+    "carGeneral:meta": {
+      "pressText": "The Renault Zoe is a five-door supermini electric car produced by the French manufacturer Renault."
+    },
+    "carDimensions:length": 4087,
+    "carDimensions:width": 1787,
+    "carDimensions:height": 1562,
+    "carTechnical:engine": "Electric",
+    "carTechnical:transmission": "Single-speed",
+    "carTechnical:gears": 1,
+    "carColors:sides": "white",
+    "carColors:roof": "black",
+    "carColors:highlights": "blue"
+  },
+  {
+    "VIN": "VF31JRHZKJW123456",
+    "carGeneral:brand": "Renault",
+    "carGeneral:type": "Megane",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 5.7,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Renault Mégane is a small family car produced by the French car manufacturer Renault since 1995."
+    },
+    "carDimensions:length": 4359,
+    "carDimensions:width": 1814,
+    "carDimensions:height": 1447,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "red",
+    "carColors:roof": "red",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "VF7YDBHZE10123456",
+    "carGeneral:brand": "Peugeot",
+    "carGeneral:type": "3008",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 6.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Peugeot 3008 is a compact crossover SUV unveiled by French automaker Peugeot in May 2008."
+    },
+    "carDimensions:length": 4447,
+    "carDimensions:width": 1826,
+    "carDimensions:height": 1624,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "grey",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "VF7GZHMZE82123456",
+    "carGeneral:brand": "Peugeot",
+    "carGeneral:type": "508",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 6.5,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Peugeot 508 is a mid-size car launched in 2010 by French automaker Peugeot."
+    },
+    "carDimensions:length": 4750,
+    "carDimensions:width": 1859,
+    "carDimensions:height": 1403,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "VF3LCYHZRJS123456",
+    "carGeneral:brand": "Citroën",
+    "carGeneral:type": "C5 Aircross",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Citroën C5 Aircross is a compact crossover SUV produced by Citroën since 2017."
+    },
+    "carDimensions:length": 4500,
+    "carDimensions:width": 1859,
+    "carDimensions:height": 1689,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "blue",
+    "carColors:roof": "white",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "TMBJW6NW5J0123456",
+    "carGeneral:brand": "Skoda",
+    "carGeneral:type": "Superb",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 6.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Škoda Superb is a large family car produced by the Czech manufacturer Škoda Auto since 2001."
+    },
+    "carDimensions:length": 4861,
+    "carDimensions:width": 1864,
+    "carDimensions:height": 1468,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "TMBEF6NW6L0123456",
+    "carGeneral:brand": "Skoda",
+    "carGeneral:type": "Kodiaq",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Škoda Kodiaq is a mid-size crossover SUV manufactured by Czech automaker Škoda Auto since 2016."
+    },
+    "carDimensions:length": 4697,
+    "carDimensions:width": 1882,
+    "carDimensions:height": 1676,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "white",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "SAJWA0FS0F8C12345",
+    "carGeneral:brand": "Jaguar",
+    "carGeneral:type": "F-Pace",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [16000, 32000, 48000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Jaguar F-Pace is a mid-size luxury crossover SUV made by Jaguar Land Rover."
+    },
+    "carDimensions:length": 4731,
+    "carDimensions:width": 1936,
+    "carDimensions:height": 1667,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "red",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "SADCG2GX3JA123456",
+    "carGeneral:brand": "Land Rover",
+    "carGeneral:type": "Discovery",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 9.5,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [16000, 32000, 48000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Land Rover Discovery is a series of medium to large premium SUVs produced by British manufacturer Land Rover."
+    },
+    "carDimensions:length": 4956,
+    "carDimensions:width": 2073,
+    "carDimensions:height": 1888,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "green",
+    "carColors:roof": "green",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "YV1CZ851881123456",
+    "carGeneral:brand": "Volvo",
+    "carGeneral:type": "S60",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 6.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Volvo S60 is a compact executive sedan manufactured and marketed by Volvo since 2000."
+    },
+    "carDimensions:length": 4761,
+    "carDimensions:width": 1850,
+    "carDimensions:height": 1437,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "blue",
+    "carColors:roof": "blue",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "YV4H60CH2M1123456",
+    "carGeneral:brand": "Volvo",
+    "carGeneral:type": "XC90",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.7,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Volvo XC90 is a mid-size luxury crossover SUV manufactured and marketed by Volvo Cars since 2002."
+    },
+    "carDimensions:length": 4953,
+    "carDimensions:width": 1958,
+    "carDimensions:height": 1776,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "JHLRD78851C123456",
+    "carGeneral:brand": "Honda",
+    "carGeneral:type": "CR-V",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Honda CR-V is a compact crossover SUV manufactured by Japanese automaker Honda since 1995."
+    },
+    "carDimensions:length": 4600,
+    "carDimensions:width": 1855,
+    "carDimensions:height": 1679,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "white",
+    "carColors:roof": "white",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "JHMGK5H58MC123456",
+    "carGeneral:brand": "Honda",
+    "carGeneral:type": "Jazz",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 5.5,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Honda Jazz, also known as Honda Fit, is a supermini car manufactured by Honda since 2001."
+    },
+    "carDimensions:length": 4045,
+    "carDimensions:width": 1694,
+    "carDimensions:height": 1537,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "orange",
+    "carColors:roof": "white",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "4S3BTAA67K3123456",
+    "carGeneral:brand": "Subaru",
+    "carGeneral:type": "Outback",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.1,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Subaru Outback is an automotive nameplate used by Japanese automaker Subaru for two different SUV-themed vehicles."
+    },
+    "carDimensions:length": 4870,
+    "carDimensions:width": 1875,
+    "carDimensions:height": 1675,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "CVT",
+    "carTechnical:gears": 1,
+    "carColors:sides": "green",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "JF1VA1C64L9123456",
+    "carGeneral:brand": "Subaru",
+    "carGeneral:type": "WRX",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 9.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Subaru WRX is a high-performance compact car manufactured by Subaru, based on the Impreza platform."
+    },
+    "carDimensions:length": 4595,
+    "carDimensions:width": 1795,
+    "carDimensions:height": 1475,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "blue",
+    "carColors:roof": "blue",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "JTEBU5JR9J5123456",
+    "carGeneral:brand": "Toyota",
+    "carGeneral:type": "4Runner",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 11.3,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Toyota 4Runner is a compact, later mid-size sport utility vehicle produced by Toyota."
+    },
+    "carDimensions:length": 4820,
+    "carDimensions:width": 1925,
+    "carDimensions:height": 1790,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 5,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "5TDDZ3DC2KS123456",
+    "carGeneral:brand": "Toyota",
+    "carGeneral:type": "Highlander",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 9.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Toyota Highlander is a mid-size crossover SUV produced by Toyota."
+    },
+    "carDimensions:length": 4950,
+    "carDimensions:width": 1930,
+    "carDimensions:height": 1730,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "1N4AL3AP8JC123456",
+    "carGeneral:brand": "Nissan",
+    "carGeneral:type": "Maxima",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 8.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Nissan Maxima is a full-size car manufactured by Nissan and sold primarily in North America."
+    },
+    "carDimensions:length": 4897,
+    "carDimensions:width": 1860,
+    "carDimensions:height": 1450,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "CVT",
+    "carTechnical:gears": 1,
+    "carColors:sides": "red",
+    "carColors:roof": "red",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "JN1CV6AP4KM123456",
+    "carGeneral:brand": "Nissan",
+    "carGeneral:type": "GT-R",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 11.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Nissan GT-R is a high-performance sports car and grand tourer produced by Nissan."
+    },
+    "carDimensions:length": 4710,
+    "carDimensions:width": 1895,
+    "carDimensions:height": 1370,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 6,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "KNMAT2MV4LP123456",
+    "carGeneral:brand": "Kia",
+    "carGeneral:type": "Sorento",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Kia Sorento is a mid-size crossover SUV produced since 2002 by the South Korean automaker Kia."
+    },
+    "carDimensions:length": 4810,
+    "carDimensions:width": 1900,
+    "carDimensions:height": 1695,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "white",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "5XYZU3LA5JG123456",
+    "carGeneral:brand": "Hyundai",
+    "carGeneral:type": "Santa Fe",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Hyundai Santa Fe is a sport utility vehicle produced by the South Korean manufacturer Hyundai since 2000."
+    },
+    "carDimensions:length": 4770,
+    "carDimensions:width": 1890,
+    "carDimensions:height": 1710,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "blue",
+    "carColors:roof": "blue",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "KMHH35LE9MU123456",
+    "carGeneral:brand": "Hyundai",
+    "carGeneral:type": "Kona",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 6.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Hyundai Kona is a subcompact crossover SUV produced by the South Korean manufacturer Hyundai."
+    },
+    "carDimensions:length": 4165,
+    "carDimensions:width": 1800,
+    "carDimensions:height": 1565,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "yellow",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "KNAE551ABLK123456",
+    "carGeneral:brand": "Kia",
+    "carGeneral:type": "Stinger",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 9.1,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Kia Stinger is a mid-size liftback manufactured by Kia since 2017."
+    },
+    "carDimensions:length": 4830,
+    "carDimensions:width": 1870,
+    "carDimensions:height": 1400,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "red",
+    "carColors:roof": "red",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "JM1NDAB78K0123456",
+    "carGeneral:brand": "Mazda",
+    "carGeneral:type": "MX-5",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 6.7,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [10000, 20000, 30000, 40000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mazda MX-5 is a lightweight two-passenger roadster sports car manufactured and marketed by Mazda."
+    },
+    "carDimensions:length": 3915,
+    "carDimensions:width": 1735,
+    "carDimensions:height": 1235,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Manual",
+    "carTechnical:gears": 6,
+    "carColors:sides": "red",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WVWAA7AU7HW123456",
+    "carGeneral:brand": "Volkswagen",
+    "carGeneral:type": "Arteon",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Volkswagen Arteon is a mid-size liftback manufactured by Volkswagen since 2017."
+    },
+    "carDimensions:length": 4862,
+    "carDimensions:width": 1871,
+    "carDimensions:height": 1427,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WVGBV7AX9KW123456",
+    "carGeneral:brand": "Volkswagen",
+    "carGeneral:type": "Touareg",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 9.3,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Volkswagen Touareg is a mid-size luxury crossover SUV produced by German automaker Volkswagen Group since 2002."
+    },
+    "carDimensions:length": 4878,
+    "carDimensions:width": 1984,
+    "carDimensions:height": 1717,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "WAUZZZ8K9DA123456",
+    "carGeneral:brand": "Audi",
+    "carGeneral:type": "Q7",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 9.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Audi Q7 is a mid-size luxury crossover SUV made by the German manufacturer Audi, unveiled in September 2005."
+    },
+    "carDimensions:length": 5052,
+    "carDimensions:width": 1968,
+    "carDimensions:height": 1741,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "white",
+    "carColors:roof": "white",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WA1LAAF78JD123456",
+    "carGeneral:brand": "Audi",
+    "carGeneral:type": "Q3",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.6,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Audi Q3 is a subcompact luxury crossover SUV made by Audi. The Q3 has a transverse-mounted front engine."
+    },
+    "carDimensions:length": 4484,
+    "carDimensions:width": 1856,
+    "carDimensions:height": 1585,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "blue",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "WBA3N5C55FK123456",
+    "carGeneral:brand": "BMW",
+    "carGeneral:type": "4 Series",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 7.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The BMW 4 Series is a range of compact executive cars manufactured by BMW since 2013."
+    },
+    "carDimensions:length": 4773,
+    "carDimensions:width": 1852,
+    "carDimensions:height": 1383,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "white",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "WBA5R1C08GG123456",
+    "carGeneral:brand": "BMW",
+    "carGeneral:type": "X5",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 9.1,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The BMW X5 is a mid-size luxury crossover SUV produced by BMW."
+    },
+    "carDimensions:length": 4922,
+    "carDimensions:width": 2004,
+    "carDimensions:height": 1745,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WBS8M9C55JK123456",
+    "carGeneral:brand": "BMW",
+    "carGeneral:type": "X1",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 7.3,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The BMW X1 is a line of subcompact luxury crossover SUV produced by BMW since 2009."
+    },
+    "carDimensions:length": 4447,
+    "carDimensions:width": 1821,
+    "carDimensions:height": 1598,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "WDD2130441A123456",
+    "carGeneral:brand": "Mercedes-Benz",
+    "carGeneral:type": "A-Class",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 6.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mercedes-Benz A-Class is a subcompact executive car produced by Mercedes-Benz."
+    },
+    "carDimensions:length": 4419,
+    "carDimensions:width": 1796,
+    "carDimensions:height": 1440,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "red",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "WDC1569431A123456",
+    "carGeneral:brand": "Mercedes-Benz",
+    "carGeneral:type": "GLE",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 9.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mercedes-Benz GLE, formerly Mercedes-Benz M-Class, is a mid-size luxury SUV produced by Mercedes-Benz."
+    },
+    "carDimensions:length": 4924,
+    "carDimensions:width": 2157,
+    "carDimensions:height": 1796,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 9,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "WDD2470011N123456",
+    "carGeneral:brand": "Mercedes-Benz",
+    "carGeneral:type": "GLC",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [15000, 30000, 45000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Mercedes-Benz GLC is a compact luxury crossover SUV introduced in 2015 for the 2016 model year."
+    },
+    "carDimensions:length": 4656,
+    "carDimensions:width": 1890,
+    "carDimensions:height": 1639,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 9,
+    "carColors:sides": "white",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "WP0ZZZ99ZTS123456",
+    "carGeneral:brand": "Porsche",
+    "carGeneral:type": "Macan",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [20000, 40000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Porsche Macan is a high-performance five-door luxury crossover SUV produced by Porsche."
+    },
+    "carDimensions:length": 4696,
+    "carDimensions:width": 1923,
+    "carDimensions:height": 1624,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 7,
+    "carColors:sides": "blue",
+    "carColors:roof": "blue",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "WP0AB2A79KL123456",
+    "carGeneral:brand": "Porsche",
+    "carGeneral:type": "Panamera",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 9.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [20000, 40000, 60000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Porsche Panamera is a mid:full-sized luxury vehicle manufactured and marketed by Porsche."
+    },
+    "carDimensions:length": 5049,
+    "carDimensions:width": 1937,
+    "carDimensions:height": 1423,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "1FMCU9GD5LU123456",
+    "carGeneral:brand": "Ford",
+    "carGeneral:type": "Escape",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.6,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Ford Escape is a compact crossover vehicle sold by Ford since 2000 over four generations."
+    },
+    "carDimensions:length": 4524,
+    "carDimensions:width": 1882,
+    "carDimensions:height": 1684,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "green",
+    "carColors:roof": "green",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "3FA6P0HD1KR123456",
+    "carGeneral:brand": "Ford",
+    "carGeneral:type": "Fusion",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 7.8,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Ford Fusion is a mid-size sedan manufactured and marketed by Ford."
+    },
+    "carDimensions:length": 4871,
+    "carDimensions:width": 1852,
+    "carDimensions:height": 1482,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 6,
+    "carColors:sides": "grey",
+    "carColors:roof": "grey",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "1FTFW1E50KF123456",
+    "carGeneral:brand": "Ford",
+    "carGeneral:type": "F-150",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 12.4,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Ford F-Series is a series of trucks marketed and manufactured by Ford Motor Company since 1948."
+    },
+    "carDimensions:length": 5890,
+    "carDimensions:width": 2029,
+    "carDimensions:height": 1951,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 10,
+    "carColors:sides": "blue",
+    "carColors:roof": "blue",
+    "carColors:highlights": "chrome"
+  },
+  {
+    "VIN": "1C4RJFAG3KC123456",
+    "carGeneral:brand": "Jeep",
+    "carGeneral:type": "Wrangler",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 10.7,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Jeep Wrangler is a series of compact and mid-size four-wheel drive off-road SUVs manufactured by Jeep since 1986."
+    },
+    "carDimensions:length": 4882,
+    "carDimensions:width": 1894,
+    "carDimensions:height": 1838,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 8,
+    "carColors:sides": "yellow",
+    "carColors:roof": "black",
+    "carColors:highlights": "black"
+  },
+  {
+    "VIN": "1C4PJMDB3JW123456",
+    "carGeneral:brand": "Jeep",
+    "carGeneral:type": "Compass",
+    "carGeneral:door": 5,
+    "carGeneral:energyConsumption": 8.9,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Jeep Compass is a compact crossover SUV introduced for the 2007 model year."
+    },
+    "carDimensions:length": 4394,
+    "carDimensions:width": 1819,
+    "carDimensions:height": 1643,
+    "carTechnical:engine": "Diesel",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 9,
+    "carColors:sides": "white",
+    "carColors:roof": "black",
+    "carColors:highlights": "silver"
+  },
+  {
+    "VIN": "2G1WD58C979123456",
+    "carGeneral:brand": "Chevrolet",
+    "carGeneral:type": "Camaro",
+    "carGeneral:door": 2,
+    "carGeneral:energyConsumption": 11.2,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Chevrolet Camaro is a mid-size American automobile manufactured by Chevrolet since 1966."
+    },
+    "carDimensions:length": 4783,
+    "carDimensions:width": 1897,
+    "carDimensions:height": 1349,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 10,
+    "carColors:sides": "black",
+    "carColors:roof": "black",
+    "carColors:highlights": "yellow"
+  },
+  {
+    "VIN": "1G1YY26E675123456",
+    "carGeneral:brand": "Chevrolet",
+    "carGeneral:type": "Malibu",
+    "carGeneral:door": 4,
+    "carGeneral:energyConsumption": 8.1,
+    "carGeneral:units": {
+      "energyConsumption": "l:100km"
+    },
+    "carGeneral:serviceIntervals": [12000, 24000, 36000],
+    "carGeneral:isElectric": false,
+    "carGeneral:meta": {
+      "pressText": "The Chevrolet Malibu is a mid-size car manufactured and marketed by Chevrolet since 1964."
+    },
+    "carDimensions:length": 4923,
+    "carDimensions:width": 1854,
+    "carDimensions:height": 1442,
+    "carTechnical:engine": "Petrol",
+    "carTechnical:transmission": "Automatic",
+    "carTechnical:gears": 9,
+    "carColors:sides": "silver",
+    "carColors:roof": "silver",
+    "carColors:highlights": "chrome"
+  }
+]

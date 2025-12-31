@@ -287,7 +287,14 @@ export class MultiEditProcessor {
 
       const previousMultiEdit = previousMultiEdits[0];
 
-      return this._resolve(previousMultiEdit);
+      const previousEditFromMultiEdit = previousMultiEdit.edit;
+      const previousEdit = this._edits[this._edits.length - 2]
+        ? this._edits[this._edits.length - 2]._hash
+        : null;
+
+      if (previousEdit !== previousEditFromMultiEdit) {
+        return await this._resolve(previousMultiEdit);
+      }
     }
   }
 
@@ -442,5 +449,14 @@ export class MultiEditProcessor {
     }
 
     return this._join!;
+  }
+
+  //...........................................................................
+  /**
+   * Get the list of Edits applied in this MultiEditProcessor
+   * @returns Array of Edits
+   */
+  get edits(): Edit[] {
+    return this._edits;
   }
 }

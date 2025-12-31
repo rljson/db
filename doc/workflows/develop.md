@@ -78,7 +78,7 @@ git commit -am"Increase version"
 ## Run tests and build
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 ## Rebase main

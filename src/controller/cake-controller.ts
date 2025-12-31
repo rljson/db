@@ -46,8 +46,6 @@ export class CakeController<N extends string, C extends Cake>
   extends BaseController<CakesTable, C>
   implements Controller<CakesTable, C, N>
 {
-  private _table: CakesTable | null = null;
-
   constructor(
     protected readonly _core: Core,
     protected readonly _tableKey: TableKey,
@@ -70,10 +68,8 @@ export class CakeController<N extends string, C extends Cake>
     }
 
     // Table must be of type cakes
-    const rljson = await this._core.dumpTable(this._tableKey);
-    this._table = rljson[this._tableKey] as CakesTable;
-
-    if (this._table._type !== 'cakes') {
+    const contentType = await this._core.contentType(this._tableKey);
+    if (contentType !== 'cakes') {
       throw new Error(`Table ${this._tableKey} is not of type cakes.`);
     }
 
@@ -101,17 +97,6 @@ export class CakeController<N extends string, C extends Cake>
 
       // Store base layers from base cake
       this._baseLayers = rmhsh(baseCake.layers);
-    } else {
-      // Try to read refs from first (latest?) row of cakes table (Fallback)
-      const cake = this._table._data[0] as CakeControllerRefs;
-      /* v8 ignore else -- @preserve */
-      if (!!cake) {
-        this._refs = {
-          sliceIdsTable: cake.sliceIdsTable,
-          sliceIdsRow: cake.sliceIdsRow,
-        };
-        this._baseLayers = rmhsh(cake.layers!);
-      }
     }
   }
 
@@ -120,7 +105,7 @@ export class CakeController<N extends string, C extends Cake>
     filter?: Json,
   ): Promise<ControllerChildProperty[]> {
     /* v8 ignore next -- @preserve */
-    if (!this._table) {
+    if (!this._tableCfg) {
       throw new Error(`Controller not initialized.`);
     }
 

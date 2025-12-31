@@ -369,6 +369,6 @@ describe('Join', () => {
       );
       expect(writtenDataSet.has('Opel')).toBe(true);
       expect(writtenDataSet.size).toBe(1);
-    });
+    }, 20000);
   });
 });

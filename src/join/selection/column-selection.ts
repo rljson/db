@@ -7,6 +7,7 @@
 import { Hash, hip } from '@rljson/hash';
 import { ColumnCfgWithRoute, Ref, Route } from '@rljson/rljson';
 
+
 export type ColumnRoute = string | string[] | number;
 
 export interface ColumnInfo extends ColumnCfgWithRoute {
