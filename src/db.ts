@@ -113,6 +113,7 @@ export class Db {
     where: string | Json,
     filter?: ControllerChildProperty[],
     sliceIds?: SliceId[],
+    options?: GetOptions,
   ): Promise<ContainerWithControllers> {
     // Validate Route
     if (!route.isValid) throw new Error(`Route ${route.flat} is not valid.`);
@@ -130,6 +131,8 @@ export class Db {
       controllers,
       filter,
       sliceIds,
+      undefined,
+      options,
     );
 
     const dataWithControllers: ContainerWithControllers = {
@@ -149,6 +152,8 @@ export class Db {
    * @param controllers - The controllers to use for fetching data
    * @param filter - Optional filter to apply to the data at the current route segment
    * @param sliceIds - Optional slice IDs to filter the data at the current route segment
+   * @param routeAccumulator - The accumulated route up to the current segment
+   * @param options - Additional options for fetching data
    * @returns - An Rljson object matching the route and filters
    */
   async _get(
