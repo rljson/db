@@ -63,6 +63,12 @@ export type Container = {
   cell: Cell[];
 };
 
+export type GetOptions = {
+  skipRljson?: boolean;
+  skipTree?: boolean;
+  skipCell?: boolean;
+};
+
 export type ContainerWithControllers = Container & {
   controllers: Record<string, Controller<any, any, any>>;
 };
@@ -152,7 +158,11 @@ export class Db {
     filter?: ControllerChildProperty[],
     sliceIds?: SliceId[],
     routeAccumulator?: Route,
+    options?: GetOptions,
   ): Promise<Container> {
+    // Default options
+    const opts = options ?? {};
+
     //Activate Cache
     const params = {
       route: route.flat,
@@ -160,6 +170,7 @@ export class Db {
       filter,
       sliceIds,
       routeAccumulator: routeAccumulator ? routeAccumulator.flat : '',
+      options: opts,
     };
     const cacheHash = (hsh(rmhsh(params)) as any)._hash as string;
 
@@ -358,27 +369,32 @@ export class Db {
         (nodeHash ? `@${nodeHash}` : '');
 
       if (route.hasPropertyKey) {
-        const isolatedNode = this.isolatePropertyFromComponents(
-          node,
-          route.propertyKey!,
-        );
+        const isolatedNode = opts.skipRljson
+          ? ({} as Rljson)
+          : this.isolatePropertyFromComponents(node, route.propertyKey!);
 
-        const routeWithProperty = Route.fromFlat(
-          baseRouteStr + `/${route.propertyKey}`,
-        ).toRouteWithProperty();
+        const routeWithProperty = opts.skipCell
+          ? null
+          : Route.fromFlat(
+              baseRouteStr + `/${route.propertyKey}`,
+            ).toRouteWithProperty();
 
         const result = {
           rljson: isolatedNode,
-          tree: { [nodeTableKey]: node[nodeTableKey] },
-          cell: nodeValue.map(
-            (v, idx) =>
-              ({
-                value: v[route.propertyKey!] ?? null,
-                row: v,
-                route: routeWithProperty,
-                path: [[nodeTableKey, '_data', idx, route.propertyKey]],
-              } as Cell),
-          ) as Cell[],
+          tree: opts.skipTree
+            ? ({} as Json)
+            : { [nodeTableKey]: node[nodeTableKey] },
+          cell: opts.skipCell
+            ? ([] as Cell[])
+            : (nodeValue.map(
+                (v, idx) =>
+                  ({
+                    value: v[route.propertyKey!] ?? null,
+                    row: v,
+                    route: routeWithProperty,
+                    path: [[nodeTableKey, '_data', idx, route.propertyKey]],
+                  } as Cell),
+              ) as Cell[]),
         };
 
         //Set Cache
@@ -387,20 +403,24 @@ export class Db {
         return result;
       }
 
-      const routeObj = Route.fromFlat(baseRouteStr);
+      const routeObj = opts.skipCell ? null : Route.fromFlat(baseRouteStr);
 
       const result = {
-        rljson: node,
-        tree: { [nodeTableKey]: node[nodeTableKey] },
-        cell: nodeValue.map(
-          (v, idx) =>
-            ({
-              value: v[route.propertyKey!] ?? null,
-              row: v,
-              route: routeObj,
-              path: [[nodeTableKey, '_data', idx]],
-            } as Cell),
-        ) as Cell[],
+        rljson: opts.skipRljson ? ({} as Rljson) : node,
+        tree: opts.skipTree
+          ? ({} as Json)
+          : { [nodeTableKey]: node[nodeTableKey] },
+        cell: opts.skipCell
+          ? ([] as Cell[])
+          : (nodeValue.map(
+              (v, idx) =>
+                ({
+                  value: v[route.propertyKey!] ?? null,
+                  row: v,
+                  route: routeObj,
+                  path: [[nodeTableKey, '_data', idx]],
+                } as Cell),
+            ) as Cell[]),
       };
       //Set Cache
       this._cache.set(cacheHash, result);
@@ -531,20 +551,31 @@ export class Db {
             '/' +
             childrenTableKey,
         ),
+        opts,
       );
 
-      // Create nodeRowObj only when needed (after we know children exist)
+      // No Children found for where + route => skip
+      if (rowChildrenRljson[childrenTableKey]._data.length === 0) continue;
+
+      nodeChildrenArray.push(rowChildrenRljson);
+
+      // Skip expensive tree/cell processing if not needed
+      if (opts.skipTree && opts.skipCell) {
+        nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
+          rljson: nodeRow,
+          tree: {},
+          cell: [],
+        });
+        continue;
+      }
+
+      // Create nodeRowObj only when needed for tree/cell
       const nodeRowObj = { ...nodeRow } as Json;
 
       if (cakeIsReferenced) {
         const refKey = [...childrenRefTypes.keys()][0] as string;
         nodeRowObj[refKey] = rowChildrenTree;
       }
-
-      // No Children found for where + route => skip
-      if (rowChildrenRljson[childrenTableKey]._data.length === 0) continue;
-
-      nodeChildrenArray.push(rowChildrenRljson);
 
       // Add Children as ThroughProperty value to Object representation
       if (childrenThroughProperty) {
@@ -661,71 +692,78 @@ export class Db {
         for (const ltap of layerTreesAndPaths) {
           const [[sliceId, { tree, path }]] = Object.entries(ltap);
           layer[sliceId] = tree;
-          paths.push(path);
+          if (!opts.skipCell) {
+            paths.push(path);
+          }
         }
 
         nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
           rljson: nodeRow,
-          tree: {
-            ...nodeRowObj,
-            add: { ...(nodeRowObj.add as Json), ...layer },
-          },
-          cell: rowChildrenCell.map(
-            (c, idx) =>
-              ({
-                ...c,
-                path: [paths.flat()[idx]],
-              } as Cell),
-          ),
+          tree: opts.skipTree
+            ? {}
+            : {
+                ...nodeRowObj,
+                add: { ...(nodeRowObj.add as Json), ...layer },
+              },
+          cell: opts.skipCell
+            ? []
+            : rowChildrenCell.map(
+                (c, idx) =>
+                  ({
+                    ...c,
+                    path: [paths.flat()[idx]],
+                  } as Cell),
+              ),
         });
       } else if (nodeType === 'cakes') {
         nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
           rljson: nodeRow,
-          tree: {
-            ...nodeRowObj,
-            layers: { ...(nodeRowObj.layers as Json), ...rowChildrenTree },
-          },
-          cell: rowChildrenCell.map((c) => ({
-            ...c,
-            path: c.path.map((p) => ['layers', ...p]),
-          })),
+          tree: opts.skipTree
+            ? {}
+            : {
+                ...nodeRowObj,
+                layers: { ...(nodeRowObj.layers as Json), ...rowChildrenTree },
+              },
+          cell: opts.skipCell
+            ? []
+            : rowChildrenCell.map((c) => ({
+                ...c,
+                path: c.path.map((p) => ['layers', ...p]),
+              })),
         });
       } else if (nodeType === 'components') {
         /* v8 ignore else -- @preserve */
         if (rowChildrenTree && Object.keys(rowChildrenTree).length > 0) {
-          const resolvedRefs: Record<string, { tree: Json; cell: Cell[] }> = {};
-
-          for (const [colKey, childTableKey] of columnReferenceMap!) {
-            const tree = {
-              ...(rowChildrenTree[childTableKey] as Json),
-              _tableKey: childTableKey,
-            };
-            const cell = rowChildrenCell.map((c) => ({
-              ...c,
-              path: c.path
-                .filter((p) => p[0] === childTableKey)
-                .map((p) => [colKey, ...p.slice(1)]),
-            }));
-
-            resolvedRefs[colKey] = { tree, cell };
-          }
-
           const resolvedProperties: Record<string, Json> = {};
           const allCells: Cell[] = [];
 
-          for (const [colKey, { tree, cell }] of Object.entries(resolvedRefs)) {
-            resolvedProperties[colKey] = tree;
-            allCells.push(...cell);
-          }
+          for (const [colKey, childTableKey] of columnReferenceMap!) {
+            if (!opts.skipTree) {
+              resolvedProperties[colKey] = {
+                ...(rowChildrenTree[childTableKey] as Json),
+                _tableKey: childTableKey,
+              };
+            }
 
-          const resolvedTree = {
-            ...nodeRowObj,
-            ...resolvedProperties,
-          };
+            if (!opts.skipCell) {
+              const cell = rowChildrenCell.map((c) => ({
+                ...c,
+                path: c.path
+                  .filter((p) => p[0] === childTableKey)
+                  .map((p) => [colKey, ...p.slice(1)]),
+              }));
+              allCells.push(...cell);
+            }
+          }
 
           nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
             rljson: nodeRow,
-            tree: resolvedTree,
+            tree: opts.skipTree
+              ? {}
+              : {
+                  ...nodeRowObj,
+                  ...resolvedProperties,
+                },
             cell: allCells,
           });
         } else {
@@ -742,49 +780,57 @@ export class Db {
       }
     }
 
-    // Merge Children Data
-    const nodeChildren = makeUnique(
-      merge(...(nodeChildrenArray as Rljson[])) as Rljson,
-    );
+    // Merge Children Data - skip if not needed
+    const nodeChildren = opts.skipRljson
+      ? ({} as Rljson)
+      : makeUnique(merge(...(nodeChildrenArray as Rljson[])) as Rljson);
 
     // Return Node with matched Children
     const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());
 
     const result = {
-      rljson: {
-        ...node,
-        ...{
-          [nodeTableKey]: {
+      rljson: opts.skipRljson
+        ? ({} as Rljson)
+        : ({
+            ...node,
             ...{
-              _data: matchedNodeRows.map((mr) => mr.rljson),
-              _type: nodeType,
+              [nodeTableKey]: {
+                ...{
+                  _data: matchedNodeRows.map((mr) => mr.rljson),
+                  _type: nodeType,
+                },
+                ...{
+                  ...(nodeHash ? { _hash: nodeHash } : {}),
+                },
+              },
             },
-            ...{
-              ...(nodeHash ? { _hash: nodeHash } : {}),
+            ...nodeChildren,
+          } as Rljson),
+      tree: opts.skipTree
+        ? ({} as Json)
+        : {
+            [nodeTableKey]: {
+              ...{
+                _data: matchedNodeRows.map((mr) => mr.tree),
+                _type: nodeType,
+              },
+              ...{
+                ...(nodeHash ? { _hash: nodeHash } : {}),
+              },
             },
           },
-        },
-        ...nodeChildren,
-      } as Rljson,
-      tree: {
-        [nodeTableKey]: {
-          ...{
-            _data: matchedNodeRows.map((mr) => mr.tree),
-            _type: nodeType,
-          },
-          ...{
-            ...(nodeHash ? { _hash: nodeHash } : {}),
-          },
-        },
-      },
-      cell: matchedNodeRows
-        .map((mr, idx) =>
-          mr.cell.map((c) => ({
-            ...c,
-            ...{ path: c.path.map((p) => [nodeTableKey, '_data', idx, ...p]) },
-          })),
-        )
-        .flat(),
+      cell: options?.skipCell
+        ? ([] as Cell[])
+        : matchedNodeRows
+            .map((mr, idx) =>
+              mr.cell.map((c) => ({
+                ...c,
+                ...{
+                  path: c.path.map((p) => [nodeTableKey, '_data', idx, ...p]),
+                },
+              })),
+            )
+            .flat(),
     };
     //Set Cache
     this._cache.set(cacheHash, result);
