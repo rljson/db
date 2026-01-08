@@ -5,16 +5,21 @@
 // found in the LICENSE file in the root of this package.
 
 import { rmhsh } from '@rljson/hash';
-import { IoMem } from '@rljson/io';
+import { Io, IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import {
   Cake,
+  createTreesTableCfg,
   InsertHistoryRow,
   InsertHistoryTable,
   Layer,
   LayersTable,
   Route,
   SliceIdsTable,
+  TableCfg,
+  Tree,
+  treeFromObject,
+  TreesTable,
 } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -471,753 +476,833 @@ describe('Db', () => {
         'Route  is not valid.',
       );
     });
-    it('get sliceId of cake w/ chained sliceIds definition', async () => {
-      const cakeKey = 'carCake';
-      const sliceIds = ['VIN1', 'VIN2'];
-      const route = `/${cakeKey}(${sliceIds.join(',')})`;
+    describe('sliceIds', () => {
+      it('get sliceId of cake w/ chained sliceIds definition', async () => {
+        const cakeKey = 'carCake';
+        const sliceIds = ['VIN1', 'VIN2'];
+        const route = `/${cakeKey}(${sliceIds.join(',')})`;
 
-      const {
-        rljson: {
-          [cakeKey]: { _data: results },
-        },
-      } = await db.get(Route.fromFlat(route), {});
+        const {
+          rljson: {
+            [cakeKey]: { _data: results },
+          },
+        } = await db.get(Route.fromFlat(route), {});
 
-      expect(results.length).toBe(3);
+        expect(results.length).toBe(3);
 
-      expect(results.map((r) => r._hash).sort()).toEqual(
-        staticExample()
-          .carCake._data.map((c) => c._hash)
-          .sort(),
-      );
-    });
-    it('get sliceId of cake w/ single sliceIds definition', async () => {
-      const cakeKey = 'carCake';
-      const sliceIds = ['VIN11'];
-      const route = `/${cakeKey}(${sliceIds.join(',')})`;
-
-      const {
-        rljson: {
-          [cakeKey]: { _data: results },
-        },
-      } = await db.get(Route.fromFlat(route), {});
-
-      expect(results.length).toBe(1);
-
-      expect(results.map((r) => r._hash)).toEqual([
-        staticExample().carCake._data[2]._hash,
-      ]);
-    });
-    it('get sliceId of layer/component', async () => {
-      const layerKey = 'carGeneralLayer';
-      const componentKey = 'carGeneral';
-      const sliceIds = ['VIN11'];
-      const route = `/${layerKey}(${sliceIds.join(',')})/${componentKey}`;
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), {});
-
-      const layers = result[layerKey]._data;
-      const components = result[componentKey]._data;
-
-      expect(layers.length).toBe(1);
-      expect(components.length).toBe(1);
-    });
-    it('get sliceId of cake/layer/component', async () => {
-      const cakeKey = 'carCake';
-      const sliceIds = ['VIN11'];
-      const route = `/${cakeKey}(${sliceIds.join(
-        ',',
-      )})/carGeneralLayer/carGeneral`;
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), {});
-
-      const cakes = result[cakeKey]._data;
-      const layers = result['carGeneralLayer']._data;
-      const components = result['carGeneral']._data;
-
-      expect(cakes.length).toBe(1);
-      expect(layers.length).toBe(1);
-      expect(components.length).toBe(1);
-    });
-    it('get sliceId w/ ref of cake/layer/component', async () => {
-      const cakeKey = 'carCake';
-      const cakeRef = staticExample().carCake._data[2]._hash ?? '';
-      const sliceIds = ['VIN11'];
-      const route = `/${cakeKey}(${sliceIds.join(
-        ',',
-      )})@${cakeRef}/carGeneralLayer/carGeneral`;
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), {});
-
-      const cakes = result[cakeKey]._data;
-      const layers = result['carGeneralLayer']._data;
-      const components = result['carGeneral']._data;
-
-      expect(cakes.length).toBe(1);
-      expect(layers.length).toBe(1);
-      expect(components.length).toBe(1);
-    });
-    it('get empty for sliceId w/ unmatching ref of cake/layer/component', async () => {
-      const cakeKey = 'carCake';
-      const cakeRef = staticExample().carCake._data[0]._hash ?? '';
-      const sliceIds = ['VIN12'];
-      const route = `/${cakeKey}(${sliceIds.join(
-        ',',
-      )})@${cakeRef}/carGeneralLayer/carGeneral`;
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), {});
-
-      const cakes = result[cakeKey];
-      const layers = result['carGeneralLayer'];
-      const components = result['carGeneral'];
-
-      expect(!cakes || cakes._data.length == 0).toBe(true);
-      expect(!layers).toBe(true);
-      expect(!components).toBe(true);
-    });
-    it('get component by ref', async () => {
-      const route = '/carGeneral';
-      const ref = staticExample().carGeneral._data[0]._hash ?? '';
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), ref);
-      expect(result).toBeDefined();
-      expect(result.carGeneral).toBeDefined();
-      expect(result.carGeneral._data.length).toBe(1);
-      expect(result.carGeneral._data[0]._hash).toBe(ref);
-    });
-    it('get component by where from Cache', async () => {
-      const route = '/carCake/carGeneralLayer/carGeneral';
-      const where = {
-        carGeneralLayer: {
-          carGeneral: { brand: 'Volkswagen' } as Partial<CarGeneral>,
-        },
-      };
-
-      const { rljson: firstGet } = await db.get(Route.fromFlat(route), where);
-
-      const cache = db.cache;
-      expect(cache.size).toBe(7);
-      expect(firstGet).toBe(Array.from(cache.values()).map((v) => v.rljson)[6]);
-
-      const { rljson: secondGet } = await db.get(Route.fromFlat(route), where);
-      expect(secondGet).toEqual(firstGet);
-      expect(cache.size).toBe(7);
-
-      //Reset cache
-      db.setCache(new Map());
-      expect(db.cache.size).toBe(0);
-    });
-
-    it('get component property by ref', async () => {
-      const componentKey = 'carGeneral';
-      const propertyKey = 'brand';
-      const route = `${componentKey}/${propertyKey}`;
-
-      const ref = staticExample().carGeneral._data[0]._hash ?? '';
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), ref);
-
-      expect(result).toBeDefined();
-      expect(result[componentKey]).toBeDefined();
-      expect(result[componentKey]._data.length).toBe(1);
-      expect(result[componentKey]._data[0]).toEqual({
-        _hash: ref,
-        [propertyKey]: staticExample().carGeneral._data[0][propertyKey],
+        expect(results.map((r) => r._hash).sort()).toEqual(
+          staticExample()
+            .carCake._data.map((c) => c._hash)
+            .sort(),
+        );
       });
-      expect(result[componentKey]._data[0][propertyKey]).toBe(
-        staticExample().carGeneral._data[0][propertyKey],
-      );
-    });
-    it('get component by where', async () => {
-      const route = '/carGeneral';
-      const where = rmhsh(staticExample().carGeneral._data[0]) as {
-        [column: string]: JsonValue;
-      };
+      it('get sliceId of cake w/ single sliceIds definition', async () => {
+        const cakeKey = 'carCake';
+        const sliceIds = ['VIN11'];
+        const route = `/${cakeKey}(${sliceIds.join(',')})`;
 
-      const { rljson: result } = await db.get(Route.fromFlat(route), where);
-      expect(result).toBeDefined();
-      expect(result.carGeneral).toBeDefined();
-      expect(result.carGeneral._data.length).toBe(1);
-      expect(result.carGeneral._data[0]._hash).toBe(
-        staticExample().carGeneral._data[0]._hash,
-      );
-    });
-    it('get components by where', async () => {
-      const route = '/carGeneral';
-      const where = { brand: 'Volkswagen' } as Partial<CarGeneral>;
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), where);
-      expect(result).toBeDefined();
-      expect(result.carGeneral).toBeDefined();
-      expect(result.carGeneral._data.length).toBe(2); //2 Volkswagens in example data
-      expect(result.carGeneral._data[0].brand).toBe('Volkswagen');
-      expect(result.carGeneral._data[1].brand).toBe('Volkswagen');
-    });
-    it('get layer by ref', async () => {
-      const route = '/carGeneralLayer';
-      const ref =
-        (staticExample().carGeneralLayer._data[0]._hash as string) ?? '';
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), ref);
-      expect(result).toBeDefined();
-      expect(result.carGeneralLayer).toBeDefined();
-      expect(result.carGeneralLayer._data.length).toBe(1);
-      expect(result.carGeneralLayer._data[0]._hash).toBe(ref);
-    });
-    it('get cake by route ref', async () => {
-      const route = '/carCake';
-      const ref = (staticExample().carCake._data[0]._hash as string) ?? '';
-
-      const { rljson: result } = await db.get(
-        Route.fromFlat(`${route}@${ref}`),
-        {},
-      );
-      expect(result).toBeDefined();
-      expect(result.carCake).toBeDefined();
-      expect(result.carCake._data.length).toBe(1);
-      expect(result.carCake._data[0]._hash).toBe(ref);
-    });
-    it('get cake/layer by route ref', async () => {
-      const cakeRoute = '/carCake';
-      const cakeRef = (staticExample().carCake._data[0]._hash as string) ?? '';
-
-      const { rljson: result } = await db.get(
-        Route.fromFlat(`${cakeRoute}@${cakeRef}/carGeneralLayer`),
-        {},
-      );
-      expect(result).toBeDefined();
-      expect(result.carCake).toBeDefined();
-      expect(result.carCake._data.length).toBe(1);
-      expect(result.carCake._data[0]._hash).toBe(cakeRef);
-    });
-    it('get nested layer/component by where', async () => {
-      const route = '/carGeneralLayer/carGeneral';
-      const where = {
-        carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
-          [column: string]: JsonValue;
-        },
-      };
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), where);
-      expect(result).toBeDefined();
-      expect(result.carGeneralLayer).toBeDefined();
-      expect(result.carGeneralLayer._data.length).toBe(3); //3 layers because they are chained
-      expect(result.carGeneralLayer._data.map((l) => l._hash).sort()).toEqual(
-        staticExample()
-          .carGeneralLayer._data.map((l) => l._hash)
-          .sort(),
-      );
-      expect(result.carGeneral).toBeDefined();
-      expect(result.carGeneral._data.length).toBe(1);
-      expect(result.carGeneral._data[0]._hash).toBe(
-        staticExample().carGeneral._data[0]._hash,
-      );
-    });
-    it('get nested layer/component by where w/ revision', async () => {
-      //Add Layer with switching VIN -> CarGeneral relation
-      const route = Route.fromFlat('/carGeneralLayer');
-      const { tree, cell } = await db.get(route, {});
-      const layer: Layer = {
-        base: staticExample().carGeneralLayer._data[2]._hash as string,
-        add: {
-          VIN1: staticExample().carGeneral._data[1]._hash || '',
-          VIN2: staticExample().carGeneral._data[0]._hash || '',
-        },
-        componentsTable: 'carGeneral',
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: staticExample().carSliceId._data[2]._hash as string,
-      } as Layer;
-
-      expect(cell.length).toBe(3);
-      expect(cell[0].path.length).toBe(1);
-
-      const path = cell[0].path[0];
-
-      inject(tree, path, layer);
-      const insert = isolate(tree, path);
-
-      const addedLayerInsertHistorys = (await db.insert(
-        route,
-        insert,
-      )) as InsertHistoryRow<'CarGeneralLayer'>[];
-
-      expect(addedLayerInsertHistorys.length).toBe(1);
-      const addedLayerInsertHistory = addedLayerInsertHistorys[0];
-
-      const where = {
-        carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
-          [column: string]: JsonValue;
-        },
-      };
-
-      //GET Result via first layer revision
-      const layerRevHash1 =
-        staticExample().carGeneralLayer._data[0]._hash ?? '';
-      const route1 = `/carGeneralLayer@${layerRevHash1}/carGeneral`;
-
-      //GET Result via second layer revision
-      const layerRevHash2 = addedLayerInsertHistory.carGeneralLayerRef ?? '';
-      const route2 = `/carGeneralLayer@${layerRevHash2}/carGeneral`;
-
-      const { rljson: result1 } = await db.get(Route.fromFlat(route1), where);
-
-      const { rljson: result2 } = await db.get(Route.fromFlat(route2), where);
-
-      expect(result1).toBeDefined();
-      expect(result2).toBeDefined();
-
-      expect(result1.carGeneral).toBeDefined();
-      expect(result1.carGeneral._data.length).toBe(1);
-      expect(result1.carGeneral._data[0]._hash).toBe(
-        staticExample().carGeneral._data[0]._hash,
-      );
-
-      expect(result2.carGeneral).toBeDefined();
-      expect(result2.carGeneral._data.length).toBe(1);
-      expect(result2.carGeneral._data[0]._hash).toBe(
-        staticExample().carGeneral._data[0]._hash,
-      );
-
-      expect(result1.carGeneralLayer).toBeDefined();
-      expect(result1.carGeneralLayer._data.length).toBe(1);
-      expect(result1.carGeneralLayer._data[0]._hash).toBe(layerRevHash1);
-
-      expect(result2.carGeneralLayer).toBeDefined();
-      expect(result2.carGeneralLayer._data.length).toBe(1);
-      expect(result2.carGeneralLayer._data[0]._hash).toBe(layerRevHash2);
-    });
-    it('get nested component/component by where', async () => {
-      const route = '/carTechnical/carDimensions';
-      const where = {
-        carDimensions: {
-          ...(rmhsh(staticExample().carDimensions._data[0]) as {
-            [column: string]: JsonValue;
-          }),
-          ...{ _through: 'dimensions' },
-        },
-      };
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), where);
-
-      expect(result).toBeDefined();
-      expect(result.carTechnical).toBeDefined();
-      expect(result.carTechnical._data.length).toBe(1);
-      expect(result.carTechnical._data[0]._hash).toBe(
-        staticExample().carTechnical._data[0]._hash,
-      );
-      expect(result.carDimensions).toBeDefined();
-      expect(result.carDimensions._data.length).toBe(1);
-      expect(result.carDimensions._data[0]._hash).toBe(
-        staticExample().carDimensions._data[0]._hash,
-      );
-    });
-
-    it('get any nested cake/layer/component/component/property by route', async () => {
-      const route =
-        '/carCake/carTechnicalLayer/carTechnical/carDimensions/length';
-
-      const sliceId = 'VIN1';
-      const cakeRef = staticExample().carCake._data[0]._hash ?? '';
-      const where = cakeRef as string;
-
-      const result = await db.get(Route.fromFlat(route), where, undefined, [
-        sliceId,
-      ]);
-
-      expect(result).toBeDefined();
-    });
-
-    it('get any nested cake/layer/component', async () => {
-      const route = '/carCake/carGeneralLayer/carGeneral';
-      const where = {};
-
-      const { rljson: result } = await db.get(Route.fromFlat(route), where);
-      expect(result).toBeDefined();
-      expect(result.carCake).toBeDefined();
-      expect(result.carCake._data.length).toBe(
-        staticExample().carCake._data.length,
-      );
-
-      expect(result.carGeneralLayer).toBeDefined();
-      expect(result.carGeneralLayer._data.length).toBe(
-        staticExample().carGeneralLayer._data.length,
-      );
-
-      expect(result.carGeneral).toBeDefined();
-      expect(result.carGeneral._data.length).toBe(
-        staticExample().carGeneral._data.length,
-      );
-    });
-    it('get nested cake/layer/component by where', async () => {
-      const route = '/carCake/carGeneralLayer/carGeneral';
-      const where = {
-        carGeneralLayer: {
-          carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
-            [column: string]: JsonValue;
+        const {
+          rljson: {
+            [cakeKey]: { _data: results },
           },
-        },
-      };
+        } = await db.get(Route.fromFlat(route), {});
 
-      const { rljson: result } = await db.get(Route.fromFlat(route), where);
-      expect(result).toBeDefined();
-      expect(result.carCake).toBeDefined();
-      expect(result.carCake._data.length).toBe(3); //3 cakes because layers are chained
-      expect(result.carCake._data[0]._hash).toBe(
-        staticExample().carCake._data[0]._hash,
-      );
-      expect(result.carGeneralLayer).toBeDefined();
-      expect(result.carGeneralLayer._data.length).toBe(3);
-      expect(result.carGeneralLayer._data.map((l) => l._hash).sort()).toEqual(
-        staticExample()
-          .carGeneralLayer._data.map((l) => l._hash)
-          .sort(),
-      );
-      expect(result.carGeneral).toBeDefined();
-      expect(result.carGeneral._data.length).toBe(1);
-      expect(result.carGeneral._data[0]._hash).toBe(
-        staticExample().carGeneral._data[0]._hash,
-      );
+        expect(results.length).toBe(1);
+
+        expect(results.map((r) => r._hash)).toEqual([
+          staticExample().carCake._data[2]._hash,
+        ]);
+      });
+      it('get sliceId of layer/component', async () => {
+        const layerKey = 'carGeneralLayer';
+        const componentKey = 'carGeneral';
+        const sliceIds = ['VIN11'];
+        const route = `/${layerKey}(${sliceIds.join(',')})/${componentKey}`;
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+        const layers = result[layerKey]._data;
+        const components = result[componentKey]._data;
+
+        expect(layers.length).toBe(1);
+        expect(components.length).toBe(1);
+      });
+      it('get sliceId of cake/layer/component', async () => {
+        const cakeKey = 'carCake';
+        const sliceIds = ['VIN11'];
+        const route = `/${cakeKey}(${sliceIds.join(
+          ',',
+        )})/carGeneralLayer/carGeneral`;
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+        const cakes = result[cakeKey]._data;
+        const layers = result['carGeneralLayer']._data;
+        const components = result['carGeneral']._data;
+
+        expect(cakes.length).toBe(1);
+        expect(layers.length).toBe(1);
+        expect(components.length).toBe(1);
+      });
+      it('get sliceId w/ ref of cake/layer/component', async () => {
+        const cakeKey = 'carCake';
+        const cakeRef = staticExample().carCake._data[2]._hash ?? '';
+        const sliceIds = ['VIN11'];
+        const route = `/${cakeKey}(${sliceIds.join(
+          ',',
+        )})@${cakeRef}/carGeneralLayer/carGeneral`;
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+        const cakes = result[cakeKey]._data;
+        const layers = result['carGeneralLayer']._data;
+        const components = result['carGeneral']._data;
+
+        expect(cakes.length).toBe(1);
+        expect(layers.length).toBe(1);
+        expect(components.length).toBe(1);
+      });
+      it('get empty for sliceId w/ unmatching ref of cake/layer/component', async () => {
+        const cakeKey = 'carCake';
+        const cakeRef = staticExample().carCake._data[0]._hash ?? '';
+        const sliceIds = ['VIN12'];
+        const route = `/${cakeKey}(${sliceIds.join(
+          ',',
+        )})@${cakeRef}/carGeneralLayer/carGeneral`;
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+        const cakes = result[cakeKey];
+        const layers = result['carGeneralLayer'];
+        const components = result['carGeneral'];
+
+        expect(!cakes || cakes._data.length == 0).toBe(true);
+        expect(!layers).toBe(true);
+        expect(!components).toBe(true);
+      });
     });
-    it('get nested cake/layer/component by hash w/ route revision hash', async () => {
-      const cakeRevisionHash = staticExample().carCake._data[0]._hash ?? '';
-      const layerRevisionHash =
-        staticExample().carGeneralLayer._data[0]._hash ?? '';
+    describe('components', () => {
+      it('get component by ref', async () => {
+        const route = '/carGeneral';
+        const ref = staticExample().carGeneral._data[0]._hash ?? '';
 
-      const route = `/carCake@${cakeRevisionHash}/carGeneralLayer@${layerRevisionHash}/carGeneral`;
-
-      const where = {
-        carGeneralLayer: {
-          carGeneral: {
-            _hash: staticExample().carGeneral._data[0]._hash ?? '',
-          },
-        },
-      };
-      const { rljson: result } = await db.get(Route.fromFlat(route), where);
-
-      expect(result).toBeDefined();
-      expect(result.carCake).toBeDefined();
-      expect(result.carCake._data.length).toBe(1);
-      expect(result.carCake._data[0]._hash).toBe(cakeRevisionHash);
-
-      expect(result.carGeneralLayer).toBeDefined();
-      expect(result.carGeneralLayer._data.length).toBe(1);
-      expect(result.carGeneralLayer._data[0]._hash).toBe(layerRevisionHash);
-
-      expect(result.carGeneral).toBeDefined();
-      expect(result.carGeneral._data.length).toBe(1);
-      expect(result.carGeneral._data[0]._hash).toBe(
-        staticExample().carGeneral._data[0]._hash,
-      );
-    });
-    it('get nested cake/layer/component by hash w/ route revision TimeId', async () => {
-      const route = Route.fromFlat('/carCake/carGeneralLayer');
-      const { tree, cell } = await db.get(route, {});
-      const layer: Layer = {
-        add: {
-          VIN1: staticExample().carGeneral._data[1]._hash || '',
-          VIN2: staticExample().carGeneral._data[0]._hash || '',
-        },
-        componentsTable: 'carGeneral',
-        sliceIdsTable: 'carSliceId',
-        sliceIdsTableRow: staticExample().carSliceId._data[2]._hash as string,
-      } as Layer;
-
-      const paths = cell.flatMap((c) => c.path);
-      expect(paths.length).toBe(3);
-
-      const path = paths[0];
-
-      const insert = isolate(tree, path);
-      inject(insert, path, layer);
-
-      const cakeInsertHistoryRows = (await db.insert(
-        route,
-        insert,
-      )) as InsertHistoryRow<'CarCake'>[];
-
-      const cakeInsertHistoryRow = cakeInsertHistoryRows[0];
-      const cakeRevisionTimeId = cakeInsertHistoryRow.timeId;
-
-      //Get layer revision TimeId
-      const {
-        ['carGeneralLayerInsertHistory']: { _data: layerInsertHistoryRows },
-      } = await db.getInsertHistory('carGeneralLayer');
-      const layerRevisionTimeId = layerInsertHistoryRows[0].timeId;
-
-      //Build route with TimeIds
-      const refRoute = `/carCake@${cakeRevisionTimeId}/carGeneralLayer@${layerRevisionTimeId}/carGeneral`;
-
-      //Get all Volkswagens in example data
-      const where = {
-        carCake: {
+        const { rljson: result } = await db.get(Route.fromFlat(route), ref);
+        expect(result).toBeDefined();
+        expect(result.carGeneral).toBeDefined();
+        expect(result.carGeneral._data.length).toBe(1);
+        expect(result.carGeneral._data[0]._hash).toBe(ref);
+      });
+      it('get component by where from Cache', async () => {
+        const route = '/carCake/carGeneralLayer/carGeneral';
+        const where = {
           carGeneralLayer: {
             carGeneral: { brand: 'Volkswagen' } as Partial<CarGeneral>,
           },
-        },
-      };
+        };
 
-      const { rljson: result } = await db.get(Route.fromFlat(refRoute), where);
+        const { rljson: firstGet } = await db.get(Route.fromFlat(route), where);
 
-      expect(result).toBeDefined();
-      expect(result.carCake).toBeDefined();
-      expect(result.carCake._data.length).toBe(1);
-      expect(result.carCake._data[0]._hash).toBe(
-        cakeInsertHistoryRow.carCakeRef,
-      );
+        const cache = db.cache;
+        expect(cache.size).toBe(7);
+        expect(firstGet).toBe(
+          Array.from(cache.values()).map((v) => v.rljson)[6],
+        );
 
-      expect(result.carGeneralLayer).toBeDefined();
-      expect(result.carGeneralLayer._data.length).toBe(1);
+        const { rljson: secondGet } = await db.get(
+          Route.fromFlat(route),
+          where,
+        );
+        expect(secondGet).toEqual(firstGet);
+        expect(cache.size).toBe(7);
 
-      expect(result.carGeneral).toBeDefined();
-      expect(result.carGeneral._data.length).toBe(2);
-      expect(result.carGeneral._data[0].brand).toBe('Volkswagen');
-      expect(result.carGeneral._data[1].brand).toBe('Volkswagen');
+        //Reset cache
+        db.setCache(new Map());
+        expect(db.cache.size).toBe(0);
+      });
+      it('get component property by ref', async () => {
+        const componentKey = 'carGeneral';
+        const propertyKey = 'brand';
+        const route = `${componentKey}/${propertyKey}`;
+
+        const ref = staticExample().carGeneral._data[0]._hash ?? '';
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), ref);
+
+        expect(result).toBeDefined();
+        expect(result[componentKey]).toBeDefined();
+        expect(result[componentKey]._data.length).toBe(1);
+        expect(result[componentKey]._data[0]).toEqual({
+          _hash: ref,
+          [propertyKey]: staticExample().carGeneral._data[0][propertyKey],
+        });
+        expect(result[componentKey]._data[0][propertyKey]).toBe(
+          staticExample().carGeneral._data[0][propertyKey],
+        );
+      });
+      it('get component by where', async () => {
+        const route = '/carGeneral';
+        const where = rmhsh(staticExample().carGeneral._data[0]) as {
+          [column: string]: JsonValue;
+        };
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), where);
+        expect(result).toBeDefined();
+        expect(result.carGeneral).toBeDefined();
+        expect(result.carGeneral._data.length).toBe(1);
+        expect(result.carGeneral._data[0]._hash).toBe(
+          staticExample().carGeneral._data[0]._hash,
+        );
+      });
+      it('get components by where', async () => {
+        const route = '/carGeneral';
+        const where = { brand: 'Volkswagen' } as Partial<CarGeneral>;
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), where);
+        expect(result).toBeDefined();
+        expect(result.carGeneral).toBeDefined();
+        expect(result.carGeneral._data.length).toBe(2); //2 Volkswagens in example data
+        expect(result.carGeneral._data[0].brand).toBe('Volkswagen');
+        expect(result.carGeneral._data[1].brand).toBe('Volkswagen');
+      });
     });
 
-    it('get related cakes by component/cake sliceId reference', async () => {
-      const cakeKey = 'seriesCake';
-      const cakeRef = staticExample().seriesCake._data[2]._hash ?? '';
+    describe('cakes & layers', () => {
+      it('get layer by ref', async () => {
+        const route = '/carGeneralLayer';
+        const ref =
+          (staticExample().carGeneralLayer._data[0]._hash as string) ?? '';
 
-      const route = `/${cakeKey}@${cakeRef}/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+        const { rljson: result } = await db.get(Route.fromFlat(route), ref);
+        expect(result).toBeDefined();
+        expect(result.carGeneralLayer).toBeDefined();
+        expect(result.carGeneralLayer._data.length).toBe(1);
+        expect(result.carGeneralLayer._data[0]._hash).toBe(ref);
+      });
+      it('get cake by route ref', async () => {
+        const route = '/carCake';
+        const ref = (staticExample().carCake._data[0]._hash as string) ?? '';
 
-      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+        const { rljson: result } = await db.get(
+          Route.fromFlat(`${route}@${ref}`),
+          {},
+        );
+        expect(result).toBeDefined();
+        expect(result.carCake).toBeDefined();
+        expect(result.carCake._data.length).toBe(1);
+        expect(result.carCake._data[0]._hash).toBe(ref);
+      });
+      it('get cake/layer by route ref', async () => {
+        const cakeRoute = '/carCake';
+        const cakeRef =
+          (staticExample().carCake._data[0]._hash as string) ?? '';
 
-      const seriesCakes = result[cakeKey]._data;
-      expect(seriesCakes.length).toBe(1);
-
-      const seriesCarsLayers = result['seriesCarsLayer']._data;
-      expect(seriesCarsLayers.length).toBe(1);
-
-      const seriesCars = result['seriesCars']._data;
-      expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
-
-      const carCakes = result['carCake']._data;
-      expect(carCakes.length).toBe(staticExample().carCake._data.length);
-
-      const carGeneralLayers = result['carGeneralLayer']._data;
-      expect(carGeneralLayers.length).toBe(
-        staticExample().carGeneralLayer._data.length,
-      );
-
-      const carGeneralComponents = result['carGeneral']._data;
-      expect(carGeneralComponents.length).toBe(
-        staticExample().carGeneral._data.length,
-      );
+        const { rljson: result } = await db.get(
+          Route.fromFlat(`${cakeRoute}@${cakeRef}/carGeneralLayer`),
+          {},
+        );
+        expect(result).toBeDefined();
+        expect(result.carCake).toBeDefined();
+        expect(result.carCake._data.length).toBe(1);
+        expect(result.carCake._data[0]._hash).toBe(cakeRef);
+      });
     });
 
-    it('get single related component/cake by sliceId reference by explicit sliceId', async () => {
-      const cakeKey = 'seriesCake';
-      const cakeRef = staticExample().seriesCake._data[2]._hash ?? '';
-      const sliceIds = ['Serie7'];
+    describe('nested cake/layer/component', () => {
+      it('get nested layer/component by where', async () => {
+        const route = '/carGeneralLayer/carGeneral';
+        const where = {
+          carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
+            [column: string]: JsonValue;
+          },
+        };
 
-      const route = `/${cakeKey}(${sliceIds.join(
-        ',',
-      )})@${cakeRef}/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+        const { rljson: result } = await db.get(Route.fromFlat(route), where);
+        expect(result).toBeDefined();
+        expect(result.carGeneralLayer).toBeDefined();
+        expect(result.carGeneralLayer._data.length).toBe(3); //3 layers because they are chained
+        expect(result.carGeneralLayer._data.map((l) => l._hash).sort()).toEqual(
+          staticExample()
+            .carGeneralLayer._data.map((l) => l._hash)
+            .sort(),
+        );
+        expect(result.carGeneral).toBeDefined();
+        expect(result.carGeneral._data.length).toBe(1);
+        expect(result.carGeneral._data[0]._hash).toBe(
+          staticExample().carGeneral._data[0]._hash,
+        );
+      });
+      it('get nested layer/component by where w/ revision', async () => {
+        //Add Layer with switching VIN -> CarGeneral relation
+        const route = Route.fromFlat('/carGeneralLayer');
+        const { tree, cell } = await db.get(route, {});
+        const layer: Layer = {
+          base: staticExample().carGeneralLayer._data[2]._hash as string,
+          add: {
+            VIN1: staticExample().carGeneral._data[1]._hash || '',
+            VIN2: staticExample().carGeneral._data[0]._hash || '',
+          },
+          componentsTable: 'carGeneral',
+          sliceIdsTable: 'carSliceId',
+          sliceIdsTableRow: staticExample().carSliceId._data[2]._hash as string,
+        } as Layer;
 
-      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+        expect(cell.length).toBe(3);
+        expect(cell[0].path.length).toBe(1);
 
-      const seriesCakes = result[cakeKey]._data;
-      expect(seriesCakes.length).toBe(1);
+        const path = cell[0].path[0];
 
-      const seriesCarsLayers = result['seriesCarsLayer']._data;
-      expect(seriesCarsLayers.length).toBe(1);
-      expect(seriesCarsLayers.map((l) => l._hash)).toEqual([
-        staticExample().seriesCarsLayer._data[2]._hash,
-      ]);
+        inject(tree, path, layer);
+        const insert = isolate(tree, path);
 
-      const seriesCars = result['seriesCars']._data;
-      expect(seriesCars.length).toBe(1);
-      expect(seriesCars.map((c) => c._hash)).toEqual([
-        staticExample().seriesCars._data[7]._hash,
-      ]);
+        const addedLayerInsertHistorys = (await db.insert(
+          route,
+          insert,
+        )) as InsertHistoryRow<'CarGeneralLayer'>[];
 
-      const carCakes = result['carCake']._data;
-      expect(carCakes.length).toBe(1);
-      expect(carCakes.map((c) => c._hash)).toEqual([
-        staticExample().carCake._data[2]._hash,
-      ]);
+        expect(addedLayerInsertHistorys.length).toBe(1);
+        const addedLayerInsertHistory = addedLayerInsertHistorys[0];
 
-      const carGeneralLayers = result['carGeneralLayer']._data;
-      expect(carGeneralLayers.length).toBe(1);
-      expect(carGeneralLayers.map((l) => l._hash)).toEqual([
-        staticExample().carGeneralLayer._data[2]._hash,
-      ]);
+        const where = {
+          carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
+            [column: string]: JsonValue;
+          },
+        };
 
-      const carGeneralComponents = result['carGeneral']._data;
-      expect(carGeneralComponents.length).toBe(1);
-      expect(carGeneralComponents.map((c) => c._hash)).toEqual([
-        staticExample().carGeneral._data[7]._hash,
-      ]);
+        //GET Result via first layer revision
+        const layerRevHash1 =
+          staticExample().carGeneralLayer._data[0]._hash ?? '';
+        const route1 = `/carGeneralLayer@${layerRevHash1}/carGeneral`;
+
+        //GET Result via second layer revision
+        const layerRevHash2 = addedLayerInsertHistory.carGeneralLayerRef ?? '';
+        const route2 = `/carGeneralLayer@${layerRevHash2}/carGeneral`;
+
+        const { rljson: result1 } = await db.get(Route.fromFlat(route1), where);
+
+        const { rljson: result2 } = await db.get(Route.fromFlat(route2), where);
+
+        expect(result1).toBeDefined();
+        expect(result2).toBeDefined();
+
+        expect(result1.carGeneral).toBeDefined();
+        expect(result1.carGeneral._data.length).toBe(1);
+        expect(result1.carGeneral._data[0]._hash).toBe(
+          staticExample().carGeneral._data[0]._hash,
+        );
+
+        expect(result2.carGeneral).toBeDefined();
+        expect(result2.carGeneral._data.length).toBe(1);
+        expect(result2.carGeneral._data[0]._hash).toBe(
+          staticExample().carGeneral._data[0]._hash,
+        );
+
+        expect(result1.carGeneralLayer).toBeDefined();
+        expect(result1.carGeneralLayer._data.length).toBe(1);
+        expect(result1.carGeneralLayer._data[0]._hash).toBe(layerRevHash1);
+
+        expect(result2.carGeneralLayer).toBeDefined();
+        expect(result2.carGeneralLayer._data.length).toBe(1);
+        expect(result2.carGeneralLayer._data[0]._hash).toBe(layerRevHash2);
+      });
+      it('get nested component/component by where', async () => {
+        const route = '/carTechnical/carDimensions';
+        const where = {
+          carDimensions: {
+            ...(rmhsh(staticExample().carDimensions._data[0]) as {
+              [column: string]: JsonValue;
+            }),
+            ...{ _through: 'dimensions' },
+          },
+        };
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), where);
+
+        expect(result).toBeDefined();
+        expect(result.carTechnical).toBeDefined();
+        expect(result.carTechnical._data.length).toBe(1);
+        expect(result.carTechnical._data[0]._hash).toBe(
+          staticExample().carTechnical._data[0]._hash,
+        );
+        expect(result.carDimensions).toBeDefined();
+        expect(result.carDimensions._data.length).toBe(1);
+        expect(result.carDimensions._data[0]._hash).toBe(
+          staticExample().carDimensions._data[0]._hash,
+        );
+      });
+      it('get any nested cake/layer/component/component/property by route', async () => {
+        const route =
+          '/carCake/carTechnicalLayer/carTechnical/carDimensions/length';
+
+        const sliceId = 'VIN1';
+        const cakeRef = staticExample().carCake._data[0]._hash ?? '';
+        const where = cakeRef as string;
+
+        const result = await db.get(Route.fromFlat(route), where, undefined, [
+          sliceId,
+        ]);
+
+        expect(result).toBeDefined();
+      });
+      it('get any nested cake/layer/component', async () => {
+        const route = '/carCake/carGeneralLayer/carGeneral';
+        const where = {};
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), where);
+        expect(result).toBeDefined();
+        expect(result.carCake).toBeDefined();
+        expect(result.carCake._data.length).toBe(
+          staticExample().carCake._data.length,
+        );
+
+        expect(result.carGeneralLayer).toBeDefined();
+        expect(result.carGeneralLayer._data.length).toBe(
+          staticExample().carGeneralLayer._data.length,
+        );
+
+        expect(result.carGeneral).toBeDefined();
+        expect(result.carGeneral._data.length).toBe(
+          staticExample().carGeneral._data.length,
+        );
+      });
+      it('get nested cake/layer/component by where', async () => {
+        const route = '/carCake/carGeneralLayer/carGeneral';
+        const where = {
+          carGeneralLayer: {
+            carGeneral: rmhsh(staticExample().carGeneral._data[0]) as {
+              [column: string]: JsonValue;
+            },
+          },
+        };
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), where);
+        expect(result).toBeDefined();
+        expect(result.carCake).toBeDefined();
+        expect(result.carCake._data.length).toBe(3); //3 cakes because layers are chained
+        expect(result.carCake._data[0]._hash).toBe(
+          staticExample().carCake._data[0]._hash,
+        );
+        expect(result.carGeneralLayer).toBeDefined();
+        expect(result.carGeneralLayer._data.length).toBe(3);
+        expect(result.carGeneralLayer._data.map((l) => l._hash).sort()).toEqual(
+          staticExample()
+            .carGeneralLayer._data.map((l) => l._hash)
+            .sort(),
+        );
+        expect(result.carGeneral).toBeDefined();
+        expect(result.carGeneral._data.length).toBe(1);
+        expect(result.carGeneral._data[0]._hash).toBe(
+          staticExample().carGeneral._data[0]._hash,
+        );
+      });
+      it('get nested cake/layer/component by hash w/ route revision hash', async () => {
+        const cakeRevisionHash = staticExample().carCake._data[0]._hash ?? '';
+        const layerRevisionHash =
+          staticExample().carGeneralLayer._data[0]._hash ?? '';
+
+        const route = `/carCake@${cakeRevisionHash}/carGeneralLayer@${layerRevisionHash}/carGeneral`;
+
+        const where = {
+          carGeneralLayer: {
+            carGeneral: {
+              _hash: staticExample().carGeneral._data[0]._hash ?? '',
+            },
+          },
+        };
+        const { rljson: result } = await db.get(Route.fromFlat(route), where);
+
+        expect(result).toBeDefined();
+        expect(result.carCake).toBeDefined();
+        expect(result.carCake._data.length).toBe(1);
+        expect(result.carCake._data[0]._hash).toBe(cakeRevisionHash);
+
+        expect(result.carGeneralLayer).toBeDefined();
+        expect(result.carGeneralLayer._data.length).toBe(1);
+        expect(result.carGeneralLayer._data[0]._hash).toBe(layerRevisionHash);
+
+        expect(result.carGeneral).toBeDefined();
+        expect(result.carGeneral._data.length).toBe(1);
+        expect(result.carGeneral._data[0]._hash).toBe(
+          staticExample().carGeneral._data[0]._hash,
+        );
+      });
+      it('get nested cake/layer/component by hash w/ route revision TimeId', async () => {
+        const route = Route.fromFlat('/carCake/carGeneralLayer');
+        const { tree, cell } = await db.get(route, {});
+        const layer: Layer = {
+          add: {
+            VIN1: staticExample().carGeneral._data[1]._hash || '',
+            VIN2: staticExample().carGeneral._data[0]._hash || '',
+          },
+          componentsTable: 'carGeneral',
+          sliceIdsTable: 'carSliceId',
+          sliceIdsTableRow: staticExample().carSliceId._data[2]._hash as string,
+        } as Layer;
+
+        const paths = cell.flatMap((c) => c.path);
+        expect(paths.length).toBe(3);
+
+        const path = paths[0];
+
+        const insert = isolate(tree, path);
+        inject(insert, path, layer);
+
+        const cakeInsertHistoryRows = (await db.insert(
+          route,
+          insert,
+        )) as InsertHistoryRow<'CarCake'>[];
+
+        const cakeInsertHistoryRow = cakeInsertHistoryRows[0];
+        const cakeRevisionTimeId = cakeInsertHistoryRow.timeId;
+
+        //Get layer revision TimeId
+        const {
+          ['carGeneralLayerInsertHistory']: { _data: layerInsertHistoryRows },
+        } = await db.getInsertHistory('carGeneralLayer');
+        const layerRevisionTimeId = layerInsertHistoryRows[0].timeId;
+
+        //Build route with TimeIds
+        const refRoute = `/carCake@${cakeRevisionTimeId}/carGeneralLayer@${layerRevisionTimeId}/carGeneral`;
+
+        //Get all Volkswagens in example data
+        const where = {
+          carCake: {
+            carGeneralLayer: {
+              carGeneral: { brand: 'Volkswagen' } as Partial<CarGeneral>,
+            },
+          },
+        };
+
+        const { rljson: result } = await db.get(
+          Route.fromFlat(refRoute),
+          where,
+        );
+
+        expect(result).toBeDefined();
+        expect(result.carCake).toBeDefined();
+        expect(result.carCake._data.length).toBe(1);
+        expect(result.carCake._data[0]._hash).toBe(
+          cakeInsertHistoryRow.carCakeRef,
+        );
+
+        expect(result.carGeneralLayer).toBeDefined();
+        expect(result.carGeneralLayer._data.length).toBe(1);
+
+        expect(result.carGeneral).toBeDefined();
+        expect(result.carGeneral._data.length).toBe(2);
+        expect(result.carGeneral._data[0].brand).toBe('Volkswagen');
+        expect(result.carGeneral._data[1].brand).toBe('Volkswagen');
+      });
     });
 
-    it('get related cakes by component/cake sliceId reference', async () => {
-      const cakeKey = 'catalogCake';
-      const cakeRef = staticExample().catalogCake._data[0]._hash ?? '';
+    describe('related cakes/layers/components', () => {
+      it('get related cakes by component/cake sliceId reference', async () => {
+        const cakeKey = 'seriesCake';
+        const cakeRef = staticExample().seriesCake._data[2]._hash ?? '';
 
-      const route = `/${cakeKey}@${cakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+        const route = `/${cakeKey}@${cakeRef}/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
 
-      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+        const { rljson: result } = await db.get(Route.fromFlat(route), {});
 
-      //Single starting point cake
-      const catalogCakes = result[cakeKey]._data;
-      expect(catalogCakes.length).toBe(1);
+        const seriesCakes = result[cakeKey]._data;
+        expect(seriesCakes.length).toBe(1);
 
-      //Single catalogSeries layer related to starting cake
-      const catalogSeriesLayers = result['catalogSeriesLayer']._data;
-      expect(catalogSeriesLayers.length).toBe(1);
-      expect(catalogSeriesLayers.map((l) => l._hash)).toEqual([
-        staticExample().catalogSeriesLayer._data[0]._hash,
-      ]);
+        const seriesCarsLayers = result['seriesCarsLayer']._data;
+        expect(seriesCarsLayers.length).toBe(1);
 
-      //All catalogSeries, due to layer is linking any of them
-      const catalogSeries = result['catalogSeries']._data;
-      expect(catalogSeries.length).toBe(
-        staticExample().catalogSeries._data.length,
-      );
+        const seriesCars = result['seriesCars']._data;
+        expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
 
-      //All seriesCakes, due to catalogSeries are linking any of them
-      const seriesCakes = result['seriesCake']._data;
-      expect(seriesCakes.length).toBe(staticExample().seriesCake._data.length);
-      expect(seriesCakes.map((c) => c._hash).sort()).toEqual(
-        staticExample()
-          .seriesCake._data.map((c) => c._hash)
-          .sort(),
-      );
+        const carCakes = result['carCake']._data;
+        expect(carCakes.length).toBe(staticExample().carCake._data.length);
 
-      //All seriesCarsLayers, due to seriesCakes are linking any of them
-      const seriesCarsLayers = result['seriesCarsLayer']._data;
-      expect(seriesCarsLayers.length).toBe(
-        staticExample().seriesCarsLayer._data.length,
-      );
-      expect(seriesCarsLayers.map((l) => l._hash).sort()).toEqual(
-        staticExample()
-          .seriesCarsLayer._data.map((l) => l._hash)
-          .sort(),
-      );
+        const carGeneralLayers = result['carGeneralLayer']._data;
+        expect(carGeneralLayers.length).toBe(
+          staticExample().carGeneralLayer._data.length,
+        );
 
-      //All seriesCars, due to seriesCarsLayers are linking any of them
-      const seriesCars = result['seriesCars']._data;
-      expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
-      expect(seriesCars.map((c) => c._hash).sort()).toEqual(
-        staticExample()
-          .seriesCars._data.map((c) => c._hash)
-          .sort(),
-      );
+        const carGeneralComponents = result['carGeneral']._data;
+        expect(carGeneralComponents.length).toBe(
+          staticExample().carGeneral._data.length,
+        );
+      });
 
-      //All carCakes, due to seriesCars are linking any of them
-      const carCakes = result['carCake']._data;
-      expect(carCakes.length).toBe(staticExample().carCake._data.length);
-      expect(carCakes.map((c) => c._hash).sort()).toEqual(
-        staticExample()
-          .carCake._data.map((c) => c._hash)
-          .sort(),
-      );
+      it('get single related component/cake by sliceId reference by explicit sliceId', async () => {
+        const cakeKey = 'seriesCake';
+        const cakeRef = staticExample().seriesCake._data[2]._hash ?? '';
+        const sliceIds = ['Serie7'];
 
-      //All carGeneralLayers, due to carCakes are linking any of them
-      const carGeneralLayers = result['carGeneralLayer']._data;
-      expect(carGeneralLayers.length).toBe(
-        staticExample().carGeneralLayer._data.length,
-      );
-      expect(carGeneralLayers.map((l) => l._hash).sort()).toEqual(
-        staticExample()
-          .carGeneralLayer._data.map((l) => l._hash)
-          .sort(),
-      );
+        const route = `/${cakeKey}(${sliceIds.join(
+          ',',
+        )})@${cakeRef}/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
 
-      //All carGeneralComponents, due to carGeneralLayers are linking any of them
-      const carGeneralComponents = result['carGeneral']._data;
-      expect(carGeneralComponents.length).toBe(
-        staticExample().carGeneral._data.length,
-      );
-      expect(carGeneralComponents.map((c) => c._hash).sort()).toEqual(
-        staticExample()
-          .carGeneral._data.map((c) => c._hash)
-          .sort(),
-      );
+        const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+        const seriesCakes = result[cakeKey]._data;
+        expect(seriesCakes.length).toBe(1);
+
+        const seriesCarsLayers = result['seriesCarsLayer']._data;
+        expect(seriesCarsLayers.length).toBe(1);
+        expect(seriesCarsLayers.map((l) => l._hash)).toEqual([
+          staticExample().seriesCarsLayer._data[2]._hash,
+        ]);
+
+        const seriesCars = result['seriesCars']._data;
+        expect(seriesCars.length).toBe(1);
+        expect(seriesCars.map((c) => c._hash)).toEqual([
+          staticExample().seriesCars._data[7]._hash,
+        ]);
+
+        const carCakes = result['carCake']._data;
+        expect(carCakes.length).toBe(1);
+        expect(carCakes.map((c) => c._hash)).toEqual([
+          staticExample().carCake._data[2]._hash,
+        ]);
+
+        const carGeneralLayers = result['carGeneralLayer']._data;
+        expect(carGeneralLayers.length).toBe(1);
+        expect(carGeneralLayers.map((l) => l._hash)).toEqual([
+          staticExample().carGeneralLayer._data[2]._hash,
+        ]);
+
+        const carGeneralComponents = result['carGeneral']._data;
+        expect(carGeneralComponents.length).toBe(1);
+        expect(carGeneralComponents.map((c) => c._hash)).toEqual([
+          staticExample().carGeneral._data[7]._hash,
+        ]);
+      });
+
+      it('get related cakes by component/cake sliceId reference', async () => {
+        const cakeKey = 'catalogCake';
+        const cakeRef = staticExample().catalogCake._data[0]._hash ?? '';
+
+        const route = `/${cakeKey}@${cakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake/carGeneralLayer/carGeneral/brand`;
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+        //Single starting point cake
+        const catalogCakes = result[cakeKey]._data;
+        expect(catalogCakes.length).toBe(1);
+
+        //Single catalogSeries layer related to starting cake
+        const catalogSeriesLayers = result['catalogSeriesLayer']._data;
+        expect(catalogSeriesLayers.length).toBe(1);
+        expect(catalogSeriesLayers.map((l) => l._hash)).toEqual([
+          staticExample().catalogSeriesLayer._data[0]._hash,
+        ]);
+
+        //All catalogSeries, due to layer is linking any of them
+        const catalogSeries = result['catalogSeries']._data;
+        expect(catalogSeries.length).toBe(
+          staticExample().catalogSeries._data.length,
+        );
+
+        //All seriesCakes, due to catalogSeries are linking any of them
+        const seriesCakes = result['seriesCake']._data;
+        expect(seriesCakes.length).toBe(
+          staticExample().seriesCake._data.length,
+        );
+        expect(seriesCakes.map((c) => c._hash).sort()).toEqual(
+          staticExample()
+            .seriesCake._data.map((c) => c._hash)
+            .sort(),
+        );
+
+        //All seriesCarsLayers, due to seriesCakes are linking any of them
+        const seriesCarsLayers = result['seriesCarsLayer']._data;
+        expect(seriesCarsLayers.length).toBe(
+          staticExample().seriesCarsLayer._data.length,
+        );
+        expect(seriesCarsLayers.map((l) => l._hash).sort()).toEqual(
+          staticExample()
+            .seriesCarsLayer._data.map((l) => l._hash)
+            .sort(),
+        );
+
+        //All seriesCars, due to seriesCarsLayers are linking any of them
+        const seriesCars = result['seriesCars']._data;
+        expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
+        expect(seriesCars.map((c) => c._hash).sort()).toEqual(
+          staticExample()
+            .seriesCars._data.map((c) => c._hash)
+            .sort(),
+        );
+
+        //All carCakes, due to seriesCars are linking any of them
+        const carCakes = result['carCake']._data;
+        expect(carCakes.length).toBe(staticExample().carCake._data.length);
+        expect(carCakes.map((c) => c._hash).sort()).toEqual(
+          staticExample()
+            .carCake._data.map((c) => c._hash)
+            .sort(),
+        );
+
+        //All carGeneralLayers, due to carCakes are linking any of them
+        const carGeneralLayers = result['carGeneralLayer']._data;
+        expect(carGeneralLayers.length).toBe(
+          staticExample().carGeneralLayer._data.length,
+        );
+        expect(carGeneralLayers.map((l) => l._hash).sort()).toEqual(
+          staticExample()
+            .carGeneralLayer._data.map((l) => l._hash)
+            .sort(),
+        );
+
+        //All carGeneralComponents, due to carGeneralLayers are linking any of them
+        const carGeneralComponents = result['carGeneral']._data;
+        expect(carGeneralComponents.length).toBe(
+          staticExample().carGeneral._data.length,
+        );
+        expect(carGeneralComponents.map((c) => c._hash).sort()).toEqual(
+          staticExample()
+            .carGeneral._data.map((c) => c._hash)
+            .sort(),
+        );
+      });
+      it('get related cakes by component/cake sliceId reference, filter on deeper sliceId', async () => {
+        const cakeKey = 'catalogCake';
+        const cakeRef = staticExample().catalogCake._data[0]._hash ?? '';
+        const filterSliceIds = ['VIN4', 'VIN8'];
+
+        const route = `/${cakeKey}@${cakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake(${filterSliceIds.join(
+          ',',
+        )})/carGeneralLayer/carGeneral/brand`;
+
+        const { rljson: result } = await db.get(Route.fromFlat(route), {});
+
+        //Single starting point cake
+        const catalogCakes = result[cakeKey]._data;
+        expect(catalogCakes.length).toBe(1);
+
+        //Single catalogSeries layer related to starting cake
+        const catalogSeriesLayers = result['catalogSeriesLayer']._data;
+        expect(catalogSeriesLayers.length).toBe(1);
+        expect(catalogSeriesLayers.map((l) => l._hash)).toEqual([
+          staticExample().catalogSeriesLayer._data[0]._hash,
+        ]);
+
+        //All catalogSeries, due to layer is linking any of them
+        const catalogSeries = result['catalogSeries']._data;
+        expect(catalogSeries.length).toBe(
+          staticExample().catalogSeries._data.length,
+        );
+
+        //All seriesCakes, due to catalogSeries are linking any of them
+        const seriesCakes = result['seriesCake']._data;
+        expect(seriesCakes.length).toBe(
+          staticExample().seriesCake._data.length,
+        );
+        expect(seriesCakes.map((c) => c._hash).sort()).toEqual(
+          staticExample()
+            .seriesCake._data.map((c) => c._hash)
+            .sort(),
+        );
+
+        //All seriesCarsLayers, due to seriesCakes are linking any of them
+        const seriesCarsLayers = result['seriesCarsLayer']._data;
+        expect(seriesCarsLayers.length).toBe(
+          staticExample().seriesCarsLayer._data.length,
+        );
+        expect(seriesCarsLayers.map((l) => l._hash).sort()).toEqual(
+          staticExample()
+            .seriesCarsLayer._data.map((l) => l._hash)
+            .sort(),
+        );
+
+        //All seriesCars, due to seriesCarsLayers are linking any of them
+        const seriesCars = result['seriesCars']._data;
+        expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
+        expect(seriesCars.map((c) => c._hash).sort()).toEqual(
+          staticExample()
+            .seriesCars._data.map((c) => c._hash)
+            .sort(),
+        );
+
+        //All carCakes, due to seriesCars are linking any of them
+        const carCakes = result['carCake']._data;
+        expect(carCakes.length).toBe(staticExample().carCake._data.length);
+        expect(carCakes.map((c) => c._hash).sort()).toEqual(
+          staticExample()
+            .carCake._data.map((c) => c._hash)
+            .sort(),
+        );
+
+        //All carGeneralLayers, due to carCakes are linking any of them
+        const carGeneralLayers = result['carGeneralLayer']._data;
+        expect(carGeneralLayers.length).toBe(
+          staticExample().carGeneralLayer._data.length,
+        );
+        expect(carGeneralLayers.map((l) => l._hash).sort()).toEqual(
+          staticExample()
+            .carGeneralLayer._data.map((l) => l._hash)
+            .sort(),
+        );
+
+        //All carGeneralComponents, due to carGeneralLayers are linking any of them
+        const carGeneralComponents = result['carGeneral']._data;
+        expect(carGeneralComponents.length).toBe(2);
+        expect(carGeneralComponents.map((c) => c._hash)).toEqual([
+          staticExample().carGeneral._data[3]._hash,
+          staticExample().carGeneral._data[7]._hash,
+        ]);
+      });
     });
-    it('get related cakes by component/cake sliceId reference, filter on deeper sliceId', async () => {
-      const cakeKey = 'catalogCake';
-      const cakeRef = staticExample().catalogCake._data[0]._hash ?? '';
-      const filterSliceIds = ['VIN4', 'VIN8'];
+    describe('tree structure', () => {
+      let treeIo: Io;
+      let treeDb: Db;
+      let treeRootRef: string;
 
-      const route = `/${cakeKey}@${cakeRef}/catalogSeriesLayer/catalogSeries/seriesCake/seriesCarsLayer/seriesCars/carCake(${filterSliceIds.join(
-        ',',
-      )})/carGeneralLayer/carGeneral/brand`;
+      beforeEach(async () => {
+        const treeObject = {
+          root: {
+            subNode1: {
+              subSubNode1: 'property of subSubNode1',
+              subSubNode2: {},
+            },
+            subNode2: {
+              subSubNode3: {
+                subSubSubNode1: 'property of subSubSubNode1',
+              },
+              subSubNode4: {},
+            },
+            subNode3: 'property of subNode3',
+          },
+        };
 
-      const { rljson: result } = await db.get(Route.fromFlat(route), {});
+        const trees: Array<Tree> = treeFromObject(treeObject);
 
-      //Single starting point cake
-      const catalogCakes = result[cakeKey]._data;
-      expect(catalogCakes.length).toBe(1);
+        const treeTable: TreesTable = {
+          _type: 'trees',
+          _data: trees,
+        };
 
-      //Single catalogSeries layer related to starting cake
-      const catalogSeriesLayers = result['catalogSeriesLayer']._data;
-      expect(catalogSeriesLayers.length).toBe(1);
-      expect(catalogSeriesLayers.map((l) => l._hash)).toEqual([
-        staticExample().catalogSeriesLayer._data[0]._hash,
-      ]);
+        const treeTableCfg: TableCfg = createTreesTableCfg('exampleTree');
 
-      //All catalogSeries, due to layer is linking any of them
-      const catalogSeries = result['catalogSeries']._data;
-      expect(catalogSeries.length).toBe(
-        staticExample().catalogSeries._data.length,
-      );
+        treeIo = new IoMem();
+        await treeIo.init();
 
-      //All seriesCakes, due to catalogSeries are linking any of them
-      const seriesCakes = result['seriesCake']._data;
-      expect(seriesCakes.length).toBe(staticExample().seriesCake._data.length);
-      expect(seriesCakes.map((c) => c._hash).sort()).toEqual(
-        staticExample()
-          .seriesCake._data.map((c) => c._hash)
-          .sort(),
-      );
+        treeDb = new Db(treeIo);
 
-      //All seriesCarsLayers, due to seriesCakes are linking any of them
-      const seriesCarsLayers = result['seriesCarsLayer']._data;
-      expect(seriesCarsLayers.length).toBe(
-        staticExample().seriesCarsLayer._data.length,
-      );
-      expect(seriesCarsLayers.map((l) => l._hash).sort()).toEqual(
-        staticExample()
-          .seriesCarsLayer._data.map((l) => l._hash)
-          .sort(),
-      );
+        await treeDb.core.createTable(treeTableCfg);
 
-      //All seriesCars, due to seriesCarsLayers are linking any of them
-      const seriesCars = result['seriesCars']._data;
-      expect(seriesCars.length).toBe(staticExample().seriesCars._data.length);
-      expect(seriesCars.map((c) => c._hash).sort()).toEqual(
-        staticExample()
-          .seriesCars._data.map((c) => c._hash)
-          .sort(),
-      );
+        await treeDb.core.import({
+          exampleTree: treeTable,
+        });
 
-      //All carCakes, due to seriesCars are linking any of them
-      const carCakes = result['carCake']._data;
-      expect(carCakes.length).toBe(staticExample().carCake._data.length);
-      expect(carCakes.map((c) => c._hash).sort()).toEqual(
-        staticExample()
-          .carCake._data.map((c) => c._hash)
-          .sort(),
-      );
+        treeRootRef = trees[trees.length - 1]._hash as string;
+      });
+      it('get simple tree structure', async () => {
+        const route = `/exampleTree@${treeRootRef}/root/subNode1/subSubNode1`;
 
-      //All carGeneralLayers, due to carCakes are linking any of them
-      const carGeneralLayers = result['carGeneralLayer']._data;
-      expect(carGeneralLayers.length).toBe(
-        staticExample().carGeneralLayer._data.length,
-      );
-      expect(carGeneralLayers.map((l) => l._hash).sort()).toEqual(
-        staticExample()
-          .carGeneralLayer._data.map((l) => l._hash)
-          .sort(),
-      );
+        const { rljson: result } = await treeDb.get(Route.fromFlat(route), {});
 
-      //All carGeneralComponents, due to carGeneralLayers are linking any of them
-      const carGeneralComponents = result['carGeneral']._data;
-      expect(carGeneralComponents.length).toBe(2);
-      expect(carGeneralComponents.map((c) => c._hash)).toEqual([
-        staticExample().carGeneral._data[3]._hash,
-        staticExample().carGeneral._data[7]._hash,
-      ]);
+        expect(result).toBeDefined();
+        expect(result.tree).toBeDefined();
+        expect(result.tree._data.length).toBe(1);
+        expect(result.tree._data[0]).toEqual({
+          _hash: expect.any(String),
+          'root/subNode1/subSubNode1': 'property of subSubNode1',
+        });
+      });
     });
   });
   describe('insert', () => {
