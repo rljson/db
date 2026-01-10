@@ -55,7 +55,7 @@ export type ControllerChildProperty = {
  * @property {ControllerRunFn<N>} insert - Function to execute a command on the table.
  * @property {() => Promise<void>} init - Initializes the controller.
  * @property {() => Promise<T>} table - Retrieves the current state of the table.
- * @property {(where: string | { [column: string]: JsonValue }) => Promise<Rljson>} get - Fetches data from the table based on a condition.
+ * @property {(where: string | { [column: string]: JsonValue }, filter: Json | undefined, path: string | undefined) => Promise<Rljson>} get - Fetches data from the table based on a condition.
  * @property {(where: string | Json, filter?: Json) => Promise<Array<{ tableKey: TableKey; ref: Ref }>>} getChildRefs - Retrieves references to child entries in related tables based on a condition.
  * @param {string | Json }} where - The condition to filter the data.
  * @returns {Promise<Json[] | null>} A promise that resolves to an array of JSON objects or null if no data is found.
@@ -69,7 +69,7 @@ export interface Controller<
   insert: ControllerRunFn<N, C>;
   init(): Promise<void>;
   table(): Promise<T>;
-  get(where: string | Json, filter?: Json): Promise<Rljson>;
+  get(where: string | Json, filter?: Json, path?: string): Promise<Rljson>;
   getChildRefs(
     where: string | Json,
     filter?: Json,

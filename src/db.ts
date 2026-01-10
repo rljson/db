@@ -34,6 +34,7 @@ import {
   SliceIds,
   TableType,
   timeId,
+  Tree,
 } from '@rljson/rljson';
 
 import {
@@ -44,6 +45,7 @@ import {
   createController,
 } from './controller/controller.ts';
 import { SliceIdController } from './controller/slice-id-controller.ts';
+import { TreeController } from './controller/tree-controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRow, JoinRows } from './join/join.ts';
 import { ColumnSelection } from './join/selection/column-selection.ts';
@@ -225,7 +227,7 @@ export class Db {
     // Fetch Node Data (actual access to underlying data model)
     const {
       [nodeTableKey]: { _data: nodeRows, _type: nodeType, _hash: nodeHash },
-    } = await nodeController.get(nodeWhere);
+    } = await nodeController.get(nodeWhere, undefined, route.propertyKey);
     const nodeColumnCfgs = nodeController.tableCfg().columns;
 
     const filterActive = filter && filter.length > 0;
@@ -393,29 +395,51 @@ export class Db {
               baseRouteStr + `/${route.propertyKey}`,
             ).toRouteWithProperty();
 
-        /* v8 ignore next -- @preserve */
-        const tree = opts.skipTree
-          ? ({} as Json)
-          : { [nodeTableKey]: node[nodeTableKey] };
+        let result: Container;
 
-        /* v8 ignore next -- @preserve */
-        const cell = opts.skipCell
-          ? ([] as Cell[])
-          : (nodeRowsFiltered.map(
-              (v, idx) =>
-                ({
-                  value: v[route.propertyKey!] ?? null,
-                  row: v,
-                  route: routeWithProperty,
-                  path: [[nodeTableKey, '_data', idx, route.propertyKey]],
-                } as Cell),
-            ) as Cell[]);
+        if (nodeType === 'trees') {
+          const rljson = node;
+          const tree = opts.skipTree
+            ? ({} as Json)
+            : await (
+                nodeController as TreeController<string, Tree>
+              ).buildTreeFromTrees(nodeRows as Tree[]);
+          const cell = opts.skipCell
+            ? ([] as Cell[])
+            : await (
+                nodeController as TreeController<string, Tree>
+              ).buildCellFromTree(nodeRows as Tree[]);
 
-        const result = {
-          rljson: isolatedNode,
-          tree,
-          cell,
-        };
+          result = {
+            rljson,
+            tree,
+            cell,
+          };
+        } else {
+          /* v8 ignore next -- @preserve */
+          const tree = opts.skipTree
+            ? ({} as Json)
+            : { [nodeTableKey]: node[nodeTableKey] };
+
+          /* v8 ignore next -- @preserve */
+          const cell = opts.skipCell
+            ? ([] as Cell[])
+            : (nodeRowsFiltered.map(
+                (v, idx) =>
+                  ({
+                    value: v[route.propertyKey!] ?? null,
+                    row: v,
+                    route: routeWithProperty,
+                    path: [[nodeTableKey, '_data', idx, route.propertyKey]],
+                  } as Cell),
+              ) as Cell[]);
+
+          result = {
+            rljson: isolatedNode,
+            tree,
+            cell,
+          };
+        }
 
         //Set Cache
         this._cache.set(cacheHash, result);

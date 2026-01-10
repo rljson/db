@@ -1249,10 +1249,13 @@ describe('Db', () => {
     describe('tree structure', () => {
       let treeIo: Io;
       let treeDb: Db;
+
+      const treeKey = 'exampleTree';
       let treeRootRef: string;
+      let treeObject: Json;
 
       beforeEach(async () => {
-        const treeObject = {
+        treeObject = {
           root: {
             subNode1: {
               subSubNode1: 'property of subSubNode1',
@@ -1269,39 +1272,199 @@ describe('Db', () => {
         };
 
         const trees: Array<Tree> = treeFromObject(treeObject);
-
         const treeTable: TreesTable = {
           _type: 'trees',
           _data: trees,
         };
-
-        const treeTableCfg: TableCfg = createTreesTableCfg('exampleTree');
+        const treeTableCfg: TableCfg = createTreesTableCfg(treeKey);
 
         treeIo = new IoMem();
         await treeIo.init();
 
         treeDb = new Db(treeIo);
-
         await treeDb.core.createTable(treeTableCfg);
 
         await treeDb.core.import({
-          exampleTree: treeTable,
+          [treeKey]: treeTable,
         });
 
         treeRootRef = trees[trees.length - 1]._hash as string;
       });
-      it('get simple tree structure', async () => {
-        const route = `/exampleTree@${treeRootRef}/root/subNode1/subSubNode1`;
 
-        const { rljson: result } = await treeDb.get(Route.fromFlat(route), {});
+      it('get root node', async () => {
+        const route = `/${treeKey}@${treeRootRef}/root`;
 
-        expect(result).toBeDefined();
-        expect(result.tree).toBeDefined();
-        expect(result.tree._data.length).toBe(1);
-        expect(result.tree._data[0]).toEqual({
-          _hash: expect.any(String),
-          'root/subNode1/subSubNode1': 'property of subSubNode1',
+        const {
+          rljson: { [treeKey]: rljson },
+          tree,
+          cell,
+        } = await treeDb.get(Route.fromFlat(route), {});
+
+        expect(rljson._data.length).toBe(9);
+        expect(rmhsh(tree)).toEqual({
+          root: {
+            subNode1: {
+              subSubNode1: {
+                value: 'property of subSubNode1',
+              },
+              subSubNode2: undefined,
+            },
+            subNode2: {
+              subSubNode3: {
+                subSubSubNode1: {
+                  value: 'property of subSubSubNode1',
+                },
+              },
+              subSubNode4: undefined,
+            },
+            subNode3: {
+              value: 'property of subNode3',
+            },
+          },
         });
+        expect(cell.length).toBe(5);
+        expect(cell.flatMap((c) => c.path)).toEqual([
+          ['root', 'subNode1', 'subSubNode1'],
+          ['root', 'subNode1', 'subSubNode2'],
+          ['root', 'subNode2', 'subSubNode3', 'subSubSubNode1'],
+          ['root', 'subNode2', 'subSubNode4'],
+          ['root', 'subNode3'],
+        ]);
+        expect(rmhsh(cell[0].value as Json)).toEqual({
+          value: 'property of subSubNode1',
+        });
+        expect(rmhsh(cell[2].value as Json)).toEqual({
+          value: 'property of subSubSubNode1',
+        });
+        expect(rmhsh(cell[4].value as Json)).toEqual({
+          value: 'property of subNode3',
+        });
+      });
+
+      it('get simple leaf', async () => {
+        const route = `/${treeKey}@${treeRootRef}/root/subNode1/subSubNode1`;
+
+        const {
+          rljson: { [treeKey]: rljson },
+          tree,
+          cell,
+        } = await treeDb.get(Route.fromFlat(route), {});
+
+        expect(rljson._data.length).toBe(3);
+        expect(rmhsh(tree)).toEqual({
+          root: {
+            subNode1: {
+              subSubNode1: {
+                value: 'property of subSubNode1',
+              },
+            },
+          },
+        });
+        expect(cell.length).toBe(1);
+        expect(cell[0].path).toEqual([['root', 'subNode1', 'subSubNode1']]);
+        expect(rmhsh(cell[0].value as Json)).toEqual({
+          value: 'property of subSubNode1',
+        });
+      });
+
+      it('get deeper leaf', async () => {
+        const route = `/${treeKey}@${treeRootRef}/root/subNode2/subSubNode3/subSubSubNode1`;
+
+        const {
+          rljson: { [treeKey]: rljson },
+          tree,
+          cell,
+        } = await treeDb.get(Route.fromFlat(route), {});
+
+        expect(rljson._data.length).toBe(4);
+        expect(rmhsh(tree)).toEqual({
+          root: {
+            subNode2: {
+              subSubNode3: {
+                subSubSubNode1: {
+                  value: 'property of subSubSubNode1',
+                },
+              },
+            },
+          },
+        });
+        expect(cell.length).toBe(1);
+        expect(cell[0].path).toEqual([
+          ['root', 'subNode2', 'subSubNode3', 'subSubSubNode1'],
+        ]);
+        expect(rmhsh(cell[0].value as Json)).toEqual({
+          value: 'property of subSubSubNode1',
+        });
+      });
+
+      it('get simple branch', async () => {
+        const route = `/${treeKey}@${treeRootRef}/root/subNode1`;
+
+        const {
+          rljson: { [treeKey]: rljson },
+          tree,
+          cell,
+        } = await treeDb.get(Route.fromFlat(route), {});
+
+        expect(rljson._data.length).toBe(4);
+        expect(rmhsh(tree)).toEqual({
+          root: {
+            subNode1: {
+              subSubNode1: {
+                value: 'property of subSubNode1',
+              },
+              subSubNode2: undefined,
+            },
+          },
+        });
+        expect(cell.length).toBe(2);
+        expect(cell.flatMap((c) => c.path)).toEqual([
+          ['root', 'subNode1', 'subSubNode1'],
+          ['root', 'subNode1', 'subSubNode2'],
+        ]);
+        expect(rmhsh(cell[0].value as Json)).toEqual({
+          value: 'property of subSubNode1',
+        });
+      });
+
+      it('get deeper branch', async () => {
+        const route = `/${treeKey}@${treeRootRef}/root/subNode2`;
+
+        const {
+          rljson: { [treeKey]: rljson },
+          tree,
+          cell,
+        } = await treeDb.get(Route.fromFlat(route), {});
+
+        expect(rljson._data.length).toBe(5);
+        expect(rmhsh(tree)).toEqual({
+          root: {
+            subNode2: {
+              subSubNode3: {
+                subSubSubNode1: {
+                  value: 'property of subSubSubNode1',
+                },
+              },
+              subSubNode4: undefined,
+            },
+          },
+        });
+        expect(cell.length).toBe(2);
+        expect(cell.flatMap((c) => c.path)).toEqual([
+          ['root', 'subNode2', 'subSubNode3', 'subSubSubNode1'],
+          ['root', 'subNode2', 'subSubNode4'],
+        ]);
+        expect(rmhsh(cell[0].value as Json)).toEqual({
+          value: 'property of subSubSubNode1',
+        });
+      });
+
+      it('throws error on non-existing node', async () => {
+        const route = `/${treeKey}@MISSINGREF`;
+
+        await expect(
+          treeDb.get(Route.fromFlat(route), {}),
+        ).rejects.toThrowError();
       });
     });
   });
