@@ -1302,23 +1302,28 @@ describe('Db', () => {
 
         expect(rljson._data.length).toBe(9);
         expect(rmhsh(tree)).toEqual({
-          root: {
-            subNode1: {
-              subSubNode1: {
-                value: 'property of subSubNode1',
-              },
-              subSubNode2: undefined,
-            },
-            subNode2: {
-              subSubNode3: {
-                subSubSubNode1: {
-                  value: 'property of subSubSubNode1',
+          exampleTree: {
+            _type: 'trees',
+            _data: {
+              root: {
+                subNode1: {
+                  subSubNode1: {
+                    value: 'property of subSubNode1',
+                  },
+                  subSubNode2: undefined,
+                },
+                subNode2: {
+                  subSubNode3: {
+                    subSubSubNode1: {
+                      value: 'property of subSubSubNode1',
+                    },
+                  },
+                  subSubNode4: undefined,
+                },
+                subNode3: {
+                  value: 'property of subNode3',
                 },
               },
-              subSubNode4: undefined,
-            },
-            subNode3: {
-              value: 'property of subNode3',
             },
           },
         });
@@ -1352,10 +1357,15 @@ describe('Db', () => {
 
         expect(rljson._data.length).toBe(3);
         expect(rmhsh(tree)).toEqual({
-          root: {
-            subNode1: {
-              subSubNode1: {
-                value: 'property of subSubNode1',
+          exampleTree: {
+            _type: 'trees',
+            _data: {
+              root: {
+                subNode1: {
+                  subSubNode1: {
+                    value: 'property of subSubNode1',
+                  },
+                },
               },
             },
           },
@@ -1378,14 +1388,19 @@ describe('Db', () => {
 
         expect(rljson._data.length).toBe(4);
         expect(rmhsh(tree)).toEqual({
-          root: {
-            subNode2: {
-              subSubNode3: {
-                subSubSubNode1: {
-                  value: 'property of subSubSubNode1',
+          exampleTree: {
+            _data: {
+              root: {
+                subNode2: {
+                  subSubNode3: {
+                    subSubSubNode1: {
+                      value: 'property of subSubSubNode1',
+                    },
+                  },
                 },
               },
             },
+            _type: 'trees',
           },
         });
         expect(cell.length).toBe(1);
@@ -1408,13 +1423,18 @@ describe('Db', () => {
 
         expect(rljson._data.length).toBe(4);
         expect(rmhsh(tree)).toEqual({
-          root: {
-            subNode1: {
-              subSubNode1: {
-                value: 'property of subSubNode1',
+          exampleTree: {
+            _data: {
+              root: {
+                subNode1: {
+                  subSubNode1: {
+                    value: 'property of subSubNode1',
+                  },
+                  subSubNode2: undefined,
+                },
               },
-              subSubNode2: undefined,
             },
+            _type: 'trees',
           },
         });
         expect(cell.length).toBe(2);
@@ -1438,14 +1458,19 @@ describe('Db', () => {
 
         expect(rljson._data.length).toBe(5);
         expect(rmhsh(tree)).toEqual({
-          root: {
-            subNode2: {
-              subSubNode3: {
-                subSubSubNode1: {
-                  value: 'property of subSubSubNode1',
+          exampleTree: {
+            _type: 'trees',
+            _data: {
+              root: {
+                subNode2: {
+                  subSubNode3: {
+                    subSubSubNode1: {
+                      value: 'property of subSubSubNode1',
+                    },
+                  },
+                  subSubNode4: undefined,
                 },
               },
-              subSubNode4: undefined,
             },
           },
         });
@@ -1459,12 +1484,19 @@ describe('Db', () => {
         });
       });
 
-      it('throws error on non-existing node', async () => {
+      it('returns empty data for non existing root tree', async () => {
         const route = `/${treeKey}@MISSINGREF`;
+        const empty = await treeDb.get(Route.fromFlat(route), {});
 
-        await expect(
-          treeDb.get(Route.fromFlat(route), {}),
-        ).rejects.toThrowError();
+        expect(empty.rljson[treeKey]._data.length).toBe(0);
+        expect(empty.tree).toEqual({
+          exampleTree: {
+            _data: [],
+            _hash: undefined,
+            _type: 'trees',
+          },
+        });
+        expect(empty.cell).toEqual([]);
       });
     });
   });

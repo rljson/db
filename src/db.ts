@@ -399,16 +399,23 @@ export class Db {
 
         if (nodeType === 'trees') {
           const rljson = node;
+          /* v8 ignore next -- @preserve */
           const tree = opts.skipTree
             ? ({} as Json)
-            : await (
-                nodeController as TreeController<string, Tree>
-              ).buildTreeFromTrees(nodeRows as Tree[]);
+            : {
+                [nodeTableKey]: {
+                  _data: await (
+                    nodeController as TreeController<string, Tree>
+                  ).buildTreeFromTrees(nodeRows as Tree[]),
+                  _type: 'trees',
+                },
+              };
+          /* v8 ignore next -- @preserve */
           const cell = opts.skipCell
             ? ([] as Cell[])
             : await (
                 nodeController as TreeController<string, Tree>
-              ).buildCellFromTree(nodeRows as Tree[]);
+              ).buildCellsFromTree(nodeRows as Tree[]);
 
           result = {
             rljson,

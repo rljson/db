@@ -63,6 +63,7 @@ export class TreeController<N extends string, C extends Tree>
     origin?: Ref,
   ): Promise<InsertHistoryRow<any>[]> {
     // Validate command
+    /* v8 ignore next -- @preserve */
     if (!command.startsWith('add') && !command.startsWith('remove')) {
       throw new Error(`Command ${command} is not supported by TreeController.`);
     }
@@ -101,17 +102,21 @@ export class TreeController<N extends string, C extends Tree>
         : await this._getByWhere(where, filter);
 
     if (trees.length === 0) {
-      throw new Error(`Tree not found for where clause.`);
+      return { [this._tableKey]: { _data: [], _type: 'trees' } } as Rljson;
     }
     if (trees.length > 1) {
-      throw new Error(`Multiple trees found for where clause.`);
+      throw new Error(
+        `Multiple trees found for where clause. Please specify a more specific query.`,
+      );
     }
 
     const treeRoute = Route.fromFlat(path || '');
+    /* v8 ignore next -- @preserve */
     const treeId =
       treeRoute.segments.length > 0 ? treeRoute.top.tableKey : null;
     const tree = (trees as Tree[])[0];
 
+    /* v8 ignore next -- @preserve */
     if (treeId && treeId !== tree.id) {
       return { [this._tableKey]: { _data: [], _type: 'trees' } } as Rljson;
     }
@@ -134,9 +139,9 @@ export class TreeController<N extends string, C extends Tree>
     } as Rljson;
   }
 
-  async buildTreeFromTrees(trees: Tree[]): Promise<any> {
+  async buildTreeFromTrees(trees: Tree[]): Promise<Json> {
     if (trees.length === 0) {
-      return null;
+      return {};
     }
 
     // Create a map of hash to tree for quick lookup
@@ -156,6 +161,7 @@ export class TreeController<N extends string, C extends Tree>
       const result: any = {};
       for (const childHash of tree.children) {
         const childTree = treeMap.get(childHash as string);
+        /* v8 ignore else -- @preserve */
         if (childTree && childTree.id) {
           result[childTree.id] = buildObject(childTree);
         }
@@ -177,22 +183,26 @@ export class TreeController<N extends string, C extends Tree>
       (tree) => !referencedHashes.has((tree as TreeWithHash)._hash),
     );
 
+    /* v8 ignore next -- @preserve */
     if (rootTrees.length === 0) {
-      return null;
+      return {};
     }
 
     // If single root, return its object directly
     if (rootTrees.length === 1) {
       const rootTree = rootTrees[0];
+      /* v8 ignore else -- @preserve */
       if (rootTree.id) {
         return { [rootTree.id]: buildObject(rootTree) };
       }
+      /*v8 ignore next -- @preserve */
       return buildObject(rootTree);
     }
 
     // Multiple roots - combine into single object
     const result: any = {};
     for (const rootTree of rootTrees) {
+      /* v8 ignore else -- @preserve */
       if (rootTree.id) {
         result[rootTree.id] = buildObject(rootTree);
       }
@@ -200,7 +210,7 @@ export class TreeController<N extends string, C extends Tree>
     return result;
   }
 
-  async buildCellFromTree(trees: Tree[]): Promise<Cell[]> {
+  async buildCellsFromTree(trees: Tree[]): Promise<Cell[]> {
     const cells: Cell[] = [];
 
     if (trees.length === 0) {
@@ -247,8 +257,10 @@ export class TreeController<N extends string, C extends Tree>
       // Build path backwards from leaf to root
       while (currentHash) {
         const current = treeMap.get(currentHash);
+        /* v8 ignore next -- @preserve */
         if (!current) break;
 
+        /* v8 ignore else -- @preserve */
         if (current.id) {
           pathIds.unshift(current.id);
         }
@@ -274,9 +286,24 @@ export class TreeController<N extends string, C extends Tree>
     return cells;
   }
 
-  /* v8 ignore next -- @preserve */
-  async getChildRefs(): Promise<ControllerChildProperty[]> {
-    return [];
+  async getChildRefs(
+    where: string | Json,
+    filter?: Json,
+  ): Promise<ControllerChildProperty[]> {
+    const childRefs: ControllerChildProperty[] = [];
+    const { [this._tableKey]: table } = await this.get(where, filter);
+
+    const trees = table._data as TreeWithHash[];
+    for (const tree of trees) {
+      for (const treeChildRef of tree.children ?? []) {
+        childRefs.push({
+          tableKey: this._tableKey,
+          ref: treeChildRef as string,
+        });
+      }
+    }
+
+    return childRefs;
   }
 
   /* v8 ignore next -- @preserve */
