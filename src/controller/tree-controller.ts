@@ -6,16 +6,8 @@ import { hsh } from '@rljson/hash';
 import { Json } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  InsertCommand,
-  InsertHistoryRow,
-  Ref,
-  Rljson,
-  Route,
-  TableKey,
-  timeId,
-  Tree,
-  TreesTable,
-  TreeWithHash,
+  InsertCommand, InsertHistoryRow, Ref, Rljson, Route, TableKey, timeId, Tree, TreesTable,
+  TreeWithHash
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
@@ -23,6 +15,7 @@ import { Cell } from '../db.ts';
 
 import { BaseController } from './base-controller.ts';
 import { Controller, ControllerChildProperty } from './controller.ts';
+
 
 export class TreeController<N extends string, C extends Tree>
   extends BaseController<TreesTable, C>
@@ -154,7 +147,7 @@ export class TreeController<N extends string, C extends Tree>
     const buildObject = (tree: Tree): any => {
       // Leaf node - return meta value
       if (!tree.isParent || !tree.children || tree.children.length === 0) {
-        return tree.meta;
+        return tree;
       }
 
       // Parent node - build object from children
@@ -277,9 +270,9 @@ export class TreeController<N extends string, C extends Tree>
       // Create cell
       cells.push({
         route,
-        value: leaf.meta,
-        row: leaf.meta,
-        path: [pathIds],
+        value: leaf,
+        row: leaf,
+        path: [[this._tableKey, '_data', 0, ...pathIds]],
       });
     }
 

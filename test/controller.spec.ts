@@ -1623,14 +1623,29 @@ describe('Controller', () => {
 
         expect(rmhsh(treeObjectConverted)).toEqual({
           a: {
-            value: 1,
+            children: null,
+            id: 'a',
+            isParent: false,
+            meta: {
+              value: 1,
+            },
           },
           b: {
             c: {
-              value: 2,
+              children: null,
+              id: 'c',
+              isParent: false,
+              meta: {
+                value: 2,
+              },
             },
             d: {
-              value: [3, 4],
+              children: null,
+              id: 'd',
+              isParent: false,
+              meta: {
+                value: [3, 4],
+              },
             },
           },
         });
@@ -1640,7 +1655,12 @@ describe('Controller', () => {
 
         expect(rmhsh(treeObjectConvertedSingle)).toEqual({
           a: {
-            value: 1,
+            children: null,
+            id: 'a',
+            isParent: false,
+            meta: {
+              value: 1,
+            },
           },
         });
 
@@ -1664,38 +1684,68 @@ describe('Controller', () => {
 
         const cell0 = { ...cells[0], route: cells[0].route.flat };
         expect(rmhsh(cell0 as any)).toEqual({
-          value: {
-            value: 1,
-          },
-          row: {
-            value: 1,
-          },
-          path: [['a']],
+          path: [['exampleTree', '_data', 0, 'a']],
           route: '/a',
+          row: {
+            children: null,
+            id: 'a',
+            isParent: false,
+            meta: {
+              value: 1,
+            },
+          },
+          value: {
+            children: null,
+            id: 'a',
+            isParent: false,
+            meta: {
+              value: 1,
+            },
+          },
         });
 
         const cell1 = { ...cells[1], route: cells[1].route.flat };
         expect(rmhsh(cell1 as any)).toEqual({
-          value: {
-            value: 2,
-          },
-          row: {
-            value: 2,
-          },
-          path: [['b', 'c']],
+          path: [['exampleTree', '_data', 0, 'b', 'c']],
           route: '/b/c',
+          row: {
+            children: null,
+            id: 'c',
+            isParent: false,
+            meta: {
+              value: 2,
+            },
+          },
+          value: {
+            children: null,
+            id: 'c',
+            isParent: false,
+            meta: {
+              value: 2,
+            },
+          },
         });
 
         const cell2 = { ...cells[2], route: cells[2].route.flat };
         expect(rmhsh(cell2 as any)).toEqual({
-          value: {
-            value: [3, 4],
-          },
-          row: {
-            value: [3, 4],
-          },
-          path: [['b', 'd']],
+          path: [['exampleTree', '_data', 0, 'b', 'd']],
           route: '/b/d',
+          row: {
+            children: null,
+            id: 'd',
+            isParent: false,
+            meta: {
+              value: [3, 4],
+            },
+          },
+          value: {
+            children: null,
+            id: 'd',
+            isParent: false,
+            meta: {
+              value: [3, 4],
+            },
+          },
         });
 
         const empty = await treeController.buildCellsFromTree([]);

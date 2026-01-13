@@ -35,6 +35,7 @@ import {
   TableType,
   timeId,
   Tree,
+  treeFromObject,
 } from '@rljson/rljson';
 
 import {
@@ -404,9 +405,11 @@ export class Db {
             ? ({} as Json)
             : {
                 [nodeTableKey]: {
-                  _data: await (
-                    nodeController as TreeController<string, Tree>
-                  ).buildTreeFromTrees(nodeRows as Tree[]),
+                  _data: [
+                    await (
+                      nodeController as TreeController<string, Tree>
+                    ).buildTreeFromTrees(nodeRows as Tree[]),
+                  ],
                   _type: 'trees',
                 },
               };
@@ -1108,7 +1111,7 @@ export class Db {
       : [];
 
     //If not root, run nested controllers first
-    if (!nodeRoute.isRoot) {
+    if (!nodeRoute.isRoot && nodeType != 'trees') {
       //Run nested controller first
       const childRoute = nodeRoute.deeper(1);
       const childTableKey = childRoute.top.tableKey;
@@ -1325,6 +1328,34 @@ export class Db {
 
           results.push(
             ...result.map((r) => ({
+              ...r,
+              ...{ previous },
+              ...{ route: route.flat },
+            })),
+          );
+        }
+      }
+      if (nodeType === 'trees') {
+        const treeObject = (tree[nodeTableKey] as any)._data[0];
+        /* v8 ignore next -- @preserve */
+        if (!treeObject) {
+          throw new Error(
+            `Db._insert: No tree data found for table "${nodeTableKey}" in route "${route.flat}".`,
+          );
+        }
+        const trees = treeFromObject(treeObject);
+
+        const writePromises = trees.map((tree) =>
+          runFn('add', tree, 'db.insert'),
+        );
+        const writeResults = await Promise.all(writePromises);
+
+        // Only add the root item (last tree) to results if anything was written
+        const lastResult = writeResults[writeResults.length - 1];
+        /* v8 ignore else -- @preserve */
+        if (lastResult && lastResult.length > 0) {
+          results.push(
+            ...lastResult.map((r) => ({
               ...r,
               ...{ previous },
               ...{ route: route.flat },
