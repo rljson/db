@@ -954,14 +954,8 @@ describe('Db', () => {
         const cakeInsertHistoryRow = cakeInsertHistoryRows[0];
         const cakeRevisionTimeId = cakeInsertHistoryRow.timeId;
 
-        //Get layer revision TimeId
-        const {
-          ['carGeneralLayerInsertHistory']: { _data: layerInsertHistoryRows },
-        } = await db.getInsertHistory('carGeneralLayer');
-        const layerRevisionTimeId = layerInsertHistoryRows[0].timeId;
-
         //Build route with TimeIds
-        const refRoute = `/carCake@${cakeRevisionTimeId}/carGeneralLayer@${layerRevisionTimeId}/carGeneral`;
+        const refRoute = `/carCake@${cakeRevisionTimeId}/carGeneralLayer/carGeneral`;
 
         //Get all Volkswagens in example data
         const where = {
@@ -1282,7 +1276,7 @@ describe('Db', () => {
         await treeIo.init();
 
         treeDb = new Db(treeIo);
-        await treeDb.core.createTable(treeTableCfg);
+        await treeDb.core.createTableWithInsertHistory(treeTableCfg);
 
         await treeDb.core.import({
           [treeKey]: treeTable,
@@ -2613,23 +2607,10 @@ describe('Db', () => {
       } = await db.getInsertHistory('carTechnical');
       const carTechnicalInsertHistoryRow = rmhsh(carTechnicalInsertHistory[0]);
 
-      const {
-        ['carDimensionsInsertHistory']: { _data: carDimensionsInsertHistory },
-      } = await db.getInsertHistory('carDimensions');
-      const carDimensionsInsertHistoryRow = rmhsh(
-        carDimensionsInsertHistory[0],
-      );
-
       expect(carTechnicalCallback).toHaveBeenCalledTimes(1);
       expect(carTechnicalCallback).toHaveBeenNthCalledWith(
         1,
         carTechnicalInsertHistoryRow,
-      );
-
-      expect(carDimensionsCallback).toHaveBeenCalledTimes(1);
-      expect(carDimensionsCallback).toHaveBeenNthCalledWith(
-        1,
-        carDimensionsInsertHistoryRow,
       );
     });
     it('notify on nested cake/layer/component route', async () => {

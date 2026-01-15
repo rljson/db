@@ -1508,11 +1508,15 @@ describe('Controller', () => {
 
       treeCore = new Core(treeIo);
 
-      await treeCore.createTable(rmhsh(treesTableCfg) as TableCfg);
+      await treeCore.createTableWithInsertHistory(
+        rmhsh(treesTableCfg) as TableCfg,
+      );
       await treeCore.import({ exampleTree: treesTable });
 
       const someCakeTableCfgs = createCakeTableCfg('notATreeCake');
-      await treeCore.createTable(rmhsh(someCakeTableCfgs) as TableCfg);
+      await treeCore.createTableWithInsertHistory(
+        rmhsh(someCakeTableCfgs) as TableCfg,
+      );
     });
     describe('Basic operation', () => {
       it('Init', async () => {

@@ -261,15 +261,13 @@ describe('MultiEditProcessor', () => {
       expect(multiEdits[0].row).toEqual(multiEdit);
 
       //Check Head updated
-      const { cell: heads } = await db.get(
-        Route.fromFlat(`${cakeKey}Heads/cakeRef`),
+      const { cell: insertCells } = await db.get(
+        Route.fromFlat(`${cakeKey}InsertHistory/${cakeKey}Ref`),
         {},
       );
 
-      expect(heads.length).toBe(4);
-      expect(heads.some((h) => (h.value as string) === writtenCakeRef)).toBe(
-        true,
-      );
+      expect(insertCells.length).toBe(1);
+      expect(insertCells[0].value === writtenCakeRef).toBe(true);
     });
   });
 

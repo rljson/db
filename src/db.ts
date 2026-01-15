@@ -18,7 +18,6 @@ import {
   EditHistoryTable,
   EditsTable,
   getTimeIdTimestamp,
-  Head,
   InsertHistoryRow,
   InsertHistoryTimeId,
   isTimeId,
@@ -33,7 +32,6 @@ import {
   SliceId,
   SliceIds,
   TableType,
-  timeId,
   Tree,
   treeFromObject,
 } from '@rljson/rljson';
@@ -1066,7 +1064,13 @@ export class Db {
     for (const [tableKey, controller] of Object.entries(controllers)) {
       runFns[tableKey] = controller.insert.bind(controller);
     }
-    return this._insert(route, tree, runFns, options);
+    const insertHistoryRow = await this._insert(route, tree, runFns, options);
+
+    //Write insertHistory
+    if (!options?.skipHistory)
+      await this._writeInsertHistory(route.top.tableKey, insertHistoryRow[0]);
+
+    return insertHistoryRow;
   }
 
   // ...........................................................................
@@ -1366,10 +1370,6 @@ export class Db {
     }
 
     for (const result of results) {
-      //Write insertHistory
-      if (!options?.skipHistory)
-        await this._writeInsertHistory(nodeTableKey, result);
-
       //Notify listeners
       if (!options?.skipNotification)
         this.notify.notify(Route.fromFlat(result.route), result);
@@ -1477,23 +1477,6 @@ export class Db {
         _type: 'insertHistory',
       },
     });
-  }
-
-  // ...........................................................................
-  /**
-   * Add a head revision for a cake
-   * @param cakeKey - The cake table key
-   * @param cakeRef - The cake reference
-   */
-  public async addHeadRevision(cakeKey: string, cakeRef: Ref) {
-    const cakeHeadKey = cakeKey + 'Heads';
-    const cakeHeadController = await this.getController(cakeHeadKey);
-
-    return await cakeHeadController.insert('add', {
-      cakeRef,
-      timeId: timeId(),
-      _hash: '',
-    } as Head);
   }
 
   // ...........................................................................
