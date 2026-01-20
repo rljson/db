@@ -221,11 +221,6 @@ export class MultiEditProcessor {
     const writtenCakeRef = (inserted as any)[this._cakeKey + 'Ref'] as string;
 
     /* v8 ignore else -- @preserve */
-    if (!options?.skipHeadUpdate) {
-      await this._db.addHeadRevision(this._cakeKey, writtenCakeRef);
-    }
-
-    /* v8 ignore else -- @preserve */
     if (!options?.skipSaveMultiEdit) {
       await this._db.addMultiEdit(this._cakeKey, this._multiEdit!);
     }

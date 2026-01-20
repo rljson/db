@@ -12,7 +12,7 @@ export const inject = (tree: any, path: (string | number)[], value: any) => {
       tree[segment] = value;
       delete tree['_hash'];
     } else {
-      if (!tree[segment]) {
+      if (!tree[segment] || typeof tree[segment] !== 'object') {
         tree[segment] = {};
       }
       tree = tree[segment];

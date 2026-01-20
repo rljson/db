@@ -18,7 +18,6 @@ import {
   EditHistoryTable,
   EditsTable,
   getTimeIdTimestamp,
-  Head,
   InsertHistoryRow,
   InsertHistoryTimeId,
   isTimeId,
@@ -33,7 +32,8 @@ import {
   SliceId,
   SliceIds,
   TableType,
-  timeId,
+  Tree,
+  treeFromObject,
 } from '@rljson/rljson';
 
 import {
@@ -44,6 +44,7 @@ import {
   createController,
 } from './controller/controller.ts';
 import { SliceIdController } from './controller/slice-id-controller.ts';
+import { TreeController } from './controller/tree-controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRow, JoinRows } from './join/join.ts';
 import { ColumnSelection } from './join/selection/column-selection.ts';
@@ -225,7 +226,7 @@ export class Db {
     // Fetch Node Data (actual access to underlying data model)
     const {
       [nodeTableKey]: { _data: nodeRows, _type: nodeType, _hash: nodeHash },
-    } = await nodeController.get(nodeWhere);
+    } = await nodeController.get(nodeWhere, undefined, route.propertyKey);
     const nodeColumnCfgs = nodeController.tableCfg().columns;
 
     const filterActive = filter && filter.length > 0;
@@ -393,29 +394,60 @@ export class Db {
               baseRouteStr + `/${route.propertyKey}`,
             ).toRouteWithProperty();
 
-        /* v8 ignore next -- @preserve */
-        const tree = opts.skipTree
-          ? ({} as Json)
-          : { [nodeTableKey]: node[nodeTableKey] };
+        let result: Container;
 
-        /* v8 ignore next -- @preserve */
-        const cell = opts.skipCell
-          ? ([] as Cell[])
-          : (nodeRowsFiltered.map(
-              (v, idx) =>
-                ({
-                  value: v[route.propertyKey!] ?? null,
-                  row: v,
-                  route: routeWithProperty,
-                  path: [[nodeTableKey, '_data', idx, route.propertyKey]],
-                } as Cell),
-            ) as Cell[]);
+        if (nodeType === 'trees') {
+          const rljson = node;
+          /* v8 ignore next -- @preserve */
+          const tree = opts.skipTree
+            ? ({} as Json)
+            : {
+                [nodeTableKey]: {
+                  _data: [
+                    await (
+                      nodeController as TreeController<string, Tree>
+                    ).buildTreeFromTrees(nodeRows as Tree[]),
+                  ],
+                  _type: 'trees',
+                },
+              };
+          /* v8 ignore next -- @preserve */
+          const cell = opts.skipCell
+            ? ([] as Cell[])
+            : await (
+                nodeController as TreeController<string, Tree>
+              ).buildCellsFromTree(nodeRows as Tree[]);
 
-        const result = {
-          rljson: isolatedNode,
-          tree,
-          cell,
-        };
+          result = {
+            rljson,
+            tree,
+            cell,
+          };
+        } else {
+          /* v8 ignore next -- @preserve */
+          const tree = opts.skipTree
+            ? ({} as Json)
+            : { [nodeTableKey]: node[nodeTableKey] };
+
+          /* v8 ignore next -- @preserve */
+          const cell = opts.skipCell
+            ? ([] as Cell[])
+            : (nodeRowsFiltered.map(
+                (v, idx) =>
+                  ({
+                    value: v[route.propertyKey!] ?? null,
+                    row: v,
+                    route: routeWithProperty,
+                    path: [[nodeTableKey, '_data', idx, route.propertyKey]],
+                  } as Cell),
+              ) as Cell[]);
+
+          result = {
+            rljson: isolatedNode,
+            tree,
+            cell,
+          };
+        }
 
         //Set Cache
         this._cache.set(cacheHash, result);
@@ -1032,7 +1064,13 @@ export class Db {
     for (const [tableKey, controller] of Object.entries(controllers)) {
       runFns[tableKey] = controller.insert.bind(controller);
     }
-    return this._insert(route, tree, runFns, options);
+    const insertHistoryRow = await this._insert(route, tree, runFns, options);
+
+    //Write insertHistory
+    if (!options?.skipHistory)
+      await this._writeInsertHistory(route.top.tableKey, insertHistoryRow[0]);
+
+    return insertHistoryRow;
   }
 
   // ...........................................................................
@@ -1077,7 +1115,7 @@ export class Db {
       : [];
 
     //If not root, run nested controllers first
-    if (!nodeRoute.isRoot) {
+    if (!nodeRoute.isRoot && nodeType != 'trees') {
       //Run nested controller first
       const childRoute = nodeRoute.deeper(1);
       const childTableKey = childRoute.top.tableKey;
@@ -1301,13 +1339,37 @@ export class Db {
           );
         }
       }
+      if (nodeType === 'trees') {
+        const treeObject = (tree[nodeTableKey] as any)._data[0];
+        /* v8 ignore next -- @preserve */
+        if (!treeObject) {
+          throw new Error(
+            `Db._insert: No tree data found for table "${nodeTableKey}" in route "${route.flat}".`,
+          );
+        }
+        const trees = treeFromObject(treeObject);
+
+        const writePromises = trees.map((tree) =>
+          runFn('add', tree, 'db.insert'),
+        );
+        const writeResults = await Promise.all(writePromises);
+
+        // Only add the root item (last tree) to results if anything was written
+        const lastResult = writeResults[writeResults.length - 1];
+        /* v8 ignore else -- @preserve */
+        if (lastResult && lastResult.length > 0) {
+          results.push(
+            ...lastResult.map((r) => ({
+              ...r,
+              ...{ previous },
+              ...{ route: route.flat },
+            })),
+          );
+        }
+      }
     }
 
     for (const result of results) {
-      //Write insertHistory
-      if (!options?.skipHistory)
-        await this._writeInsertHistory(nodeTableKey, result);
-
       //Notify listeners
       if (!options?.skipNotification)
         this.notify.notify(Route.fromFlat(result.route), result);
@@ -1415,23 +1477,6 @@ export class Db {
         _type: 'insertHistory',
       },
     });
-  }
-
-  // ...........................................................................
-  /**
-   * Add a head revision for a cake
-   * @param cakeKey - The cake table key
-   * @param cakeRef - The cake reference
-   */
-  public async addHeadRevision(cakeKey: string, cakeRef: Ref) {
-    const cakeHeadKey = cakeKey + 'Heads';
-    const cakeHeadController = await this.getController(cakeHeadKey);
-
-    return await cakeHeadController.insert('add', {
-      cakeRef,
-      timeId: timeId(),
-      _hash: '',
-    } as Head);
   }
 
   // ...........................................................................

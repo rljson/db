@@ -6,7 +6,15 @@
 
 import { Json, JsonValue } from '@rljson/json';
 import {
-  ContentType, InsertCommand, InsertHistoryRow, Ref, Rljson, SliceId, TableCfg, TableKey, TableType
+  ContentType,
+  InsertCommand,
+  InsertHistoryRow,
+  Ref,
+  Rljson,
+  SliceId,
+  TableCfg,
+  TableKey,
+  TableType,
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
@@ -14,8 +22,11 @@ import { Core } from '../core.ts';
 import { CakeController, CakeControllerRefs } from './cake-controller.ts';
 import { ComponentController } from './component-controller.ts';
 import { LayerController, LayerControllerRefs } from './layer-controller.ts';
-import { SliceIdController, SliceIdControllerRefs } from './slice-id-controller.ts';
-
+import {
+  SliceIdController,
+  SliceIdControllerRefs,
+} from './slice-id-controller.ts';
+import { TreeController } from './tree-controller.ts';
 
 export type ControllerRefs = CakeControllerRefs | LayerControllerRefs;
 
@@ -44,7 +55,7 @@ export type ControllerChildProperty = {
  * @property {ControllerRunFn<N>} insert - Function to execute a command on the table.
  * @property {() => Promise<void>} init - Initializes the controller.
  * @property {() => Promise<T>} table - Retrieves the current state of the table.
- * @property {(where: string | { [column: string]: JsonValue }) => Promise<Rljson>} get - Fetches data from the table based on a condition.
+ * @property {(where: string | { [column: string]: JsonValue }, filter: Json | undefined, path: string | undefined) => Promise<Rljson>} get - Fetches data from the table based on a condition.
  * @property {(where: string | Json, filter?: Json) => Promise<Array<{ tableKey: TableKey; ref: Ref }>>} getChildRefs - Retrieves references to child entries in related tables based on a condition.
  * @param {string | Json }} where - The condition to filter the data.
  * @returns {Promise<Json[] | null>} A promise that resolves to an array of JSON objects or null if no data is found.
@@ -58,7 +69,7 @@ export interface Controller<
   insert: ControllerRunFn<N, C>;
   init(): Promise<void>;
   table(): Promise<T>;
-  get(where: string | Json, filter?: Json): Promise<Rljson>;
+  get(where: string | Json, filter?: Json, path?: string): Promise<Rljson>;
   getChildRefs(
     where: string | Json,
     filter?: Json,
@@ -93,7 +104,7 @@ export const createController = async (
     case 'edits':
     case 'editHistory':
     case 'multiEdits':
-    case 'head':
+    case 'insertHistory':
       ctrl = new ComponentController(core, tableKey, refs as ControllerRefs);
       break;
     case 'cakes':
@@ -105,6 +116,9 @@ export const createController = async (
         tableKey,
         refs as SliceIdControllerRefs,
       );
+      break;
+    case 'trees':
+      ctrl = new TreeController(core, tableKey);
       break;
     default:
       throw new Error(`Controller for type ${type} is not implemented yet.`);

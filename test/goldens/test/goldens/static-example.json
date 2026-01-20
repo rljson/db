@@ -716,28 +716,6 @@
     ],
     "_hash": "GE2ENEvgz0V5or4b5mGUeA"
   },
-  "carCakeHeads": {
-    "_tableCfg": "BdHBQfVBybIqR5cpy7Q6gM",
-    "_type": "head",
-    "_data": [
-      {
-        "timeId": "1764756756311:jkCG",
-        "cakeRef": "CDGdGBeIalWNKAVLKw1eRQ",
-        "_hash": "ojtVzxYOmsw6zi9QJAc8gV"
-      },
-      {
-        "timeId": "1764756756312:1AGV",
-        "cakeRef": "S_JW6rukm6bJqkp4qONlY8",
-        "_hash": "2TXf5A1srq_ZfuMkLXLl5i"
-      },
-      {
-        "timeId": "1764756756312:g8nh",
-        "cakeRef": "EC-rmNFrV6n5i90b8i9Cfm",
-        "_hash": "v0xmjUkWp56YQBPBhOJcDg"
-      }
-    ],
-    "_hash": "q_zxJk4XnlbQQ3lH3i7Pms"
-  },
   "seriesSliceId": {
     "_tableCfg": "M56UyKNWlKRYjthW4Zz101",
     "_type": "sliceIds",
@@ -1113,28 +1091,6 @@
     ],
     "_hash": "O2jWwS-eGh2xgnOxo4MpLZ"
   },
-  "seriesCakeHeads": {
-    "_tableCfg": "0Ux8jbuyRnf_GmNzWM3F0V",
-    "_type": "head",
-    "_data": [
-      {
-        "timeId": "1764756756315:L14y",
-        "cakeRef": "eKSiCG1lsWdog0COeNjsZ6",
-        "_hash": "wuBH0XoLHJx8aY1XJbFjcf"
-      },
-      {
-        "timeId": "1764756756315:xCXT",
-        "cakeRef": "0slS_F64EY9vArREgRfU6o",
-        "_hash": "4_9uLevaheNnNLnsbeeAxe"
-      },
-      {
-        "timeId": "1764756756315:fZwA",
-        "cakeRef": "OSW5AwessmFW6Pzm6Hbc5U",
-        "_hash": "vUteeysdSBJ_A5An5tm7n0"
-      }
-    ],
-    "_hash": "vdtQH2z20bnfFH9n2poa6I"
-  },
   "catalogSliceId": {
     "_tableCfg": "RuPnebBhe2zKYEaPl2UQ-B",
     "_type": "sliceIds",
@@ -1223,18 +1179,6 @@
       }
     ],
     "_hash": "FY38AvWqJrl_mrOEZRDZ6f"
-  },
-  "catalogCakeHeads": {
-    "_tableCfg": "_mzeU0VufVrplS7IPt2i16",
-    "_type": "head",
-    "_data": [
-      {
-        "timeId": "1764756756317:5UTy",
-        "cakeRef": "qQeqWokNwOrYJLPK3UBNDm",
-        "_hash": "H9VHo0KaPOe8TD2m0rC6zi"
-      }
-    ],
-    "_hash": "mDnvt2zxUSEljqdabU9JYV"
   },
   "tableCfgs": {
     "_data": [
@@ -1677,41 +1621,6 @@
         "_hash": "5tcrs9FhrPleZv_JXzetfy"
       },
       {
-        "key": "carCakeHeads",
-        "type": "head",
-        "columns": [
-          {
-            "key": "_hash",
-            "type": "string",
-            "titleLong": "Hash",
-            "titleShort": "Hash",
-            "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
-          },
-          {
-            "key": "timeId",
-            "type": "string",
-            "titleLong": "Time Identifier",
-            "titleShort": "Time ID",
-            "_hash": "2ej3dpJSAPgLtZjcQ1zj8C"
-          },
-          {
-            "key": "cakeRef",
-            "type": "string",
-            "titleLong": "Cake Reference",
-            "titleShort": "Cake Ref",
-            "ref": {
-              "tableKey": "carCake",
-              "_hash": "2l4mut6PepEq0qxY-e8q_1"
-            },
-            "_hash": "57mIA6dSpdEHV5tGHTDCh-"
-          }
-        ],
-        "isHead": false,
-        "isRoot": false,
-        "isShared": true,
-        "_hash": "BdHBQfVBybIqR5cpy7Q6gM"
-      },
-      {
         "key": "seriesSliceId",
         "type": "sliceIds",
         "columns": [
@@ -1966,41 +1875,6 @@
         "_hash": "RV_3YD_kV-43k-fGdbnJWr"
       },
       {
-        "key": "seriesCakeHeads",
-        "type": "head",
-        "columns": [
-          {
-            "key": "_hash",
-            "type": "string",
-            "titleLong": "Hash",
-            "titleShort": "Hash",
-            "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
-          },
-          {
-            "key": "timeId",
-            "type": "string",
-            "titleLong": "Time Identifier",
-            "titleShort": "Time ID",
-            "_hash": "2ej3dpJSAPgLtZjcQ1zj8C"
-          },
-          {
-            "key": "cakeRef",
-            "type": "string",
-            "titleLong": "Cake Reference",
-            "titleShort": "Cake Ref",
-            "ref": {
-              "tableKey": "seriesCake",
-              "_hash": "p6qHRBXbSevmRzBbxg_QRP"
-            },
-            "_hash": "7yScNAwdonEi-v4fSVJ21f"
-          }
-        ],
-        "isHead": false,
-        "isRoot": false,
-        "isShared": true,
-        "_hash": "0Ux8jbuyRnf_GmNzWM3F0V"
-      },
-      {
         "key": "catalogSliceId",
         "type": "sliceIds",
         "columns": [
@@ -2170,41 +2044,6 @@
         "isRoot": false,
         "isShared": true,
         "_hash": "qnSyADYpFzJVxFvRjUrodj"
-      },
-      {
-        "key": "catalogCakeHeads",
-        "type": "head",
-        "columns": [
-          {
-            "key": "_hash",
-            "type": "string",
-            "titleLong": "Hash",
-            "titleShort": "Hash",
-            "_hash": "Np5O9L6tfUaUFTAYyx6g5E"
-          },
-          {
-            "key": "timeId",
-            "type": "string",
-            "titleLong": "Time Identifier",
-            "titleShort": "Time ID",
-            "_hash": "2ej3dpJSAPgLtZjcQ1zj8C"
-          },
-          {
-            "key": "cakeRef",
-            "type": "string",
-            "titleLong": "Cake Reference",
-            "titleShort": "Cake Ref",
-            "ref": {
-              "tableKey": "catalogCake",
-              "_hash": "EN0f4jKrk2feacQ-2Ne-Ea"
-            },
-            "_hash": "XUaBPCcvYEoVoNSLrD4Ai2"
-          }
-        ],
-        "isHead": false,
-        "isRoot": false,
-        "isShared": true,
-        "_hash": "_mzeU0VufVrplS7IPt2i16"
       }
     ]
   }

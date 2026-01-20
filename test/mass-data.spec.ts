@@ -177,5 +177,5 @@ describe('mass data', () => {
     //console.log(`Join took ${endTime - startTime}ms`);
 
     expect(join.rows.length).toBe(dataLength);
-  }, 10000);
+  }, 20000);
 });

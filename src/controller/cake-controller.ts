@@ -104,11 +104,6 @@ export class CakeController<N extends string, C extends Cake>
     where: string | Json,
     filter?: Json,
   ): Promise<ControllerChildProperty[]> {
-    /* v8 ignore next -- @preserve */
-    if (!this._tableCfg) {
-      throw new Error(`Controller not initialized.`);
-    }
-
     const childRefs: ControllerChildProperty[] = [];
     const { [this._tableKey]: table } = await this.get(where, filter);
 
