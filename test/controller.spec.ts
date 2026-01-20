@@ -5,16 +5,22 @@
 // found in the LICENSE file in the root of this package.
 
 import { rmhsh } from '@rljson/hash';
-import { IoMem } from '@rljson/io';
+import { Io, IoMem } from '@rljson/io';
 import { Json, JsonH } from '@rljson/json';
 import {
   Cake,
   CakesTable,
+  createCakeTableCfg,
+  createTreesTableCfg,
   Layer,
   LayersTable,
   SliceId,
   SliceIds,
   TableCfg,
+  Tree,
+  treeFromObject,
+  TreesTable,
+  TreeWithHash,
 } from '@rljson/rljson';
 
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -34,6 +40,7 @@ import {
   SliceIdController,
   SliceIdControllerRefs,
 } from '../src/controller/slice-id-controller';
+import { TreeController } from '../src/controller/tree-controller';
 import { Core } from '../src/core';
 import { Db } from '../src/db';
 import {
@@ -1477,6 +1484,323 @@ describe('Controller', () => {
         await expect(
           carCakeController.insert('update' as any, carCakeValue, origin),
         ).rejects.toThrow('Command update is not supported by CakeController.');
+      });
+    });
+  });
+  describe('TreeController', () => {
+    const treeObject: Json = { a: 1, b: { c: 2, d: [3, 4] } };
+    let trees: TreeWithHash[];
+    let treesTable: TreesTable;
+    const treesTableCfg: TableCfg = createTreesTableCfg('exampleTree');
+    let treeIo: Io;
+    let treeCore: Core;
+
+    beforeEach(async () => {
+      trees = treeFromObject(treeObject);
+      treesTable = {
+        _type: 'trees',
+        _data: trees,
+      };
+
+      treeIo = new IoMem();
+      await treeIo.init();
+      await treeIo.isReady();
+
+      treeCore = new Core(treeIo);
+
+      await treeCore.createTableWithInsertHistory(
+        rmhsh(treesTableCfg) as TableCfg,
+      );
+      await treeCore.import({ exampleTree: treesTable });
+
+      const someCakeTableCfgs = createCakeTableCfg('notATreeCake');
+      await treeCore.createTableWithInsertHistory(
+        rmhsh(someCakeTableCfgs) as TableCfg,
+      );
+    });
+    describe('Basic operation', () => {
+      it('Init', async () => {
+        //Create TreeController
+        let treeCtrl: TreeController<'exampleTree', Tree>;
+
+        //Wrong TableKey
+        treeCtrl = new TreeController(treeCore, '#');
+        await expect(treeCtrl.init()).rejects.toThrow(
+          'Table # is not supported by TreeController.',
+        );
+
+        //Table not of type trees
+        treeCtrl = new TreeController(treeCore, 'notATreeCake');
+        await expect(treeCtrl.init()).rejects.toThrow(
+          'Table notATreeCake is not supported by TreeController.',
+        );
+
+        //Valid
+        treeCtrl = new TreeController(treeCore, 'exampleTree');
+        await treeCtrl.init();
+        expect(treeCtrl).toBeDefined();
+      });
+
+      it('getChildRefs', async () => {
+        //Create TreeController
+        const treeController = await createController(
+          'trees',
+          treeCore,
+          'exampleTree',
+        );
+
+        //Get Child Refs
+        const childRefs = await treeController.getChildRefs(
+          trees[3]._hash as string,
+        );
+
+        expect(childRefs).toBeDefined();
+        expect(childRefs.length).toBe(2);
+      });
+
+      it('Table', async () => {
+        //Create TreeController
+        const treeController = await createController(
+          'trees',
+          treeCore,
+          'exampleTree',
+        );
+
+        //Read Table
+        const table = (await treeController.table()) as TreesTable;
+        expect(table).toBeDefined();
+        expect(table._data.map((t) => t._hash).sort()).toEqual(
+          trees.map((t) => t._hash).sort(),
+        );
+      });
+
+      it('Get', async () => {
+        //Create TreeController
+        const treeController = await createController(
+          'trees',
+          treeCore,
+          'exampleTree',
+        );
+
+        //Read existing Row By Hash
+        const firstRowHash = trees[3]._hash as string;
+        const {
+          ['exampleTree']: { _data: firstRows },
+        } = await treeController.get(firstRowHash);
+        const firstRow = firstRows.find((r) => r._hash === firstRowHash);
+        expect(firstRow).toBeDefined();
+        expect(firstRow._hash!).toBeDefined();
+        expect(firstRow._hash!).toStrictEqual(firstRowHash);
+
+        //Read existing Row By where object
+        const {
+          ['exampleTree']: { _data: firstRowsByWhere },
+        } = await treeController.get(rmhsh(firstRow) as string);
+        const firstRowByWhere = firstRowsByWhere.find(
+          (r) => r._hash === firstRowHash,
+        );
+        expect(firstRowByWhere).toBeDefined();
+        expect(firstRowByWhere._hash!).toBeDefined();
+        expect(firstRowByWhere).toStrictEqual(firstRow);
+
+        //Read non-existing Row
+        const nonExistingRow = await treeController.get('#');
+        expect(nonExistingRow['exampleTree']._data.length).toBe(0);
+
+        //Read by invalid where
+        await expect(treeController.get(5 as any)).rejects.toThrow(
+          'Multiple trees found for where clause. Please specify a more specific query.',
+        );
+      });
+
+      it('buildTreeFromTrees', async () => {
+        //Create TreeController
+        const treeController = (await createController(
+          'trees',
+          treeCore,
+          'exampleTree',
+        )) as TreeController<'exampleTree', Tree>;
+
+        const treeObjectConverted = await treeController.buildTreeFromTrees(
+          trees,
+        );
+
+        expect(rmhsh(treeObjectConverted)).toEqual({
+          a: {
+            children: null,
+            id: 'a',
+            isParent: false,
+            meta: {
+              value: 1,
+            },
+          },
+          b: {
+            c: {
+              children: null,
+              id: 'c',
+              isParent: false,
+              meta: {
+                value: 2,
+              },
+            },
+            d: {
+              children: null,
+              id: 'd',
+              isParent: false,
+              meta: {
+                value: [3, 4],
+              },
+            },
+          },
+        });
+
+        const treeObjectConvertedSingle =
+          await treeController.buildTreeFromTrees([trees[0]]);
+
+        expect(rmhsh(treeObjectConvertedSingle)).toEqual({
+          a: {
+            children: null,
+            id: 'a',
+            isParent: false,
+            meta: {
+              value: 1,
+            },
+          },
+        });
+
+        const treeObjectConvertedEmpty =
+          await treeController.buildTreeFromTrees([]);
+
+        expect(rmhsh(treeObjectConvertedEmpty)).toEqual({});
+      });
+
+      it('buildCellsFromTree', async () => {
+        //Create TreeController
+        const treeController = (await createController(
+          'trees',
+          treeCore,
+          'exampleTree',
+        )) as TreeController<'exampleTree', Tree>;
+
+        const cells = await treeController.buildCellsFromTree(trees);
+
+        expect(cells.length).toBe(3);
+
+        const cell0 = { ...cells[0], route: cells[0].route.flat };
+        expect(rmhsh(cell0 as any)).toEqual({
+          path: [['exampleTree', '_data', 0, 'a']],
+          route: '/a',
+          row: {
+            children: null,
+            id: 'a',
+            isParent: false,
+            meta: {
+              value: 1,
+            },
+          },
+          value: {
+            children: null,
+            id: 'a',
+            isParent: false,
+            meta: {
+              value: 1,
+            },
+          },
+        });
+
+        const cell1 = { ...cells[1], route: cells[1].route.flat };
+        expect(rmhsh(cell1 as any)).toEqual({
+          path: [['exampleTree', '_data', 0, 'b', 'c']],
+          route: '/b/c',
+          row: {
+            children: null,
+            id: 'c',
+            isParent: false,
+            meta: {
+              value: 2,
+            },
+          },
+          value: {
+            children: null,
+            id: 'c',
+            isParent: false,
+            meta: {
+              value: 2,
+            },
+          },
+        });
+
+        const cell2 = { ...cells[2], route: cells[2].route.flat };
+        expect(rmhsh(cell2 as any)).toEqual({
+          path: [['exampleTree', '_data', 0, 'b', 'd']],
+          route: '/b/d',
+          row: {
+            children: null,
+            id: 'd',
+            isParent: false,
+            meta: {
+              value: [3, 4],
+            },
+          },
+          value: {
+            children: null,
+            id: 'd',
+            isParent: false,
+            meta: {
+              value: [3, 4],
+            },
+          },
+        });
+
+        const empty = await treeController.buildCellsFromTree([]);
+        expect(empty.length).toBe(0);
+      });
+
+      it('Insert', async () => {
+        //Create TreeController
+        const treeController = await createController(
+          'trees',
+          treeCore,
+          'exampleTree',
+        );
+
+        //Add Tree
+        const origin = 'H45H';
+
+        const insertHistoryFirstRows = await treeController.insert(
+          'add',
+          trees[0],
+          origin,
+        );
+        const insertHistoryFirstRow = insertHistoryFirstRows[0];
+        expect(insertHistoryFirstRow).toBeDefined();
+        expect(insertHistoryFirstRow.timeId).toBeDefined();
+        expect(insertHistoryFirstRow.exampleTreeRef).toBeDefined();
+
+        //Check if InsertHistory was written correctly
+        const { exampleTree: exampleTreeTable } = await treeCore.dumpTable(
+          'exampleTree',
+        );
+        expect(exampleTreeTable?._data.length).toBe(treesTable._data.length);
+
+        //Add another Tree
+        const insertHistorySecondRows = await treeController.insert(
+          'add',
+          treeFromObject({ x: 10, y: { z: 20 } })[0],
+          origin,
+        );
+        const insertHistorySecondRow = insertHistorySecondRows[0];
+        expect(insertHistorySecondRow).toBeDefined();
+        expect(insertHistorySecondRow.timeId).toBeDefined();
+        expect(insertHistorySecondRow.exampleTreeRef).toBeDefined();
+
+        //Check if InsertHistory was written correctly
+        const { exampleTree: exampleTreeTable2 } = await treeCore.dumpTable(
+          'exampleTree',
+        );
+        expect(exampleTreeTable2?._data.length).toBe(
+          treesTable._data.length + 1,
+        );
       });
     });
   });

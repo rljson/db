@@ -27,7 +27,7 @@ function runCommand(command, options = {}) {
 (async () => {
   try {
     console.log('📦 Publishing package...');
-    await runCommand('npm publish --access public');
+    await runCommand('pnpm publish --access public');
     console.log('✅ Publish successful. Adding version tag...');
     await runCommand('node scripts/add-version-tag.js');
     console.log('🏷️ Version tag added.');
