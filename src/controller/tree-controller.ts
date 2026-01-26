@@ -6,8 +6,16 @@ import { hsh } from '@rljson/hash';
 import { Json } from '@rljson/json';
 // found in the LICENSE file in the root of this package.
 import {
-  InsertCommand, InsertHistoryRow, Ref, Rljson, Route, TableKey, timeId, Tree, TreesTable,
-  TreeWithHash
+  InsertCommand,
+  InsertHistoryRow,
+  Ref,
+  Rljson,
+  Route,
+  TableKey,
+  timeId,
+  Tree,
+  TreesTable,
+  TreeWithHash,
 } from '@rljson/rljson';
 
 import { Core } from '../core.ts';
@@ -15,7 +23,6 @@ import { Cell } from '../db.ts';
 
 import { BaseController } from './base-controller.ts';
 import { Controller, ControllerChildProperty } from './controller.ts';
-
 
 export class TreeController<N extends string, C extends Tree>
   extends BaseController<TreesTable, C>
@@ -114,6 +121,22 @@ export class TreeController<N extends string, C extends Tree>
       return { [this._tableKey]: { _data: [], _type: 'trees' } } as Rljson;
     }
 
+    // Expand children if:
+    // path !== undefined: We're navigating a route (even if path is now "" after .deeper())
+    // path === undefined: This is a WHERE clause query - return only the requested node
+    const shouldExpandChildren = path !== undefined;
+
+    if (!shouldExpandChildren) {
+      // Return only the requested tree node without expanding children
+      return {
+        [this._tableKey]: {
+          _data: [tree],
+          _type: 'trees',
+        },
+      } as Rljson;
+    }
+
+    // Expand children for route navigation
     const children: any[] = [];
     for (const childRef of tree.children ?? []) {
       const child = await this.get(
@@ -137,17 +160,62 @@ export class TreeController<N extends string, C extends Tree>
       return {};
     }
 
+    // Safety check: prevent processing excessively large trees
+    /* v8 ignore next 5 -- @preserve */
+    if (trees.length > 100000) {
+      throw new Error(
+        `TreeController.buildTreeFromTrees: Tree size exceeds limit (${trees.length} > 100000 nodes). ` +
+          `This may indicate a performance issue or data structure problem.`,
+      );
+    }
+
     // Create a map of hash to tree for quick lookup
     const treeMap = new Map<string, Tree>();
     for (const tree of trees) {
       treeMap.set((tree as TreeWithHash)._hash, tree);
     }
 
+    // Memoization map to prevent processing same subtree multiple times
+    const memo = new Map<string, any>();
+
+    let buildObjectCallCount = 0;
+    const MAX_ITERATIONS = 1000000; // Safety limit to prevent infinite loops
+
     // Recursive function to build object from tree
-    const buildObject = (tree: Tree): any => {
+    const buildObject = (tree: Tree, depth = 0): any => {
+      buildObjectCallCount++;
+
+      // Safety check: prevent infinite loops
+      /* v8 ignore next 5 -- @preserve */
+      if (buildObjectCallCount > MAX_ITERATIONS) {
+        throw new Error(
+          `TreeController.buildTreeFromTrees: Maximum iterations (${MAX_ITERATIONS}) exceeded. ` +
+            `This likely indicates a bug. Processed ${buildObjectCallCount} nodes from ${trees.length} total.`,
+        );
+      }
+
+      // Safety check: prevent stack overflow from deep nesting
+      /* v8 ignore next 5 -- @preserve */
+      if (depth > 10000) {
+        throw new Error(
+          `TreeController.buildTreeFromTrees: Tree depth exceeds limit (${depth} > 10000). ` +
+            `This may indicate a circular reference or extremely deep structure.`,
+        );
+      }
+
+      const hash = (tree as TreeWithHash)._hash;
+
+      // Return memoized result if already processed
+      /* v8 ignore next 3 -- @preserve */
+      if (memo.has(hash)) {
+        return memo.get(hash);
+      }
+
       // Leaf node - return meta value
       if (!tree.isParent || !tree.children || tree.children.length === 0) {
-        return tree;
+        const result = tree;
+        memo.set(hash, result);
+        return result;
       }
 
       // Parent node - build object from children
@@ -156,9 +224,12 @@ export class TreeController<N extends string, C extends Tree>
         const childTree = treeMap.get(childHash as string);
         /* v8 ignore else -- @preserve */
         if (childTree && childTree.id) {
-          result[childTree.id] = buildObject(childTree);
+          result[childTree.id] = buildObject(childTree, depth + 1);
         }
       }
+
+      // Cache the result before returning
+      memo.set(hash, result);
       return result;
     };
 

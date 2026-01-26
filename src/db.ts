@@ -166,6 +166,20 @@ export class Db {
     routeAccumulator?: Route,
     options?: GetOptions,
   ): Promise<Container> {
+    // Safety check: prevent infinite recursion
+    const depth = routeAccumulator
+      ? routeAccumulator.flat.split('/').length
+      : 1;
+
+    /* v8 ignore next 6 -- @preserve */
+    if (depth > 100) {
+      throw new Error(
+        `Db._get: Maximum recursion depth (100) exceeded. ` +
+          `This likely indicates a bug in route resolution or where clause construction. ` +
+          `Current route: ${route.flat}, routeAccumulator: ${routeAccumulator?.flat}`,
+      );
+    }
+
     // Default options
     const opts = options ?? {};
 
@@ -439,7 +453,7 @@ export class Db {
                     row: v,
                     route: routeWithProperty,
                     path: [[nodeTableKey, '_data', idx, route.propertyKey]],
-                  } as Cell),
+                  }) as Cell,
               ) as Cell[]);
 
           result = {
@@ -473,7 +487,7 @@ export class Db {
                 row: v,
                 route: routeObj,
                 path: [[nodeTableKey, '_data', idx]],
-              } as Cell),
+              }) as Cell,
           ) as Cell[]);
 
       const result = {
@@ -495,7 +509,7 @@ export class Db {
     const childrenTableKey = childrenRoute.top.tableKey;
     /* v8 ignore next -- @preserve */
     const childrenWhere = (
-      typeof where === 'object' ? where[childrenTableKey] ?? {} : {}
+      typeof where === 'object' ? (where[childrenTableKey] ?? {}) : {}
     ) as Json | string;
 
     const childrenThroughProperty = (childrenWhere as any)?._through;
@@ -595,8 +609,8 @@ export class Db {
       const childrenSliceIds = cakeIsReferenced
         ? [...childrenRefSliceIds]
         : componentIsReferenced
-        ? undefined
-        : nodeSliceIds;
+          ? undefined
+          : nodeSliceIds;
 
       const {
         rljson: rowChildrenRljson,
@@ -785,7 +799,7 @@ export class Db {
                 ({
                   ...c,
                   path: [paths.flat()[idx]],
-                } as Cell),
+                }) as Cell,
             );
 
         nodeRowsMatchingChildrenRefs.set(nodeRowHash, {
@@ -917,6 +931,7 @@ export class Db {
       tree,
       cell,
     };
+
     //Set Cache
     this._cache.set(cacheHash, result);
 
@@ -1111,8 +1126,8 @@ export class Db {
     const previous: InsertHistoryTimeId[] = previousHash
       ? await this.getTimeIdsForRef(nodeTableKey, previousHash as string)
       : previousTimeId
-      ? [previousTimeId]
-      : [];
+        ? [previousTimeId]
+        : [];
 
     //If not root, run nested controllers first
     if (!nodeRoute.isRoot && nodeType != 'trees') {
@@ -1511,9 +1526,8 @@ export class Db {
     const multiEditController = await this.getController(
       cakeKey + 'MultiEdits',
     );
-    const { [cakeKey + 'MultiEdits']: result } = await multiEditController.get(
-      where,
-    );
+    const { [cakeKey + 'MultiEdits']: result } =
+      await multiEditController.get(where);
     return result._data as MultiEdit[];
   }
 

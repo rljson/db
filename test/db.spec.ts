@@ -1596,6 +1596,44 @@ describe('Db', () => {
         });
         expect(empty.cell).toEqual([]);
       });
+
+      it('should return ONLY ONE NODE when querying by _hash', async () => {
+        // Query by _hash with WHERE clause - should return ONLY the requested node
+        const route = Route.fromFlat(treeKey);
+        const result = await treeDb.get(route, { _hash: treeRootRef });
+
+        const nodes = result.rljson[treeKey]._data;
+        expect(nodes).toHaveLength(1);
+        expect(nodes[0]._hash).toBe(treeRootRef);
+        expect(nodes[0].id).toBe('root');
+      });
+
+      it('should prevent heap crash with large trees', async () => {
+        // Create large tree (50+ nodes)
+        const largeTreeKey = 'largeTree';
+        const largeObj: any = { root: {} };
+        for (let i = 0; i < 50; i++) {
+          largeObj.root[`child${i}`] = { value: i };
+        }
+
+        const largeTreeArray = treeFromObject(largeObj);
+        const largeRootHash = largeTreeArray[largeTreeArray.length - 1]._hash;
+
+        await treeDb.core.createTableWithInsertHistory(
+          createTreesTableCfg(largeTreeKey),
+        );
+        await treeDb.core.import({
+          [largeTreeKey]: { _type: 'trees', _data: largeTreeArray },
+        });
+
+        // Query by _hash - should NOT expand all descendants (prevents heap crash)
+        const route = Route.fromFlat(largeTreeKey);
+        const result = await treeDb.get(route, { _hash: largeRootHash });
+
+        const nodes = result.rljson[largeTreeKey]._data;
+        expect(nodes).toHaveLength(1);
+        expect(nodes[0]._hash).toBe(largeRootHash);
+      });
     });
   });
   describe('insert', () => {
