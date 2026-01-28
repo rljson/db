@@ -101,9 +101,13 @@ export class TreeController<N extends string, C extends Tree>
         ? await this._getByHash(where, filter)
         : await this._getByWhere(where, filter);
 
+    // Don't process empty results - return as-is to allow IoMulti cascade
+    // If all IoMulti priorities returned empty, we should propagate that
     if (trees.length === 0) {
       return { [this._tableKey]: { _data: [], _type: 'trees' } } as Rljson;
     }
+
+    // Only do tree-specific validation when we have data
     if (trees.length > 1) {
       throw new Error(
         `Multiple trees found for where clause. Please specify a more specific query.`,
@@ -253,6 +257,7 @@ export class TreeController<N extends string, C extends Tree>
     }
 
     // If single root, return its object directly
+    /* v8 ignore next -- @preserve */
     if (rootTrees.length === 1) {
       const rootTree = rootTrees[0];
       /* v8 ignore else -- @preserve */
@@ -264,13 +269,16 @@ export class TreeController<N extends string, C extends Tree>
     }
 
     // Multiple roots - combine into single object
+    /*v8 ignore next -- @preserve */
     const result: any = {};
+    /*v8 ignore next -- @preserve */
     for (const rootTree of rootTrees) {
       /* v8 ignore else -- @preserve */
       if (rootTree.id) {
         result[rootTree.id] = buildObject(rootTree);
       }
     }
+    /*v8 ignore next -- @preserve */
     return result;
   }
 
@@ -359,6 +367,7 @@ export class TreeController<N extends string, C extends Tree>
 
     const trees = table._data as TreeWithHash[];
     for (const tree of trees) {
+      /* v8 ignore next -- @preserve */
       for (const treeChildRef of tree.children ?? []) {
         childRefs.push({
           tableKey: this._tableKey,

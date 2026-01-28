@@ -385,6 +385,21 @@ type Tree = {
 
 **Solution**: Conditional expansion based on query context
 
+### Tree INSERT and Root Node Creation
+
+**Problem**: The `treeFromObject` function (from `@rljson/rljson`) automatically creates an explicit root node with `id='root'`. During INSERT operations, if the tree object already represents an isolated subtree (e.g., from `isolate()`), this creates a double-root structure:
+- Auto-root (id='root') → User-root (id='root') → actual data nodes
+
+This causes navigation issues because `TreeController` stops at the first node matching `id='root'`.
+
+**Solution**: The `treeFromObject` call in `db.ts` (line 1365) uses a `skipRootCreation` parameter:
+
+```typescript
+const trees = treeFromObject(treeObject, true); // true = skip automatic root creation
+```
+
+This prevents the extra root wrapper when inserting tree data, allowing the subtree to be inserted with its existing structure intact.
+
 ```typescript
 async get(where, filter?, path?): Promise<Rljson> {
   // Fetch matching tree nodes

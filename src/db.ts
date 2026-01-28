@@ -1362,7 +1362,7 @@ export class Db {
             `Db._insert: No tree data found for table "${nodeTableKey}" in route "${route.flat}".`,
           );
         }
-        const trees = treeFromObject(treeObject);
+        const trees = treeFromObject(treeObject, true);
 
         const writePromises = trees.map((tree) =>
           runFn('add', tree, 'db.insert'),

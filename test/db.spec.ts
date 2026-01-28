@@ -1250,19 +1250,17 @@ describe('Db', () => {
 
       beforeEach(async () => {
         treeObject = {
-          root: {
-            subNode1: {
-              subSubNode1: 'property of subSubNode1',
-              subSubNode2: {},
-            },
-            subNode2: {
-              subSubNode3: {
-                subSubSubNode1: 'property of subSubSubNode1',
-              },
-              subSubNode4: {},
-            },
-            subNode3: 'property of subNode3',
+          subNode1: {
+            subSubNode1: 'property of subSubNode1',
+            subSubNode2: {},
           },
+          subNode2: {
+            subSubNode3: {
+              subSubSubNode1: 'property of subSubSubNode1',
+            },
+            subSubNode4: {},
+          },
+          subNode3: 'property of subNode3',
         };
 
         const trees: Array<Tree> = treeFromObject(treeObject);
@@ -1294,6 +1292,7 @@ describe('Db', () => {
           cell,
         } = await treeDb.get(Route.fromFlat(route), {});
 
+        // Now we have 9 nodes: the 8 original user nodes + 1 auto-generated root
         expect(rljson._data.length).toBe(9);
         expect(rmhsh(tree)).toEqual({
           exampleTree: {
@@ -1389,6 +1388,7 @@ describe('Db', () => {
           cell,
         } = await treeDb.get(Route.fromFlat(route), {});
 
+        // Navigating to /root/subNode1/subSubNode1 returns: root + subNode1 + subSubNode1 (3 nodes)
         expect(rljson._data.length).toBe(3);
         expect(rmhsh(tree)).toEqual({
           exampleTree: {
@@ -1432,6 +1432,7 @@ describe('Db', () => {
           cell,
         } = await treeDb.get(Route.fromFlat(route), {});
 
+        // Navigating to deep leaf returns: root + subNode2 + subSubNode3 + subSubSubNode1 (4 nodes)
         expect(rljson._data.length).toBe(4);
         expect(rmhsh(tree)).toEqual({
           exampleTree: {
@@ -1485,6 +1486,7 @@ describe('Db', () => {
           cell,
         } = await treeDb.get(Route.fromFlat(route), {});
 
+        // Navigating to /root/subNode1 returns: root + subNode1 + subSubNode1 + subSubNode2 = 4 nodes
         expect(rljson._data.length).toBe(4);
         expect(rmhsh(tree)).toEqual({
           exampleTree: {
@@ -1533,6 +1535,7 @@ describe('Db', () => {
           cell,
         } = await treeDb.get(Route.fromFlat(route), {});
 
+        // Navigating to /root/subNode2 returns: root + subNode2 + subSubNode3 + subSubNode4 + subSubSubNode1 = 5 nodes
         expect(rljson._data.length).toBe(5);
         expect(rmhsh(tree)).toEqual({
           exampleTree: {
@@ -2247,19 +2250,17 @@ describe('Db', () => {
 
       beforeEach(async () => {
         treeObject = {
-          root: {
-            subNode1: {
-              subSubNode1: 'property of subSubNode1',
-              subSubNode2: {},
-            },
-            subNode2: {
-              subSubNode3: {
-                subSubSubNode1: 'property of subSubSubNode1',
-              },
-              subSubNode4: {},
-            },
-            subNode3: 'property of subNode3',
+          subNode1: {
+            subSubNode1: 'property of subSubNode1',
+            subSubNode2: {},
           },
+          subNode2: {
+            subSubNode3: {
+              subSubSubNode1: 'property of subSubSubNode1',
+            },
+            subSubNode4: {},
+          },
+          subNode3: 'property of subNode3',
         };
 
         trees = treeFromObject(treeObject);
@@ -2343,6 +2344,7 @@ describe('Db', () => {
         const { tree, cell } = await treeDb.get(routeObj, {});
 
         const paths = cell.flatMap((c) => c.path);
+        // With new root structure: subNode1/subSubNode1, subNode1/subSubNode2 (2 leaf nodes)
         expect(paths.length).toBe(2); //subNode1/subSubNode1, subNode1/subSubNode2
 
         const subSubNode2Path = paths[1]; //subNode1/subSubNode2
@@ -2365,7 +2367,6 @@ describe('Db', () => {
         const newRouteObj = Route.fromFlat(newRoute);
 
         const { cell: newCell } = await treeDb.get(newRouteObj, {});
-
         expect(newCell.length).toBe(2);
         const newPaths = newCell.flatMap((c) => c.path);
         expect(newPaths).toEqual([
