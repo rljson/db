@@ -377,9 +377,8 @@ describe('Controller', () => {
         expect(insertHistoryFirstRow.carGeneralRef).toBeDefined();
 
         //Check if InsertHistory was written correctly
-        const { carGeneral: carGeneralTable } = await db.core.dumpTable(
-          'carGeneral',
-        );
+        const { carGeneral: carGeneralTable } =
+          await db.core.dumpTable('carGeneral');
         expect(carGeneralTable?._data.length).toBe(
           staticExample().carGeneral._data.length + 1,
         );
@@ -405,9 +404,8 @@ describe('Controller', () => {
         expect(insertHistorySecondRow.carGeneralRef).toBeDefined();
 
         //Check if InsertHistory was written correctly
-        const { carGeneral: carGeneralTable2 } = await db.core.dumpTable(
-          'carGeneral',
-        );
+        const { carGeneral: carGeneralTable2 } =
+          await db.core.dumpTable('carGeneral');
         expect(carGeneralTable2?._data.length).toBe(
           staticExample().carGeneral._data.length + 2,
         );
@@ -518,9 +516,8 @@ describe('Controller', () => {
         //Get Child Refs by Hash
         const firstRowHash = staticExample().carGeneralLayer._data[0]
           ._hash as string;
-        const childRefsByHash = await carGeneralLayerController.getChildRefs(
-          firstRowHash,
-        );
+        const childRefsByHash =
+          await carGeneralLayerController.getChildRefs(firstRowHash);
 
         expect(childRefsByHash).toBeDefined();
         expect(childRefsByHash.length).toBe(
@@ -1095,9 +1092,8 @@ describe('Controller', () => {
         expect(insertHistoryFirstRow.carSliceIdRef).toBeDefined();
 
         //Check if InsertHistory was written correctly
-        const { carSliceId: carSliceIdTable } = await db.core.dumpTable(
-          'carSliceId',
-        );
+        const { carSliceId: carSliceIdTable } =
+          await db.core.dumpTable('carSliceId');
         expect(carSliceIdTable?._data.length).toBe(
           staticExample().carSliceId._data.length + 1,
         );
@@ -1117,9 +1113,8 @@ describe('Controller', () => {
         expect(insertHistorySecondRow.carSliceIdRef).toBeDefined();
 
         //Check if InsertHistory was written correctly
-        const { carSliceId: carSliceIdTable2 } = await db.core.dumpTable(
-          'carSliceId',
-        );
+        const { carSliceId: carSliceIdTable2 } =
+          await db.core.dumpTable('carSliceId');
         expect(carSliceIdTable2?._data.length).toBe(
           staticExample().carSliceId._data.length + 2,
         );
@@ -1549,13 +1544,23 @@ describe('Controller', () => {
           'exampleTree',
         );
 
-        //Get Child Refs
-        const childRefs = await treeController.getChildRefs(
-          trees[3]._hash as string,
-        );
+        //Get Child Refs by hash - should return empty to prevent infinite recursion
+        const bNodeHash = trees[3]._hash as string; // 'b' is still at index 3
+        const childRefsHash = await treeController.getChildRefs(bNodeHash);
 
-        expect(childRefs).toBeDefined();
-        expect(childRefs.length).toBe(2);
+        expect(childRefsHash).toBeDefined();
+        expect(childRefsHash.length).toBe(0); // Hash queries should not expand children
+
+        //Get Child Refs by WHERE clause - should return children
+        const rootHash = trees[trees.length - 1]._hash as string;
+        const childRefsWhere = await treeController.getChildRefs({
+          _hash: rootHash,
+        });
+
+        expect(childRefsWhere).toBeDefined();
+        expect(childRefsWhere.length).toBeGreaterThan(0); // WHERE queries should expand children
+        expect(childRefsWhere[0].tableKey).toBe('exampleTree');
+        expect(childRefsWhere[0].ref).toBeDefined();
       });
 
       it('Table', async () => {
@@ -1582,12 +1587,15 @@ describe('Controller', () => {
           'exampleTree',
         );
 
-        //Read existing Row By Hash
+        //Read existing Row By Hash - should return ONLY the requested node (no children expansion)
         const firstRowHash = trees[3]._hash as string;
         const {
           ['exampleTree']: { _data: firstRows },
         } = await treeController.get(firstRowHash);
-        const firstRow = firstRows.find((r) => r._hash === firstRowHash);
+
+        // When querying by hash without path parameter, should return exactly 1 node
+        expect(firstRows.length).toBe(1);
+        const firstRow = firstRows[0];
         expect(firstRow).toBeDefined();
         expect(firstRow._hash!).toBeDefined();
         expect(firstRow._hash!).toStrictEqual(firstRowHash);
@@ -1596,9 +1604,10 @@ describe('Controller', () => {
         const {
           ['exampleTree']: { _data: firstRowsByWhere },
         } = await treeController.get(rmhsh(firstRow) as string);
-        const firstRowByWhere = firstRowsByWhere.find(
-          (r) => r._hash === firstRowHash,
-        );
+
+        // Should also return exactly 1 node
+        expect(firstRowsByWhere.length).toBe(1);
+        const firstRowByWhere = firstRowsByWhere[0];
         expect(firstRowByWhere).toBeDefined();
         expect(firstRowByWhere._hash!).toBeDefined();
         expect(firstRowByWhere).toStrictEqual(firstRow);
@@ -1611,6 +1620,26 @@ describe('Controller', () => {
         await expect(treeController.get(5 as any)).rejects.toThrow(
           'Multiple trees found for where clause. Please specify a more specific query.',
         );
+
+        //Read with path parameter - should expand children and return whole tree
+        const rootHash = trees[trees.length - 1]._hash as string;
+        const rootNode = trees.find((t) => t._hash === rootHash)!;
+        const {
+          ['exampleTree']: { _data: treeWithChildren },
+        } = await treeController.get(rootHash, undefined, rootNode.id);
+
+        // Should return multiple nodes (root + all its children)
+        expect(treeWithChildren.length).toBeGreaterThan(1);
+        // Should include the root node
+        expect(treeWithChildren.some((n) => n._hash === rootHash)).toBe(true);
+        // Root node with id='root' has 2 children ('a' and 'b'), plus their descendants
+        // Total: root + a + b + c + d = 5 nodes (all nodes in the tree)
+        expect(treeWithChildren.length).toBe(trees.length);
+        // Verify it includes all nodes
+        const childIds = treeWithChildren.map((n) => n.id);
+        expect(childIds).toContain('root'); // root node
+        expect(childIds).toContain('a'); // child of root
+        expect(childIds).toContain('b'); // child of root (parent itself)
       });
 
       it('buildTreeFromTrees', async () => {
@@ -1621,34 +1650,36 @@ describe('Controller', () => {
           'exampleTree',
         )) as TreeController<'exampleTree', Tree>;
 
-        const treeObjectConverted = await treeController.buildTreeFromTrees(
-          trees,
-        );
+        const treeObjectConverted =
+          await treeController.buildTreeFromTrees(trees);
 
+        // With new root node structure, everything is wrapped under 'root'
         expect(rmhsh(treeObjectConverted)).toEqual({
-          a: {
-            children: null,
-            id: 'a',
-            isParent: false,
-            meta: {
-              value: 1,
-            },
-          },
-          b: {
-            c: {
+          root: {
+            a: {
               children: null,
-              id: 'c',
+              id: 'a',
               isParent: false,
               meta: {
-                value: 2,
+                value: 1,
               },
             },
-            d: {
-              children: null,
-              id: 'd',
-              isParent: false,
-              meta: {
-                value: [3, 4],
+            b: {
+              c: {
+                children: null,
+                id: 'c',
+                isParent: false,
+                meta: {
+                  value: 2,
+                },
+              },
+              d: {
+                children: null,
+                id: 'd',
+                isParent: false,
+                meta: {
+                  value: [3, 4],
+                },
               },
             },
           },
@@ -1684,12 +1715,13 @@ describe('Controller', () => {
 
         const cells = await treeController.buildCellsFromTree(trees);
 
+        // With root node, leaf nodes are: a (under root), c (under root/b), d (under root/b)
         expect(cells.length).toBe(3);
 
         const cell0 = { ...cells[0], route: cells[0].route.flat };
         expect(rmhsh(cell0 as any)).toEqual({
-          path: [['exampleTree', '_data', 0, 'a']],
-          route: '/a',
+          path: [['exampleTree', '_data', 0, 'root', 'a']],
+          route: '/root/a',
           row: {
             children: null,
             id: 'a',
@@ -1710,8 +1742,8 @@ describe('Controller', () => {
 
         const cell1 = { ...cells[1], route: cells[1].route.flat };
         expect(rmhsh(cell1 as any)).toEqual({
-          path: [['exampleTree', '_data', 0, 'b', 'c']],
-          route: '/b/c',
+          path: [['exampleTree', '_data', 0, 'root', 'b', 'c']],
+          route: '/root/b/c',
           row: {
             children: null,
             id: 'c',
@@ -1732,8 +1764,8 @@ describe('Controller', () => {
 
         const cell2 = { ...cells[2], route: cells[2].route.flat };
         expect(rmhsh(cell2 as any)).toEqual({
-          path: [['exampleTree', '_data', 0, 'b', 'd']],
-          route: '/b/d',
+          path: [['exampleTree', '_data', 0, 'root', 'b', 'd']],
+          route: '/root/b/d',
           row: {
             children: null,
             id: 'd',
@@ -1778,9 +1810,8 @@ describe('Controller', () => {
         expect(insertHistoryFirstRow.exampleTreeRef).toBeDefined();
 
         //Check if InsertHistory was written correctly
-        const { exampleTree: exampleTreeTable } = await treeCore.dumpTable(
-          'exampleTree',
-        );
+        const { exampleTree: exampleTreeTable } =
+          await treeCore.dumpTable('exampleTree');
         expect(exampleTreeTable?._data.length).toBe(treesTable._data.length);
 
         //Add another Tree
@@ -1795,12 +1826,36 @@ describe('Controller', () => {
         expect(insertHistorySecondRow.exampleTreeRef).toBeDefined();
 
         //Check if InsertHistory was written correctly
-        const { exampleTree: exampleTreeTable2 } = await treeCore.dumpTable(
-          'exampleTree',
-        );
+        const { exampleTree: exampleTreeTable2 } =
+          await treeCore.dumpTable('exampleTree');
         expect(exampleTreeTable2?._data.length).toBe(
           treesTable._data.length + 1,
         );
+      });
+
+      it('should expand children when path is provided', async () => {
+        // Test that TreeController expands children when path parameter is provided
+        const treeController = await createController(
+          'trees',
+          treeCore,
+          'exampleTree',
+        );
+
+        const rootHash = trees[trees.length - 1]._hash as string;
+        const rootNode = trees.find((t) => t._hash === rootHash)!;
+
+        // Call get() with path parameter
+        const result = await treeController.get(
+          rootHash,
+          undefined,
+          rootNode.id,
+        );
+
+        const nodes = result['exampleTree']._data;
+        // Should expand children when path is provided
+        expect(nodes.length).toBeGreaterThan(1);
+        // Should include the root node
+        expect(nodes.some((n) => n._hash === rootHash)).toBe(true);
       });
     });
   });
