@@ -123,7 +123,11 @@ export class Core {
   // ...........................................................................
   /** Reads a specific row from a database table */
   async readRow(table: string, rowHash: string): Promise<Rljson> {
-    return await this._io.readRows({ table, where: { _hash: rowHash } });
+    const result = await this._io.readRows({
+      table,
+      where: { _hash: rowHash },
+    });
+    return result;
   }
 
   // ...........................................................................
