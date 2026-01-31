@@ -362,6 +362,13 @@ export class TreeController<N extends string, C extends Tree>
     where: string | Json,
     filter?: Json,
   ): Promise<ControllerChildProperty[]> {
+    // When querying by hash, don't expand children
+    // This prevents infinite recursion in db._get()
+    /* v8 ignore next 3 -- @preserve */
+    if (typeof where === 'string') {
+      return [];
+    }
+
     const childRefs: ControllerChildProperty[] = [];
     const { [this._tableKey]: table } = await this.get(where, filter);
 

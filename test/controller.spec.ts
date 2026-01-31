@@ -1544,12 +1544,23 @@ describe('Controller', () => {
           'exampleTree',
         );
 
-        //Get Child Refs of 'b' node (which has 2 children: 'c' and 'd')
+        //Get Child Refs by hash - should return empty to prevent infinite recursion
         const bNodeHash = trees[3]._hash as string; // 'b' is still at index 3
-        const childRefs = await treeController.getChildRefs(bNodeHash);
+        const childRefsHash = await treeController.getChildRefs(bNodeHash);
 
-        expect(childRefs).toBeDefined();
-        expect(childRefs.length).toBe(2); // 'c' and 'd'
+        expect(childRefsHash).toBeDefined();
+        expect(childRefsHash.length).toBe(0); // Hash queries should not expand children
+
+        //Get Child Refs by WHERE clause - should return children
+        const rootHash = trees[trees.length - 1]._hash as string;
+        const childRefsWhere = await treeController.getChildRefs({
+          _hash: rootHash,
+        });
+
+        expect(childRefsWhere).toBeDefined();
+        expect(childRefsWhere.length).toBeGreaterThan(0); // WHERE queries should expand children
+        expect(childRefsWhere[0].tableKey).toBe('exampleTree');
+        expect(childRefsWhere[0].ref).toBeDefined();
       });
 
       it('Table', async () => {

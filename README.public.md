@@ -1,6 +1,15 @@
 # @rljson/db
 
-A high-level TypeScript interface for reading and writing structured, content-addressed RLJSON data. The package provides a powerful database-like abstraction with support for hierarchical data models, version history, and complex data relationships.
+A high-level TypeScript database abstraction for content-addressed, immutable RLJSON data. Provides intuitive querying with native support for hierarchical structures, version history, and pluggable storage backends.
+
+## Features
+
+- **Content-Addressed:** All data identified by SHA-based hashes
+- **Immutable:** Changes create new versions automatically
+- **Hierarchical:** First-class tree structures with smart expansion
+- **Type-Safe:** Full TypeScript support
+- **Time-Travel:** Query historical versions
+- **Storage-Agnostic:** Memory, file, or network backends
 
 ## Installation
 
@@ -8,12 +17,14 @@ A high-level TypeScript interface for reading and writing structured, content-ad
 npm install @rljson/db @rljson/io @rljson/rljson
 ```
 
+**Requirements:** Node.js >= 22.14.0
+
 ## Quick Start
 
 ```typescript
 import { Db } from '@rljson/db';
 import { IoMem } from '@rljson/io';
-import { Route, createTreesTableCfg, treeFromObject } from '@rljson/rljson';
+import { Route, createComponentsTableCfg } from '@rljson/rljson';
 
 // Initialize database with in-memory storage
 const io = new IoMem();
@@ -21,221 +32,396 @@ await io.init();
 const db = new Db(io);
 
 // Create a table
-const treeCfg = createTreesTableCfg('myTree');
-await db.core.createTableWithInsertHistory(treeCfg);
+const tableCfg = createComponentsTableCfg('users', [
+  { key: 'name', type: 'string' },
+  { key: 'email', type: 'string' }
+]);
+await db.core.createTableWithInsertHistory(tableCfg);
 
 // Import data
-const tree = treeFromObject({ x: 1, y: 2, z: { a: 3 } });
-await db.core.import({
-  myTree: { _type: 'trees', _data: tree }
-});
-
-// Query data
-const route = Route.fromFlat('myTree');
-const result = await db.get(route, {});
-console.log(result.rljson);
-```
-
-## Core Concepts
-
-### RLJSON Data Model
-
-RLJSON (Relational JSON) extends JSON with:
-- **Content-addressed hashing**: Every object has a unique `_hash` based on its content
-- **Typed tables**: Data is organized into strongly-typed tables
-- **Relationships**: Objects reference each other via content hashes
-- **Version history**: Built-in support for tracking changes over time
-
-### Table Types
-
-@rljson/db supports five primary table types:
-
-#### 1. **Components** (`components`)
-Basic structured data with fields and values. Similar to database records.
-
-```typescript
-const component = {
-  brand: 'Tesla',
-  model: 'Model 3',
-  year: 2024,
-  _type: 'components',
-  _hash: '...'
-};
-```
-
-#### 2. **Trees** (`trees`)
-Hierarchical data structures with parent-child relationships. Trees use content-addressed hashing where children are referenced by their hash values.
-
-```typescript
-// Create tree from object
-const treeData = {
-  root: {
-    child1: { value: 1 },
-    child2: { value: 2 }
-  }
-};
-const trees = treeFromObject(treeData);
-
-// Each node has: id, children (hash array), meta, isParent
-const rootNode = trees[trees.length - 1]; // Last element is root
-```
-
-#### 3. **Cakes** (`cakes`)
-Multi-dimensional data cubes with slicing capabilities. Useful for analytics and aggregated data.
-
-```typescript
-const cake = {
-  base: 'salesData',
-  sliceIdsTable: 'regions',
-  sliceIdsRow: 'north',
-  componentsTable: 'metrics',
-  _type: 'cakes',
-  _hash: '...'
-};
-```
-
-#### 4. **Layers** (`layers`)
-Stacked data with inheritance and composition. Layers can override or extend base layer data.
-
-```typescript
-const layer = {
-  base: 'baseConfigHash',
-  sliceIdsTable: 'environments',
-  sliceIdsTableRow: 'production',
-  componentsTable: 'settings',
-  _type: 'layers',
-  _hash: '...'
-};
-```
-
-#### 5. **SliceIds** (`sliceIds`)
-Dimension identifiers for cakes and layers, enabling multi-dimensional data organization.
-
-## Working with Data
-
-### Setting Up Tables
-
-```typescript
-import {
-  createComponentsTableCfg,
-  createTreesTableCfg,
-  createCakesTableCfg,
-  createLayersTableCfg
-} from '@rljson/rljson';
-
-// Create component table
-const componentCfg = createComponentsTableCfg('users', [
-  { key: 'name', type: 'string' },
-  { key: 'email', type: 'string' },
-  { key: 'age', type: 'number' }
-]);
-await db.core.createTableWithInsertHistory(componentCfg);
-
-// Create tree table
-const treeCfg = createTreesTableCfg('fileSystem');
-await db.core.createTableWithInsertHistory(treeCfg);
-```
-
-### Importing Data
-
-```typescript
-// Import structured data
 await db.core.import({
   users: {
     _type: 'components',
     _data: [
-      { name: 'Alice', email: 'alice@example.com', age: 30, _hash: '...' },
-      { name: 'Bob', email: 'bob@example.com', age: 25, _hash: '...' }
+      { name: 'Alice', email: 'alice@example.com', _hash: '...' }
     ]
   }
 });
 
-// Import tree data
-const fileTree = treeFromObject({
-  src: {
-    components: { 'Button.tsx': {} },
-    utils: { 'helpers.ts': {} }
-  }
-});
-await db.core.import({
-  fileSystem: { _type: 'trees', _data: fileTree }
-});
+// Query data
+const route = Route.fromFlat('users');
+const result = await db.get(route, {});
+console.log(result.rljson.users._data);
 ```
 
-### Querying Data
+## Core Concepts
 
-#### Basic Queries
+### Content-Addressed Data
+
+All data in @rljson/db is identified by its **content hash** (SHA-256 based). This means:
+
+- Identical data always has the same hash
+- Changes to data produce a new hash
+- Perfect caching: same hash = same data
+- Deduplication: store each unique value once
+
+```typescript
+import { hsh } from '@rljson/hash';
+
+const data = { name: 'Alice', age: 30 };
+const hash = hsh(data)._hash;
+// 'abc123...' - deterministic hash based on content
+```
+
+### Immutability
+
+Data is **never modified in place**. All mutations create new versions:
+
+- INSERT creates new data with new hash
+- Old versions remain accessible
+- Time-travel queries via insert history
+- No update conflicts
+
+### Routes
+
+Routes define paths through related data. They use a flat string syntax:
+
+```
+/tableName                          # Root table
+/tableName@hash                     # Specific row by hash
+/tableName@timeId                   # Historic version
+/tableName/childTable               # Relationship traversal
+/tableName@hash/childTable@hash2    # Nested navigation
+```
+
+Example:
+
+```typescript
+// Simple route
+Route.fromFlat('users')
+
+// With hash reference
+Route.fromFlat('users@abc123')
+
+// Nested relationship
+Route.fromFlat('projects/tasks')
+
+// Complex navigation
+Route.fromFlat('projects@hash1/tasks@hash2')
+```
+
+## Data Types
+
+### 1. Components
+
+Flat tables with arbitrary columns. Similar to traditional database tables.
+
+```typescript
+type Component = {
+  [column: string]: JsonValue;
+  _hash: string;
+};
+```
+
+**Use Cases:**
+
+- User records
+- Configuration data
+- Event logs
+- Any flat, record-based data
+
+**Example:**
+
+```typescript
+const component = {
+  name: 'Alice',
+  email: 'alice@example.com',
+  role: 'admin',
+  _hash: '...'
+};
+```
+
+### 2. Trees
+
+Hierarchical structures where each node has:
+
+- `id`: Node identifier
+- `children`: Array of child hash references
+- `meta`: Node metadata
+- `isParent`: Boolean flag for parent nodes
+- `_hash`: Content hash
+
+```typescript
+type Tree = {
+  id: string;
+  children: string[];  // Hash references
+  meta: Json;
+  isParent: boolean;
+  _hash: string;
+};
+```
+
+**Use Cases:**
+
+- File systems
+- Organizational hierarchies
+- Menu structures
+- DOM-like structures
+
+**Important:** Tree queries behave differently based on context:
+
+- **WHERE clause** (`{ _hash: ... }`): Returns single node only (prevents infinite recursion)
+- **Route navigation**: Expands children recursively
+
+**Example:**
+
+```typescript
+const tree = {
+  id: 'root',
+  children: ['childHash1', 'childHash2'],
+  meta: { name: 'Root Node' },
+  isParent: true,
+  _hash: '...'
+};
+
+// Single node query (efficient)
+await db.get(route, { _hash: tree._hash });
+
+// Expanded navigation (recursive)
+await db.get(Route.fromFlat(`tree@${tree._hash}`));
+```
+
+### 3. Cakes
+
+Multi-dimensional data cubes with slicing capabilities.
+
+```typescript
+type Cake = {
+  sliceIdsTable: string;
+  sliceIdsRow: string;
+  layers: Record<string, string>;  // layerTable -> layerRef
+  _hash: string;
+};
+```
+
+**Use Cases:**
+
+- Multi-environment configurations
+- A/B testing variants
+- Feature flags
+- Dimensional data analysis
+
+**Example:**
+
+```typescript
+const cake = {
+  sliceIdsTable: 'environments',
+  sliceIdsRow: 'production',
+  layers: {
+    configLayer: 'layerHash1',
+    settingsLayer: 'layerHash2'
+  },
+  _hash: '...'
+};
+```
+
+### 4. Layers
+
+Composable data layers with inheritance and dimension filtering.
+
+```typescript
+type Layer = {
+  base?: string;                  // Base layer hash
+  sliceIdsTable: string;
+  sliceIdsTableRow: string;
+  componentsTable: string;
+  _hash: string;
+};
+```
+
+**Use Cases:**
+
+- Configuration inheritance
+- Environment-specific settings
+- Progressive overrides
+- Template-based data
+
+**Example:**
+
+```typescript
+const layer = {
+  base: 'baseLayerHash',
+  sliceIdsTable: 'environments',
+  sliceIdsTableRow: 'staging',
+  componentsTable: 'settings',
+  _hash: '...'
+};
+```
+
+### 5. SliceIds
+
+Dimension identifiers for cakes and layers. Enable multi-dimensional data organization.
+
+```typescript
+type SliceId = string;  // e.g., 'production', 'staging', 'featureA'
+```
+
+## Querying Data
+
+### Basic Queries
 
 ```typescript
 // Get all records from a table
 const route = Route.fromFlat('users');
 const result = await db.get(route, {});
-console.log(result.rljson.users._data); // All users
+console.log(result.rljson.users._data);  // All users
 
 // Query by hash
-const route = Route.fromFlat('users');
 const result = await db.get(route, { _hash: 'specific-hash' });
-console.log(result.rljson.users._data); // Single user
+console.log(result.rljson.users._data[0]);  // Single user
+
+// Query by field values
+const result = await db.get(route, { role: 'admin' });
+console.log(result.rljson.users._data);  // All admin users
 ```
 
-#### Tree Queries
+### Nested Queries
 
 ```typescript
-// Query single tree node (WHERE clause)
-const route = Route.fromFlat('fileSystem');
-const result = await db.get(route, { _hash: nodeHash });
-// Returns ONLY the requested node without expanding children
-
-// Navigate tree with route
-const route = Route.fromFlat(`fileSystem@${rootHash}`);
-const result = await db.get(route);
-// Returns root node with children expanded
-```
-
-**Important:** Tree queries behave differently based on context:
-- **WHERE clause** (`{ _hash: ... }`): Returns single node only
-- **Route navigation**: Expands children recursively
-
-This distinction prevents infinite recursion and heap crashes when querying large trees.
-
-#### Filtering and Relationships
-
-```typescript
-// Query with nested relationships
+// Query with relationships
 const route = Route.fromFlat('projects/tasks');
 const result = await db.get(route, {
   projects: { status: 'active' },
   tasks: { priority: 'high' }
 });
 
-// The result contains both projects and their related tasks
+// Result contains both projects and their related tasks
 console.log(result.rljson.projects);
 console.log(result.rljson.tasks);
 ```
 
-### Inserting Data
+### Tree Queries
+
+**Critical:** Tree behavior depends on query context.
+
+```typescript
+// ✅ WHERE clause - Returns ONLY requested node
+// Use this for querying specific nodes without expansion
+const nodeRoute = Route.fromFlat('fileSystem');
+const nodeResult = await db.get(nodeRoute, { _hash: nodeHash });
+// Returns: { fileSystem: { _data: [singleNode] } }
+// No children expanded - prevents heap crashes on large trees
+
+// ✅ Route navigation - Expands children recursively
+// Use this for traversing tree structures
+const treeRoute = Route.fromFlat(`fileSystem@${rootHash}`);
+const treeResult = await db.get(treeRoute);
+// Returns: Complete tree with all children expanded
+// Access via treeResult.tree for hierarchical view
+```
+
+### Result Container
+
+All queries return a `Container` object with three views of the data:
+
+```typescript
+type Container = {
+  rljson: Rljson;      // Table data indexed by table name
+  tree: Json;          // Hierarchical representation
+  cell: Cell[];        // Path-value pairs for modifications
+};
+
+type Cell = {
+  route: Route;
+  value: JsonValue;
+  row: JsonValue;
+  path: Array<Array<string | number>>;
+};
+```
+
+**Example:**
+
+```typescript
+const { rljson, tree, cell } = await db.get(route, where);
+
+// RLJSON view - Table-oriented
+console.log(rljson.users._data);
+
+// Tree view - Hierarchical
+console.log(tree.users[0].name);
+
+// Cell view - Path-based for mutations
+console.log(cell[0].path);  // ['users', 0, 'name']
+console.log(cell[0].value); // 'Alice'
+```
+
+## Inserting Data
+
+### Using isolate() and inject()
+
+The recommended pattern for data modifications:
 
 ```typescript
 import { isolate, inject } from '@rljson/db';
 
-// Isolate specific data from a structure
+// 1. Query existing data
 const route = Route.fromFlat('users/profile/settings');
 const { tree, cell } = await db.get(route, {});
+
+// 2. Isolate specific path
 const path = cell[0].path;
 const isolated = isolate(tree, path);
+// Returns only the data at the specified path
 
-// Modify the isolated data
+// 3. Modify isolated data
 isolated.profile.settings.theme = 'dark';
+isolated.profile.settings.notifications = true;
 
-// Inject changes back
-inject(isolated, path, { theme: 'dark' });
+// 4. Inject changes back
+inject(isolated, path, {
+  theme: 'dark',
+  notifications: true
+});
 
-// Insert into database
+// 5. Insert into database
 const results = await db.insert(route, isolated);
-console.log(results); // InsertHistoryRow[]
+console.log(results);  // InsertHistoryRow[]
 ```
 
-### Version History
+### Direct Import
+
+For bulk data loading:
+
+```typescript
+await db.core.import({
+  users: {
+    _type: 'components',
+    _data: [
+      { name: 'Alice', email: 'alice@example.com', _hash: 'hash1' },
+      { name: 'Bob', email: 'bob@example.com', _hash: 'hash2' }
+    ]
+  }
+});
+```
+
+### Tree INSERT
+
+**Important:** When inserting tree data that has already been isolated, use the fixed behavior:
+
+```typescript
+// The treeFromObject function now has skipRootCreation parameter
+// This is handled internally by db.insert() - no action needed
+
+const treeData = isolate(existingTree, path);
+// Modify treeData...
+
+// INSERT automatically uses skipRootCreation=true internally
+await db.insert(route, treeData);
+```
+
+**Why this matters:** The `treeFromObject` function creates an explicit root node. When inserting already-isolated subtrees, this created a double-root structure causing navigation failures. The fix in v0.0.12+ handles this automatically.
+
+## Version History
 
 Every insert creates a history entry with timestamps and references:
 
@@ -243,7 +429,7 @@ Every insert creates a history entry with timestamps and references:
 // Get insert history for a table
 const history = await db.getInsertHistory('users', {
   sorted: true,
-  ascending: false
+  ascending: false  // Most recent first
 });
 
 console.log(history.usersInsertHistory._data);
@@ -256,156 +442,236 @@ console.log(history.usersInsertHistory._data);
 //     ...
 //   }
 // ]
+```
 
+### Time-Travel Queries
+
+Query historical versions using timeIds:
+
+```typescript
 // Query specific version by timeId
 const route = Route.fromFlat(`users@ABC123:20260126T150000Z`);
 const historicData = await db.get(route);
+console.log(historicData.rljson.users._data);  // Data as it was at that time
+
+// Get all timeIds for a specific hash
+const timeIds = await db.getTimeIdsForRef('users', 'hash1');
+console.log(timeIds);  // ['timeId1', 'timeId2', ...]
+
+// Get data hash for a specific timeId
+const ref = await db.getRefOfTimeId('users', 'ABC123:20260126T150000Z');
+console.log(ref);  // 'hash1'
 ```
 
 ## Advanced Features
 
-### Joins and Transformations
+### Join System
+
+The Join system provides SQL-like operations on query results:
 
 ```typescript
-import { Join } from '@rljson/db';
-import { ColumnSelection } from '@rljson/db';
-import { RowFilter } from '@rljson/db';
+import { Join, ColumnSelection, RowFilter } from '@rljson/db';
 
 // Create a join from query results
 const { rljson, tree, cell } = await db.get(route, where);
 const join = new Join({ rljson, tree, cell });
 
 // Apply column selection
-const selection = new ColumnSelection(...);
+const selection = new ColumnSelection(
+  route,
+  [
+    { key: 'name', type: 'include' },
+    { key: 'email', type: 'include' }
+  ]
+);
 join.select(selection);
 
-// Apply filtering
-const filter = new RowFilter(...);
+// Apply row filtering
+const filter = new RowFilter(
+  route,
+  {
+    age: { gt: 25 }  // Greater than 25
+  }
+);
 join.filter(filter);
+
+// Apply sorting
+const sort = new RowSort(
+  route,
+  [{ key: 'name', direction: 'asc' }]
+);
+join.sort(sort);
 
 // Get transformed results
 const resultRows = await join.rows();
+console.log(resultRows);
 ```
 
 ### Multi-Edit Operations
 
+Transactional editing with rollback support:
+
 ```typescript
 import { MultiEditManager } from '@rljson/db';
 
-const manager = new MultiEditManager(db);
+const manager = new MultiEditManager('configCake', db);
+await manager.init();
 
 // Perform multiple edits as a transaction
 await manager.multiEdit(async (head) => {
-  await head.edit(editAction1);
-  await head.edit(editAction2);
+  // Edit 1: Update column selection
+  await head.edit({
+    type: 'columnSelection',
+    params: { columns: ['name', 'email'] }
+  });
+
+  // Edit 2: Apply filter
+  await head.edit({
+    type: 'rowFilter',
+    params: { age: { gt: 18 } }
+  });
+
   return head;
 });
 
-// Publish changes
+// Publish changes (commits transaction)
 const published = await manager.publishHead();
+console.log(published);
 ```
 
-### Real-time Notifications
+### Real-Time Notifications
+
+Register callbacks for data changes:
 
 ```typescript
-// Register callback for data changes
-db.notify.registerCallback('myCallback', async (data) => {
-  console.log('Data changed:', data);
+// Register callback
+db.notify.registerCallback('myCallback', async (insertHistoryRow) => {
+  console.log('Data changed:', insertHistoryRow);
+  // Perform side effects (cache invalidation, UI updates, etc.)
 });
+
+// Perform operations - callback fires automatically
+await db.insert(route, data);
 
 // Unregister when done
 db.notify.unregisterCallback('myCallback');
+
+// Or unregister all callbacks for a route
+db.notify.unregisterAll(route);
 ```
 
 ### Caching
 
-```typescript
-// The database automatically caches query results
-// Get cache statistics
-const cache = db.cache;
-console.log(`Cache size: ${cache.size}`);
+The database automatically caches query results based on query signatures:
 
-// Clear cache if needed
+```typescript
+// Check cache size
+console.log(`Cache size: ${db.cache.size}`);
+
+// Clear cache manually
 db.clearCache();
-```
 
-## Data Export and Backup
-
-```typescript
-// Dump entire database
-const dump = await db.core.dump();
-console.log(JSON.stringify(dump, null, 2));
-
-// Dump specific table
-const tableDump = await db.core.dumpTable('users');
-console.log(JSON.stringify(tableDump, null, 2));
-
-// Get all tables
-const tables = await db.core.tables();
-console.log(Object.keys(tables));
+// Caching is automatic when:
+// - Route contains hash references (@hash)
+// - Filters are applied
+// - SliceIds are specified
 ```
 
 ## Best Practices
 
 ### 1. Content-Addressed Design
-All data is immutable and identified by content hash. Never modify data in place - always create new versions.
+
+All data is immutable - never modify in place:
+
+```typescript
+// ❌ WRONG - Modifying data directly
+const { rljson } = await db.get(route, {});
+rljson.users._data[0].name = 'Changed';  // This won't persist!
+
+// ✅ CORRECT - Use isolate/inject pattern
+const { tree, cell } = await db.get(route, {});
+const isolated = isolate(tree, cell[0].path);
+isolated.name = 'Changed';
+await db.insert(route, isolated);  // Creates new version
+```
 
 ### 2. Tree Query Optimization
-When querying trees by hash, use WHERE clauses to fetch single nodes:
-```typescript
-// ✅ Efficient - single node
-await db.get(route, { _hash: nodeHash });
 
-// ❌ Avoid for large trees - expands all children
+When querying trees by hash, use WHERE clauses for single nodes:
+
+```typescript
+// ✅ Efficient - Returns single node only
+await db.get(Route.fromFlat('tree'), { _hash: nodeHash });
+
+// ❌ Avoid for large trees - Expands ALL children recursively
+// Only use for navigation when you need the full tree
 await db.get(Route.fromFlat(`tree@${nodeHash}`));
 ```
 
+This is **critical** for large trees to prevent:
+
+- Heap exhaustion
+- Infinite recursion
+- Performance degradation
+
 ### 3. Batch Operations
+
 Import data in batches for better performance:
+
 ```typescript
 const batchSize = 100;
 for (let i = 0; i < data.length; i += batchSize) {
   const batch = data.slice(i, i + batchSize);
-  await db.core.import({ users: { _type: 'components', _data: batch } });
+  await db.core.import({
+    users: { _type: 'components', _data: batch }
+  });
 }
 ```
 
-### 4. Use Insert History
-Always create tables with insert history to enable time-travel queries:
+### 4. Always Use Insert History
+
+Create tables with insert history to enable time-travel:
+
 ```typescript
+// ✅ CORRECT - Enables version tracking
 await db.core.createTableWithInsertHistory(tableCfg);
+
+// ❌ AVOID - No version history
+await db.core.createTable(tableCfg);
 ```
 
 ### 5. Type Safety
+
 Use TypeScript types from `@rljson/rljson` for type-safe operations:
+
 ```typescript
 import type { Component, Tree, Cake, Layer } from '@rljson/rljson';
+
+// Type-safe component
+const user: Component = {
+  name: 'Alice',
+  email: 'alice@example.com',
+  _hash: '...'
+};
+
+// Type-safe tree
+const tree: Tree = {
+  id: 'root',
+  children: [],
+  meta: { name: 'Root' },
+  isParent: false,
+  _hash: '...'
+};
 ```
 
-## Storage Backends
+### 6. Error Handling
 
-@rljson/db works with any `@rljson/io` implementation:
-
-```typescript
-import { IoMem } from '@rljson/io'; // In-memory
-import { IoFile } from '@rljson/io'; // File system
-import { IoMulti } from '@rljson/io'; // Multiple backends
-
-// In-memory (development)
-const memDb = new Db(new IoMem());
-
-// File-based (production)
-const fileDb = new Db(new IoFile('/path/to/data'));
-
-// Multi-backend (redundancy)
-const multiDb = new Db(new IoMulti([io1, io2, io3]));
-```
-
-## Error Handling
+Always wrap database operations in try-catch:
 
 ```typescript
 try {
   const result = await db.get(route, where);
+  // Process result...
 } catch (error) {
   if (error.message.includes('Maximum recursion depth')) {
     console.error('Infinite recursion detected in route');
@@ -417,32 +683,246 @@ try {
 }
 ```
 
-## Examples
+## Troubleshooting
 
-See [src/example.ts](src/example.ts) for a complete working example.
+### Tree INSERT Failures
+
+**Symptoms:**
+
+- Tree INSERT completes without errors
+- GET queries return empty results or only root node
+- Cell length is 1 instead of expected count
+
+**Solution:** This was fixed in v0.0.12+. Upgrade to latest version:
+
+```bash
+pnpm update @rljson/db@latest
+```
+
+See [README.trouble.md](./README.trouble.md) for more troubleshooting guides.
+
+### Infinite Recursion Errors
+
+**Problem:** Tree queries causing stack overflow or heap exhaustion.
+
+**Solution:** Use WHERE clause for single-node queries:
+
+```typescript
+// ✅ This
+await db.get(route, { _hash: nodeHash });
+
+// ❌ Not this (for large trees)
+await db.get(Route.fromFlat(`tree@${nodeHash}`));
+```
+
+### Cache Not Clearing
+
+**Problem:** Stale data persists after modifications.
+
+**Solution:** Register notify callbacks to clear cache automatically:
+
+```typescript
+db.notify.register(route, async () => {
+  db.clearCache();
+});
+```
 
 ## API Reference
 
 ### Core Methods
 
-- `db.get(route, where, filter?, sliceIds?, options?)` - Query data
-- `db.insert(route, data, origin?, refs?)` - Insert new data
-- `db.getInsertHistory(table, options?)` - Get version history
-- `db.core.import(rljson)` - Import RLJSON data
-- `db.core.dump()` - Export all data
-- `db.core.createTableWithInsertHistory(cfg)` - Create table
+#### `db.get(route, where, filter?, sliceIds?, options?)`
+
+Query data from the database.
+
+**Parameters:**
+
+- `route: Route` - The route to query
+- `where: string | Json` - Filter criteria
+- `filter?: ControllerChildProperty[]` - Optional child filters
+- `sliceIds?: SliceId[]` - Optional dimension filters
+- `options?: GetOptions` - Query options (`skipRljson`, `skipTree`, `skipCell`)
+
+**Returns:** `Promise<ContainerWithControllers>`
+
+#### `db.insert(route, data, origin?, refs?)`
+
+Insert new data into the database.
+
+**Parameters:**
+
+- `route: Route` - Destination route
+- `data: Json` - Data to insert
+- `origin?: Ref` - Optional origin reference
+- `refs?: ControllerRefs` - Optional controller references
+
+**Returns:** `Promise<InsertHistoryRow[]>`
+
+#### `db.getInsertHistory(table, options?)`
+
+Get version history for a table.
+
+**Parameters:**
+
+- `table: string` - Table name
+- `options?: { sorted?: boolean, ascending?: boolean }` - Sort options
+
+**Returns:** `Promise<InsertHistoryTable>`
+
+#### `db.core.import(rljson)`
+
+Import RLJSON data into the database.
+
+**Parameters:**
+
+- `rljson: Rljson` - Data to import
+
+**Returns:** `Promise<void>`
+
+#### `db.core.dump()`
+
+Export all database data.
+
+**Returns:** `Promise<Rljson>`
+
+#### `db.core.createTableWithInsertHistory(cfg)`
+
+Create a table with automatic version tracking.
+
+**Parameters:**
+
+- `cfg: TableCfg` - Table configuration
+
+**Returns:** `Promise<void>`
 
 ### Utility Functions
 
-- `isolate(tree, path)` - Extract data at path
-- `inject(tree, path, value)` - Insert value at path
-- `treeFromObject(obj)` - Convert object to tree structure
-- `makeUnique(array)` - Remove duplicates by hash
-- `mergeTrees(trees)` - Combine tree structures
+#### `isolate(tree, path, preservedKeys?)`
 
-## License
+Extract data at a specific path.
 
-MIT
+**Parameters:**
+
+- `tree: any` - Source tree
+- `path: (string | number)[]` - Path to isolate
+- `preservedKeys?: string[]` - Keys to preserve (e.g., metadata)
+
+**Returns:** Isolated data subtree
+
+#### `inject(tree, path, value)`
+
+Insert value at a specific path.
+
+**Parameters:**
+
+- `tree: any` - Target tree
+- `path: (string | number)[]` - Destination path
+- `value: any` - Value to inject
+
+**Returns:** Modified tree
+
+#### `treeFromObject(obj, skipRootCreation?)`
+
+Convert object to tree structure.
+
+**Parameters:**
+
+- `obj: Json` - Object to convert
+- `skipRootCreation?: boolean` - Skip automatic root creation (default: false)
+
+**Returns:** `Tree[]`
+
+#### `makeUnique(array)`
+
+Remove duplicates by hash.
+
+**Parameters:**
+
+- `array: any[]` - Array with potential duplicates
+
+**Returns:** `any[]` - Unique elements
+
+#### `mergeTrees(trees)`
+
+Combine multiple tree structures.
+
+**Parameters:**
+
+- `trees: Tree[][]` - Arrays of trees to merge
+
+**Returns:** `Tree[]`
+
+## Storage Backends
+
+@rljson/db works with any `@rljson/io` implementation:
+
+### IoMem (In-Memory)
+
+Perfect for development, testing, and temporary data:
+
+```typescript
+import { IoMem } from '@rljson/io';
+
+const io = new IoMem();
+await io.init();
+const db = new Db(io);
+
+// Data stored in memory - cleared on process exit
+```
+
+### IoFile (File System)
+
+Persistent storage using the file system:
+
+```typescript
+import { IoFile } from '@rljson/io';
+
+const io = new IoFile('/path/to/data');
+await io.init();
+const db = new Db(io);
+
+// Data persisted to disk
+```
+
+### IoMulti (Multiple Backends)
+
+Redundant storage across multiple backends with priority-based cascade:
+
+```typescript
+import { IoMulti, IoMem, IoFile } from '@rljson/io';
+
+const io1 = new IoMem();
+const io2 = new IoFile('/path/to/backup');
+const io3 = new IoFile('/path/to/archive');
+
+await io1.init();
+await io2.init();
+await io3.init();
+
+const multi = new IoMulti([io1, io2, io3]);
+const db = new Db(multi);
+
+// Writes to all backends, reads from first available
+// Priority: io1 > io2 > io3
+```
+
+## Examples
+
+See [src/example.ts](src/example.ts) for a complete working example demonstrating:
+
+- Table creation
+- Data import/export
+- Queries and filters
+- Tree operations
+- Version history
+- Multi-edit operations
+
+Run the example:
+
+```bash
+pnpm run build
+node dist/example.js
+```
 
 ## Related Packages
 
@@ -450,3 +930,17 @@ MIT
 - `@rljson/io` - Storage backend implementations
 - `@rljson/hash` - Content-addressing utilities
 - `@rljson/json` - JSON manipulation helpers
+- `@rljson/validate` - Data validation utilities
+
+## License
+
+MIT
+
+## Documentation
+
+- [README.md](./README.md) - Main documentation index
+- [README.public.md](./README.public.md) - This file (public API)
+- [README.contributors.md](./README.contributors.md) - Developer guide
+- [README.architecture.md](./README.architecture.md) - Technical architecture
+- [README.trouble.md](./README.trouble.md) - Troubleshooting guide
+- [README.blog.md](./README.blog.md) - Blog posts and updates
