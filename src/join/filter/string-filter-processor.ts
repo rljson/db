@@ -19,11 +19,11 @@ export class StringFilterProcessor implements ColumnFilterProcessor {
       '',
     );
 
-    /* v8 ignore start */
+    /* v8 ignore start -- @preserve */
     try {
       this.regExp = operator === 'regExp' ? new RegExp(search) : null;
     } catch {}
-    /* v8 ignore stop */
+    /* v8 ignore stop -- @preserve */
   }
 
   // ...........................................................................

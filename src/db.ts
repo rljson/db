@@ -171,7 +171,7 @@ export class Db {
       ? routeAccumulator.flat.split('/').length
       : 1;
 
-    /* v8 ignore next 6 -- @preserve */
+    /* v8 ignore if -- @preserve */
     if (depth > 100) {
       throw new Error(
         `Db._get: Maximum recursion depth (100) exceeded. ` +
