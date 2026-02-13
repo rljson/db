@@ -1090,6 +1090,80 @@ export class Db {
 
   // ...........................................................................
   /**
+   * Insert pre-decomposed tree nodes into a tree table.
+   *
+   * Unlike `insert()`, which expects a plain nested object and decomposes it
+   * via `treeFromObject()`, this method accepts an array of already-decomposed
+   * `Tree` nodes (e.g. from FsScanner). The **root node must be the last
+   * element** in the array.
+   *
+   * The method goes through the full insert pipeline:
+   * 1. Writes each node via TreeController
+   * 2. Creates an InsertHistoryRow automatically
+   * 3. Calls `notify.notify()` so Connector observers fire
+   *
+   * @param treeKey - The tree table key (must end with "Tree")
+   * @param trees - Pre-decomposed Tree nodes, root LAST
+   * @param options - Optional: skip notification or history
+   * @returns The InsertHistoryRow for the root node
+   */
+  async insertTrees(
+    treeKey: string,
+    trees: Tree[],
+    options?: { skipNotification?: boolean; skipHistory?: boolean },
+  ): Promise<InsertHistoryRow<any>[]> {
+    if (!trees || trees.length === 0) {
+      throw new Error(
+        'Db.insertTrees: trees array must contain at least one node.',
+      );
+    }
+
+    // Get the TreeController for this table
+    const controller = (await this.getController(treeKey)) as TreeController<
+      any,
+      any
+    >;
+
+    // Write each tree node via the controller
+    const writePromises = trees.map((tree) =>
+      controller.insert('add', tree, 'db.insertTrees'),
+    );
+    const writeResults = await Promise.all(writePromises);
+
+    // Only the root (last) result matters for InsertHistoryRow
+    const lastResult = writeResults[writeResults.length - 1];
+
+    /* v8 ignore next -- @preserve */
+    if (!lastResult || lastResult.length === 0) {
+      throw new Error(
+        `Db.insertTrees: TreeController returned no result for root node of table "${treeKey}".`,
+      );
+    }
+
+    const rootResult = lastResult[0];
+
+    // Add route info to the result
+    const route = Route.fromFlat(`/${treeKey}`);
+    const result: InsertHistoryRow<any> = {
+      ...rootResult,
+      route: route.flat,
+    };
+
+    // Write InsertHistory
+    if (!options?.skipHistory) {
+      await this._writeInsertHistory(treeKey, result);
+    }
+
+    // Notify observers (Connector picks this up automatically)
+    if (!options?.skipNotification) {
+      this.notify.notify(route, result);
+    }
+
+    return [result];
+  }
+
+  // ...........................................................................
+  /**
    * Recursively runs controllers based on the route of the Insert
    * @param insert - The Insert to run
    * @param route - The route of the Insert

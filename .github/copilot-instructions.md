@@ -78,6 +78,24 @@ if (isConnected) {
 
 Uses **pnpm**. Never modify the `scripts` section in `package.json` without explicit user permission.
 
+## Post-Edit Validation (MANDATORY)
+
+**ALWAYS run these checks after editing ANY file. No exceptions.**
+
+1. **Check for TypeScript / lint errors** in every file you touched (use the IDE error checker)
+2. **Run `pnpm exec eslint <changed-files>`** to catch lint violations
+3. **Run `pnpm test`** to verify tests pass and coverage stays at 100%
+4. **Fix all errors before moving on** — never leave red squiggles behind
+
+This applies to source files AND test files. A change is not complete until all diagnostics are clean.
+
+## Git Workflow (MANDATORY)
+
+- **NEVER commit directly to `main`.** Always work on a feature branch.
+- When proposing commits, provide a commit message, wait for user approval, then commit.
+- **`pnpm link` is acceptable** during development for local cross-repo dependencies.
+- **Before PR/merge**: unlink all local overrides (`git restore package.json pnpm-lock.yaml`, remove `pnpm.overrides`), verify tests still pass with published versions.
+
 ## Coding Style
 
 - **TypeScript**: ESM modules (`"type": "module"`)
