@@ -777,6 +777,62 @@ describe('Tree WHERE clause fix', () => {
 });
 ```
 
+## Connector (Sync Protocol)
+
+The `Connector` class implements the client side of the RLJSON sync protocol. It sits between a local `Db` and a socket, enriching outgoing refs with protocol metadata and processing incoming refs with safety guarantees.
+
+### Responsibilities
+
+```
+┌────────────────────────────────────────────────┐
+│                  Connector                     │
+│                                                │
+│  Outgoing path (Db → socket):                  │
+│    1. Db.notify fires with InsertHistoryRow    │
+│    2. Auto-populate predecessors from          │
+│       InsertHistoryRow.previous                │
+│    3. Enrich with seq, c, t, p (per config)    │
+│    4. Add to sent-refs dedup set               │
+│    5. Emit ConnectorPayload on socket          │
+│                                                │
+│  Incoming path (socket → callbacks):           │
+│    1. Receive ConnectorPayload from socket      │
+│    2. Reject self-echo (origin === own origin)  │
+│    3. Reject duplicate (ref already received)   │
+│    4. Detect sequence gaps → request gap-fill   │
+│    5. Emit client ACK (if requireAck)           │
+│    6. Invoke onIncomingRef callbacks            │
+└────────────────────────────────────────────────┘
+```
+
+### Bounded dedup strategy
+
+The Connector tracks recently sent and received refs to prevent duplicates. Both sets use **two-generation eviction**:
+
+1. A `current` Set accumulates refs.
+2. When `current.size ≥ maxDedupSetSize`, it rotates: `previous = current`, `current = new Set()`.
+3. Lookups check **both** `current` and `previous`.
+4. This caps memory at ≈ 2 × `maxDedupSetSize` entries (default 10 000 per generation).
+
+The eviction is O(1) — no per-entry bookkeeping — and avoids the overhead of a full LRU cache.
+
+### Auto-predecessor from InsertHistory
+
+When `causalOrdering` is enabled, the Connector's Db observer reads the `previous` field from each `InsertHistoryRow` emitted by `Db.notify`. These `InsertHistoryTimeId` values become the `p` (predecessors) array in the outgoing `ConnectorPayload`. This eliminates the need for manual `setPredecessors()` calls in normal database-driven workflows.
+
+### onIncomingRef vs listen()
+
+| Method            | Dedup | Origin filter | Gap detection | ACK | Recommended    |
+| ----------------- | ----- | ------------- | ------------- | --- | -------------- |
+| `onIncomingRef()` | ✅     | ✅             | ✅             | ✅   | ✅              |
+| `listen()`        | ❌     | ❌             | ❌             | ❌   | ❌ (deprecated) |
+
+`listen()` attaches a raw socket listener. It is retained for backward compatibility but bypasses all protocol safeguards. New code should use `onIncomingRef()`.
+
+### sendWithAck ordering
+
+The `sendWithAck()` method registers the ACK listener **before** emitting the ref on the socket. This prevents a race condition with synchronous transports (e.g., in-memory sockets used in tests) where the ACK fires during `send()` and would be lost if the listener were registered after.
+
 ## Future Enhancements
 
 ### Planned Features
