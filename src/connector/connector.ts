@@ -31,8 +31,12 @@ export class Connector {
 
   private _isListening: boolean = false;
 
-  private _sentRefs: Set<string> = new Set();
-  private _receivedRefs: Set<string> = new Set();
+  // Two-generation dedup sets — bounded memory
+  private _sentRefsCurrent: Set<string> = new Set();
+  private _sentRefsPrevious: Set<string> = new Set();
+  private _receivedRefsCurrent: Set<string> = new Set();
+  private _receivedRefsPrevious: Set<string> = new Set();
+  private readonly _maxDedup: number;
 
   // Sync protocol state
   private readonly _syncConfig: SyncConfig | undefined;
@@ -60,6 +64,8 @@ export class Connector {
       this._clientId = generateClientId();
     }
 
+    this._maxDedup = syncConfig?.maxDedupSetSize ?? 10_000;
+
     this._init();
   }
 
@@ -70,9 +76,9 @@ export class Connector {
    * @param ref - The ref to send
    */
   send(ref: string) {
-    if (this._sentRefs.has(ref) || this._receivedRefs.has(ref)) return;
+    if (this._hasSentRef(ref) || this._hasReceivedRef(ref)) return;
 
-    this._sentRefs.add(ref);
+    this._addSentRef(ref);
 
     const payload: ConnectorPayload = {
       o: this._origin,
@@ -102,7 +108,6 @@ export class Connector {
    * @returns A promise that resolves with the AckPayload
    */
   async sendWithAck(ref: string): Promise<AckPayload> {
-    this.send(ref);
     const timeoutMs = this._syncConfig?.ackTimeoutMs ?? 10_000;
 
     return new Promise<AckPayload>((resolve, reject) => {
@@ -119,7 +124,9 @@ export class Connector {
         }
       };
 
+      // Register listener BEFORE send so synchronous ACK is not lost
       this._socket.on(this._events.ack, handler);
+      this.send(ref);
     });
   }
 
@@ -136,6 +143,10 @@ export class Connector {
   /**
    * Registers a listener for incoming refs on this route.
    * The callback receives the raw ref string (not the full payload).
+   *
+   * **⚠️ Bypasses dedup, origin filtering, and gap detection.**
+   * Prefer {@link onIncomingRef} for safe, deduplicated delivery.
+   *
    * @param callback - The callback to invoke with each incoming ref
    */
   listen(callback: (editHistoryRef: string) => Promise<void>) {
@@ -147,6 +158,20 @@ export class Connector {
         console.error('Error in connector listener callback:', error);
       }
     });
+  }
+
+  // ...........................................................................
+  /**
+   * Registers a callback for incoming refs that are processed through the
+   * full sync pipeline: origin filtering, dedup, gap detection, and ACK.
+   *
+   * This is the recommended way to receive incoming refs. Unlike
+   * {@link listen}, this method benefits from all sync protocol protections.
+   *
+   * @param callback - The callback to invoke with each deduplicated incoming ref
+   */
+  onIncomingRef(callback: ConnectorCallback) {
+    this._callbacks.push(callback);
   }
 
   // ...........................................................................
@@ -214,6 +239,36 @@ export class Connector {
     this._isListening = false;
   }
 
+  // ...........................................................................
+  // Two-generation dedup helpers
+  // ...........................................................................
+
+  private _hasSentRef(ref: string): boolean {
+    return this._sentRefsCurrent.has(ref) || this._sentRefsPrevious.has(ref);
+  }
+
+  private _addSentRef(ref: string): void {
+    this._sentRefsCurrent.add(ref);
+    if (this._sentRefsCurrent.size >= this._maxDedup) {
+      this._sentRefsPrevious = this._sentRefsCurrent;
+      this._sentRefsCurrent = new Set();
+    }
+  }
+
+  private _hasReceivedRef(ref: string): boolean {
+    return (
+      this._receivedRefsCurrent.has(ref) || this._receivedRefsPrevious.has(ref)
+    );
+  }
+
+  private _addReceivedRef(ref: string): void {
+    this._receivedRefsCurrent.add(ref);
+    if (this._receivedRefsCurrent.size >= this._maxDedup) {
+      this._receivedRefsPrevious = this._receivedRefsCurrent;
+      this._receivedRefsCurrent = new Set();
+    }
+  }
+
   private _notifyCallbacks(ref: string) {
     /* v8 ignore next -- @preserve */
     Promise.all(this._callbacks.map((cb) => cb(ref))).catch((err) => {
@@ -224,7 +279,7 @@ export class Connector {
   private _processIncoming(payload: ConnectorPayload) {
     const ref = payload.r;
     /* v8 ignore next -- @preserve */
-    if (this._receivedRefs.has(ref)) {
+    if (this._hasReceivedRef(ref)) {
       return;
     }
 
@@ -242,7 +297,7 @@ export class Connector {
       this._peerSeqs.set(payload.c, payload.seq);
     }
 
-    this._receivedRefs.add(ref);
+    this._addReceivedRef(ref);
     this._notifyCallbacks(ref);
 
     // Send individual client ACK if required
@@ -274,7 +329,7 @@ export class Connector {
       return new Promise<void>((resolve) => {
         const ref = (ins as any)[this.route.root.tableKey + 'Ref'] as string;
         /* v8 ignore next -- @preserve */
-        if (this._sentRefs.has(ref)) {
+        if (this._hasSentRef(ref)) {
           resolve();
           return;
         }

@@ -589,4 +589,220 @@ describe('Connector sync protocol', () => {
       expect(callback).not.toHaveBeenCalled();
     });
   });
+
+  // =========================================================================
+  // Bounded dedup sets (two-generation eviction)
+  // =========================================================================
+
+  describe('bounded dedup sets', () => {
+    it('should evict old sent refs when maxDedupSetSize is reached', () => {
+      const config: SyncConfig = { maxDedupSetSize: 3 };
+      const connector = new Connector(db, route, socket, config);
+
+      const callback = vi.fn();
+      socket.on(events.ref, callback);
+
+      // Send 3 refs — fills the current generation
+      connector.send('a');
+      connector.send('b');
+      connector.send('c');
+      expect(callback).toHaveBeenCalledTimes(3);
+
+      // Sending 'a' again should be deduped (it's in previous generation)
+      connector.send('a');
+      expect(callback).toHaveBeenCalledTimes(3);
+
+      // Send 3 more — fills current generation again, evicts previous
+      connector.send('d');
+      connector.send('e');
+      connector.send('f');
+      expect(callback).toHaveBeenCalledTimes(6);
+
+      // 'a','b','c' are now fully evicted — 'a' can be sent again
+      connector.send('a');
+      expect(callback).toHaveBeenCalledTimes(7);
+
+      connector.teardown();
+    });
+
+    it('should evict old received refs when maxDedupSetSize is reached', () => {
+      const config: SyncConfig = { maxDedupSetSize: 3 };
+      const connector = new Connector(db, route, socket, config);
+
+      const notifyCallback = vi.fn();
+      (connector as any)._callbacks.push(notifyCallback);
+
+      // Receive 3 refs — fills current generation
+      for (const r of ['x', 'y', 'z']) {
+        socket.emit(events.ref, {
+          o: 'other-origin',
+          r,
+        } as ConnectorPayload);
+      }
+      expect(notifyCallback).toHaveBeenCalledTimes(3);
+
+      // Receiving 'x' again should be deduped (in previous generation)
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'x',
+      } as ConnectorPayload);
+      expect(notifyCallback).toHaveBeenCalledTimes(3);
+
+      // Receive 3 more — evicts previous generation
+      for (const r of ['p', 'q', 'r']) {
+        socket.emit(events.ref, {
+          o: 'other-origin',
+          r,
+        } as ConnectorPayload);
+      }
+      expect(notifyCallback).toHaveBeenCalledTimes(6);
+
+      // 'x' is now fully evicted — can be received again
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'x',
+      } as ConnectorPayload);
+      expect(notifyCallback).toHaveBeenCalledTimes(7);
+
+      connector.teardown();
+    });
+
+    it('should default to 10_000 when maxDedupSetSize is not set', () => {
+      const connector = new Connector(db, route, socket);
+      expect((connector as any)._maxDedup).toBe(10_000);
+      connector.teardown();
+    });
+  });
+
+  // =========================================================================
+  // onIncomingRef (safe callback via _processIncoming)
+  // =========================================================================
+
+  describe('onIncomingRef', () => {
+    it('should receive deduplicated incoming refs', () => {
+      const connector = new Connector(db, route, socket);
+
+      const callback = vi.fn();
+      connector.onIncomingRef(callback);
+
+      // Receive a ref
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'ref1',
+      } as ConnectorPayload);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith('ref1');
+
+      // Receiving the same ref again — should be deduped
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'ref1',
+      } as ConnectorPayload);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      connector.teardown();
+    });
+
+    it('should filter self-origin refs', () => {
+      const connector = new Connector(db, route, socket);
+
+      const callback = vi.fn();
+      connector.onIncomingRef(callback);
+
+      // Emit with connector's own origin — should be filtered
+      socket.emit(events.ref, {
+        o: connector.origin,
+        r: 'ref1',
+      } as ConnectorPayload);
+
+      expect(callback).not.toHaveBeenCalled();
+
+      connector.teardown();
+    });
+
+    it('should support multiple onIncomingRef callbacks', () => {
+      const connector = new Connector(db, route, socket);
+
+      const cb1 = vi.fn();
+      const cb2 = vi.fn();
+      connector.onIncomingRef(cb1);
+      connector.onIncomingRef(cb2);
+
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'ref1',
+      } as ConnectorPayload);
+
+      expect(cb1).toHaveBeenCalledTimes(1);
+      expect(cb2).toHaveBeenCalledTimes(1);
+
+      connector.teardown();
+    });
+
+    it('should trigger gap detection when used with causalOrdering', () => {
+      const config: SyncConfig = {
+        causalOrdering: true,
+        includeClientIdentity: true,
+      };
+      const connector = new Connector(db, route, socket, config);
+
+      const refCallback = vi.fn();
+      connector.onIncomingRef(refCallback);
+
+      const gapCallback = vi.fn();
+      socket.on(events.gapFillReq, gapCallback);
+
+      const peerId = 'client_Peer1';
+
+      // Receive seq 1
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'ref1',
+        c: peerId,
+        seq: 1,
+      } as ConnectorPayload);
+
+      // Receive seq 5 — gap
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'ref5',
+        c: peerId,
+        seq: 5,
+      } as ConnectorPayload);
+
+      expect(refCallback).toHaveBeenCalledTimes(2);
+      expect(gapCallback).toHaveBeenCalledTimes(1);
+
+      connector.teardown();
+    });
+  });
+
+  // =========================================================================
+  // sendWithAck with synchronous ACK
+  // =========================================================================
+
+  describe('sendWithAck listener ordering', () => {
+    it('should resolve when ACK arrives synchronously during send', async () => {
+      const config: SyncConfig = { requireAck: true, ackTimeoutMs: 1000 };
+      const connector = new Connector(db, route, socket, config);
+
+      // Set up a listener that immediately responds with ACK when ref is sent
+      socket.on(events.ref, (payload: ConnectorPayload) => {
+        socket.emit(events.ack, {
+          r: payload.r,
+          ok: true,
+          receivedBy: 1,
+          totalClients: 1,
+        } as AckPayload);
+      });
+
+      const result = await connector.sendWithAck(editHistory._hash);
+      expect(result.r).toBe(editHistory._hash);
+      expect(result.ok).toBe(true);
+
+      connector.teardown();
+    });
+  });
 });

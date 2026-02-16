@@ -158,7 +158,7 @@ describe('Connector', () => {
       socket.on(route.flat, callback);
 
       //Simulate receiving the ref
-      (connector as any)._receivedRefs.add(editHistory._hash);
+      (connector as any)._receivedRefsCurrent.add(editHistory._hash);
 
       connector.send(editHistory._hash);
 
