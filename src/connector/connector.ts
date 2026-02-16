@@ -5,11 +5,24 @@
 // found in the LICENSE file in the root of this package.
 
 import { Socket } from '@rljson/io';
-import { Route, timeId } from '@rljson/rljson';
+import {
+  AckPayload,
+  ClientId,
+  clientId as generateClientId,
+  ConnectorPayload,
+  GapFillRequest,
+  GapFillResponse,
+  InsertHistoryTimeId,
+  Route,
+  SyncConfig,
+  SyncEventNames,
+  syncEvents,
+  timeId,
+} from '@rljson/rljson';
 
 import { Db } from '../db.ts';
 
-export type ConnectorPayload = { o: string; r: string };
+export type { ConnectorPayload } from '@rljson/rljson';
 export type ConnectorCallback = (ref: string) => Promise<any>;
 
 export class Connector {
@@ -21,29 +34,112 @@ export class Connector {
   private _sentRefs: Set<string> = new Set();
   private _receivedRefs: Set<string> = new Set();
 
+  // Sync protocol state
+  private readonly _syncConfig: SyncConfig | undefined;
+  private readonly _clientId: ClientId | undefined;
+  private readonly _events: SyncEventNames;
+  private _seq: number = 0;
+  private _lastPredecessors: InsertHistoryTimeId[] = [];
+  private _peerSeqs: Map<ClientId, number> = new Map();
+
   constructor(
     private readonly _db: Db,
     private readonly _route: Route,
     private readonly _socket: Socket,
+    syncConfig?: SyncConfig,
+    clientIdentity?: ClientId,
   ) {
     this._origin = timeId();
+    this._syncConfig = syncConfig;
+    this._events = syncEvents(this._route.flat);
+
+    // Resolve client identity
+    if (clientIdentity) {
+      this._clientId = clientIdentity;
+    } else if (syncConfig?.includeClientIdentity) {
+      this._clientId = generateClientId();
+    }
 
     this._init();
   }
 
+  // ...........................................................................
+  /**
+   * Sends a ref to the server via the socket.
+   * Enriches the payload based on SyncConfig flags.
+   * @param ref - The ref to send
+   */
   send(ref: string) {
     if (this._sentRefs.has(ref) || this._receivedRefs.has(ref)) return;
 
     this._sentRefs.add(ref);
 
-    this.socket.emit(this.route.flat, {
+    const payload: ConnectorPayload = {
       o: this._origin,
       r: ref,
-    } as ConnectorPayload);
+    };
+
+    if (this._syncConfig?.includeClientIdentity && this._clientId) {
+      payload.c = this._clientId;
+      payload.t = Date.now();
+    }
+
+    if (this._syncConfig?.causalOrdering) {
+      payload.seq = ++this._seq;
+      if (this._lastPredecessors.length > 0) {
+        payload.p = [...this._lastPredecessors];
+      }
+    }
+
+    this.socket.emit(this._events.ref, payload);
   }
 
+  // ...........................................................................
+  /**
+   * Sends a ref and waits for server acknowledgment.
+   * Only meaningful when `syncConfig.requireAck` is `true`.
+   * @param ref - The ref to send
+   * @returns A promise that resolves with the AckPayload
+   */
+  async sendWithAck(ref: string): Promise<AckPayload> {
+    this.send(ref);
+    const timeoutMs = this._syncConfig?.ackTimeoutMs ?? 10_000;
+
+    return new Promise<AckPayload>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this._socket.off(this._events.ack, handler);
+        reject(new Error(`ACK timeout for ref ${ref} after ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      const handler = (ack: AckPayload) => {
+        if (ack.r === ref) {
+          clearTimeout(timeout);
+          this._socket.off(this._events.ack, handler);
+          resolve(ack);
+        }
+      };
+
+      this._socket.on(this._events.ack, handler);
+    });
+  }
+
+  // ...........................................................................
+  /**
+   * Sets the causal predecessors for the next send.
+   * @param predecessors - The InsertHistory timeIds of causal predecessors
+   */
+  setPredecessors(predecessors: InsertHistoryTimeId[]) {
+    this._lastPredecessors = predecessors;
+  }
+
+  // ...........................................................................
+  /**
+   * Registers a listener for incoming refs on this route.
+   * The callback receives the raw ref string (not the full payload).
+   * @param callback - The callback to invoke with each incoming ref
+   */
   listen(callback: (editHistoryRef: string) => Promise<void>) {
-    this._socket.on(this._route.flat, async (payload: ConnectorPayload) => {
+    this._socket.on(this._events.ref, async (payload: ConnectorPayload) => {
       /* v8 ignore next -- @preserve */
       try {
         await callback(payload.r);
@@ -53,15 +149,66 @@ export class Connector {
     });
   }
 
+  // ...........................................................................
+  /**
+   * Returns the current sequence number.
+   * Only meaningful when `causalOrdering` is enabled.
+   */
+  get seq(): number {
+    return this._seq;
+  }
+
+  // ...........................................................................
+  /**
+   * Returns the stable client identity.
+   * Only available when `includeClientIdentity` is enabled.
+   */
+  get clientIdentity(): ClientId | undefined {
+    return this._clientId;
+  }
+
+  // ...........................................................................
+  /**
+   * Returns the sync configuration, if any.
+   */
+  get syncConfig(): SyncConfig | undefined {
+    return this._syncConfig;
+  }
+
+  // ...........................................................................
+  /**
+   * Returns the typed event names for this connector's route.
+   */
+  get events(): SyncEventNames {
+    return this._events;
+  }
+
+  // ######################
+  // Private
+  // ######################
+
   private _init() {
     this._registerSocketObserver();
     this._registerDbObserver();
+
+    if (this._syncConfig?.causalOrdering) {
+      this._registerGapFillHandler();
+    }
 
     this._isListening = true;
   }
 
   public teardown() {
-    this._socket.removeAllListeners(this._route.flat);
+    this._socket.removeAllListeners(this._events.ref);
+
+    if (this._syncConfig?.causalOrdering) {
+      this._socket.removeAllListeners(this._events.gapFillRes);
+    }
+
+    if (this._syncConfig?.requireAck) {
+      this._socket.removeAllListeners(this._events.ack);
+    }
+
     this._db.unregisterAllObservers(this._route);
 
     this._isListening = false;
@@ -74,21 +221,51 @@ export class Connector {
     });
   }
 
+  private _processIncoming(payload: ConnectorPayload) {
+    const ref = payload.r;
+    /* v8 ignore next -- @preserve */
+    if (this._receivedRefs.has(ref)) {
+      return;
+    }
+
+    // Gap detection
+    if (this._syncConfig?.causalOrdering && payload.seq != null && payload.c) {
+      const lastSeq = this._peerSeqs.get(payload.c) ?? 0;
+      if (payload.seq > lastSeq + 1) {
+        // Gap detected — request fill
+        const gapReq: GapFillRequest = {
+          route: this._route.flat,
+          afterSeq: lastSeq,
+        };
+        this._socket.emit(this._events.gapFillReq, gapReq);
+      }
+      this._peerSeqs.set(payload.c, payload.seq);
+    }
+
+    this._receivedRefs.add(ref);
+    this._notifyCallbacks(ref);
+
+    // Send individual client ACK if required
+    if (this._syncConfig?.requireAck) {
+      this._socket.emit(this._events.ackClient, { r: ref });
+    }
+  }
+
   private _registerSocketObserver() {
-    this.socket.on(this.route.flat, (p: ConnectorPayload) => {
+    this.socket.on(this._events.ref, (p: ConnectorPayload) => {
       if (p.o === this._origin) {
         return;
       }
 
-      const ref = p.r;
-      /* v8 ignore next -- @preserve */
-      if (this._receivedRefs.has(ref)) {
-        return;
+      this._processIncoming(p);
+    });
+  }
+
+  private _registerGapFillHandler() {
+    this._socket.on(this._events.gapFillRes, (res: GapFillResponse) => {
+      for (const p of res.refs) {
+        this._processIncoming(p);
       }
-
-      this._receivedRefs.add(p.r);
-
-      this._notifyCallbacks(p.r);
     });
   }
 
