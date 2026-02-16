@@ -333,6 +333,12 @@ export class Connector {
           resolve();
           return;
         }
+
+        // Auto-populate predecessors from InsertHistoryRow
+        if (this._syncConfig?.causalOrdering && ins.previous?.length) {
+          this._lastPredecessors = [...ins.previous];
+        }
+
         this.send(ref);
         resolve();
       });

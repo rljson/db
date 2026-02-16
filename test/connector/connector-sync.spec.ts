@@ -805,4 +805,90 @@ describe('Connector sync protocol', () => {
       connector.teardown();
     });
   });
+
+  // =========================================================================
+  // Auto-predecessor from InsertHistoryRow.previous
+  // =========================================================================
+
+  describe('auto-predecessor from Db observer', () => {
+    it('should attach p from InsertHistoryRow.previous when causalOrdering', async () => {
+      const config: SyncConfig = {
+        causalOrdering: true,
+        includeClientIdentity: true,
+      };
+      const connector = new Connector(db, route, socket, config);
+
+      const emitted: ConnectorPayload[] = [];
+      socket.on(events.ref, (p: ConnectorPayload) => emitted.push(p));
+
+      // Simulate Db notifying the connector with an InsertHistoryRow
+      // that has a non-empty previous
+      const predecessorTimeId = timeId();
+      db.notify.notify(route, {
+        [cakeKey + 'EditHistoryRef']: 'ref-with-previous',
+        timeId: timeId(),
+        route: route.flat,
+        previous: [predecessorTimeId],
+      } as any);
+
+      // Wait for async notify
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].r).toBe('ref-with-previous');
+      expect(emitted[0].p).toEqual([predecessorTimeId]);
+
+      connector.teardown();
+    });
+
+    it('should not attach p when previous is empty', async () => {
+      const config: SyncConfig = {
+        causalOrdering: true,
+        includeClientIdentity: true,
+      };
+      const connector = new Connector(db, route, socket, config);
+
+      const emitted: ConnectorPayload[] = [];
+      socket.on(events.ref, (p: ConnectorPayload) => emitted.push(p));
+
+      // Notify with empty previous
+      db.notify.notify(route, {
+        [cakeKey + 'EditHistoryRef']: 'ref-no-previous',
+        timeId: timeId(),
+        route: route.flat,
+        previous: [],
+      } as any);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].r).toBe('ref-no-previous');
+      expect(emitted[0].p).toBeUndefined();
+
+      connector.teardown();
+    });
+
+    it('should not attach p when causalOrdering is disabled', async () => {
+      const connector = new Connector(db, route, socket);
+
+      const emitted: ConnectorPayload[] = [];
+      socket.on(events.ref, (p: ConnectorPayload) => emitted.push(p));
+
+      const predecessorTimeId = timeId();
+      db.notify.notify(route, {
+        [cakeKey + 'EditHistoryRef']: 'ref-no-causal',
+        timeId: timeId(),
+        route: route.flat,
+        previous: [predecessorTimeId],
+      } as any);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(emitted).toHaveLength(1);
+      expect(emitted[0].r).toBe('ref-no-causal');
+      expect(emitted[0].p).toBeUndefined();
+
+      connector.teardown();
+    });
+  });
 });
