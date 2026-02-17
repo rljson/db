@@ -165,7 +165,7 @@ export class TreeController<N extends string, C extends Tree>
     }
 
     // Safety check: prevent processing excessively large trees
-    /* v8 ignore next 5 -- @preserve */
+    /* v8 ignore if -- @preserve */
     if (trees.length > 100000) {
       throw new Error(
         `TreeController.buildTreeFromTrees: Tree size exceeds limit (${trees.length} > 100000 nodes). ` +
@@ -190,7 +190,7 @@ export class TreeController<N extends string, C extends Tree>
       buildObjectCallCount++;
 
       // Safety check: prevent infinite loops
-      /* v8 ignore next 5 -- @preserve */
+      /* v8 ignore if -- @preserve */
       if (buildObjectCallCount > MAX_ITERATIONS) {
         throw new Error(
           `TreeController.buildTreeFromTrees: Maximum iterations (${MAX_ITERATIONS}) exceeded. ` +
@@ -199,7 +199,7 @@ export class TreeController<N extends string, C extends Tree>
       }
 
       // Safety check: prevent stack overflow from deep nesting
-      /* v8 ignore next 5 -- @preserve */
+      /* v8 ignore if -- @preserve */
       if (depth > 10000) {
         throw new Error(
           `TreeController.buildTreeFromTrees: Tree depth exceeds limit (${depth} > 10000). ` +
@@ -210,7 +210,7 @@ export class TreeController<N extends string, C extends Tree>
       const hash = (tree as TreeWithHash)._hash;
 
       // Return memoized result if already processed
-      /* v8 ignore next 3 -- @preserve */
+      /* v8 ignore if -- @preserve */
       if (memo.has(hash)) {
         return memo.get(hash);
       }
@@ -364,7 +364,7 @@ export class TreeController<N extends string, C extends Tree>
   ): Promise<ControllerChildProperty[]> {
     // When querying by hash, don't expand children
     // This prevents infinite recursion in db._get()
-    /* v8 ignore next 3 -- @preserve */
+    /* v8 ignore if -- @preserve */
     if (typeof where === 'string') {
       return [];
     }

@@ -8,6 +8,14 @@ export type {
   ConnectorCallback,
   ConnectorPayload,
 } from './connector/connector.ts';
+export type {
+  AckPayload,
+  ClientId,
+  GapFillRequest,
+  GapFillResponse,
+  SyncConfig,
+  SyncEventNames,
+} from '@rljson/rljson';
 export { Db } from './db.ts';
 export {
   exampleEditActionColumnSelection,

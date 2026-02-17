@@ -2459,6 +2459,170 @@ describe('Db', () => {
       });
     });
   });
+
+  describe('insertTrees', () => {
+    const treeKey = 'insertTestTree';
+    let treeIo: Io;
+    let treeDb: Db;
+
+    beforeEach(async () => {
+      treeIo = new IoMem();
+      await treeIo.init();
+      await treeIo.isReady();
+
+      treeDb = new Db(treeIo);
+      const treeTableCfg: TableCfg = createTreesTableCfg(treeKey);
+      await treeDb.core.createTableWithInsertHistory(treeTableCfg);
+    });
+
+    it('should insert pre-decomposed trees and return InsertHistoryRow', async () => {
+      const treeObject = {
+        fileA: 'contentA',
+        dirB: {
+          fileC: 'contentC',
+        },
+      };
+      const trees: Array<Tree> = treeFromObject(treeObject);
+      const rootHash = trees[trees.length - 1]._hash as string;
+
+      const results = await treeDb.insertTrees(treeKey, trees);
+
+      expect(results).toHaveLength(1);
+      const result = results[0];
+      expect(result[`${treeKey}Ref`]).toBe(rootHash);
+      expect(result.route).toBe(`/${treeKey}`);
+      expect(result.timeId).toBeDefined();
+    });
+
+    it('should write InsertHistory to the history table', async () => {
+      const trees: Array<Tree> = treeFromObject({ leaf: 'value' });
+
+      const results = await treeDb.insertTrees(treeKey, trees);
+      const result = results[0];
+
+      // Verify InsertHistory was written
+      const historyData = await treeDb.core.dumpTable(
+        `${treeKey}InsertHistory`,
+      );
+      const historyTable = historyData[
+        `${treeKey}InsertHistory`
+      ] as InsertHistoryTable<any>;
+      expect(historyTable._data.length).toBeGreaterThanOrEqual(1);
+
+      const historyRow = historyTable._data.find(
+        (row: InsertHistoryRow<any>) => row.timeId === result.timeId,
+      );
+      expect(historyRow).toBeDefined();
+      expect(historyRow![`${treeKey}Ref`]).toBe(result[`${treeKey}Ref`]);
+    });
+
+    it('should trigger notify so observers fire', async () => {
+      const callback = vi.fn();
+      const route = Route.fromFlat(`/${treeKey}`);
+      treeDb.registerObserver(route, callback);
+
+      const trees: Array<Tree> = treeFromObject({ node: 'data' });
+      await treeDb.insertTrees(treeKey, trees);
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      const notifiedRow = callback.mock.calls[0][0];
+      expect(notifiedRow.route).toBe(`/${treeKey}`);
+      expect(notifiedRow[`${treeKey}Ref`]).toBeDefined();
+    });
+
+    it('should skip notification when skipNotification is true', async () => {
+      const callback = vi.fn();
+      const route = Route.fromFlat(`/${treeKey}`);
+      treeDb.registerObserver(route, callback);
+
+      const trees: Array<Tree> = treeFromObject({ x: 1 });
+      await treeDb.insertTrees(treeKey, trees, { skipNotification: true });
+
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it('should skip history when skipHistory is true', async () => {
+      const trees: Array<Tree> = treeFromObject({ y: 2 });
+      await treeDb.insertTrees(treeKey, trees, { skipHistory: true });
+
+      // InsertHistory table should be empty (only the table itself exists)
+      const historyData = await treeDb.core.dumpTable(
+        `${treeKey}InsertHistory`,
+      );
+      const historyTable = historyData[
+        `${treeKey}InsertHistory`
+      ] as InsertHistoryTable<any>;
+      expect(historyTable._data.length).toBe(0);
+    });
+
+    it('should throw on empty trees array', async () => {
+      await expect(treeDb.insertTrees(treeKey, [])).rejects.toThrow(
+        'trees array must contain at least one node',
+      );
+    });
+
+    it('should make tree data retrievable via db.get()', async () => {
+      const treeObject = {
+        alpha: 'leaf',
+        beta: {
+          gamma: 'deep leaf',
+        },
+      };
+      const trees: Array<Tree> = treeFromObject(treeObject);
+      const rootHash = trees[trees.length - 1]._hash as string;
+
+      await treeDb.insertTrees(treeKey, trees);
+
+      // Retrieve the tree by its root ref
+      const route = Route.fromFlat(`/${treeKey}@${rootHash}/root`);
+      const { cell } = await treeDb.get(route, {});
+
+      // Should have leaf nodes: alpha, beta/gamma
+      const paths = cell.flatMap((c) => c.path);
+      expect(paths.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should handle single-node tree', async () => {
+      const trees: Array<Tree> = treeFromObject({ singleLeaf: 'only' });
+      const results = await treeDb.insertTrees(treeKey, trees);
+
+      expect(results).toHaveLength(1);
+      expect(results[0][`${treeKey}Ref`]).toBeDefined();
+    });
+
+    it('should handle deeply nested trees', async () => {
+      const treeObject = {
+        a: { b: { c: { d: { e: 'deep' } } } },
+      };
+      const trees: Array<Tree> = treeFromObject(treeObject);
+      const rootHash = trees[trees.length - 1]._hash as string;
+
+      const results = await treeDb.insertTrees(treeKey, trees);
+
+      expect(results).toHaveLength(1);
+      expect(results[0][`${treeKey}Ref`]).toBe(rootHash);
+    });
+
+    it('should produce same ref as db.core.import for identical data', async () => {
+      const treeObject = {
+        fileX: 'contentX',
+        dirY: { fileZ: 'contentZ' },
+      };
+      const trees: Array<Tree> = treeFromObject(treeObject);
+
+      // Insert via insertTrees
+      const results = await treeDb.insertTrees(treeKey, trees);
+      const insertTreesRef = results[0][`${treeKey}Ref`];
+
+      // Also do a raw import of the same trees (to verify hash consistency)
+      const treeTable: TreesTable = { _type: 'trees', _data: trees };
+      await treeDb.core.import({ [treeKey]: treeTable });
+      const rawRootHash = trees[trees.length - 1]._hash as string;
+
+      expect(insertTreesRef).toBe(rawRootHash);
+    });
+  });
+
   describe('notify', () => {
     it('returns 0 callbacks for unregistered route', () => {
       const route = Route.fromFlat('/carGeneral');

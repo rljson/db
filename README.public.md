@@ -906,6 +906,79 @@ const db = new Db(multi);
 // Priority: io1 > io2 > io3
 ```
 
+## Connector (sync protocol)
+
+The `Connector` bridges a local `Db` with a remote server via socket events. It enriches outgoing refs with protocol metadata and processes incoming refs with dedup, origin filtering, and gap detection.
+
+### Creating a Connector
+
+```typescript
+import { Connector } from '@rljson/db';
+import { Route } from '@rljson/rljson';
+import type { SyncConfig } from '@rljson/rljson';
+
+const route = Route.fromFlat('/sharedTree');
+
+// Minimal — no enrichment
+const connector = new Connector(db, route, socket);
+
+// With sync config — enables enriched payloads
+const syncConfig: SyncConfig = {
+  causalOrdering: true,
+  requireAck: true,
+  ackTimeoutMs: 5_000,
+  includeClientIdentity: true,
+  maxDedupSetSize: 10_000,
+};
+const connector = new Connector(db, route, socket, { syncConfig });
+```
+
+### Sending refs
+
+```typescript
+// Fire-and-forget
+connector.send(ref);
+
+// Wait for server ACK (requires requireAck: true)
+const ack = await connector.sendWithAck(ref);
+// ack: { r, ok, receivedBy, totalClients }
+```
+
+### Receiving refs
+
+```typescript
+// Safe callback with dedup, origin filtering, gap detection
+connector.listen(async (ref) => {
+  console.log('New ref:', ref);
+});
+```
+
+### Predecessors
+
+When `causalOrdering` is enabled, the Connector automatically populates the `p` (predecessors) field from the `InsertHistoryRow.previous` array whenever the local Db notifies about a new insert. No manual call to `setPredecessors()` is needed for standard database-driven sends.
+
+```typescript
+// Manual override (advanced) — sets predecessors for the NEXT send only
+connector.setPredecessors(['1700000000000:AbCd']);
+```
+
+### Bounded dedup
+
+The Connector tracks recently sent and received refs to prevent duplicates. The dedup sets use **two-generation eviction**: when the current set reaches `maxDedupSetSize` (default 10 000), it rotates to previous and a new current set starts. Lookups check both generations. This caps memory usage at ≈ 2 × `maxDedupSetSize` entries.
+
+### Bootstrap handling
+
+The Connector automatically listens for `${route}:bootstrap` events from the server. When a client joins after data has already been sent, the server pushes the latest ref via this event. The Connector feeds it into `_processIncoming()`, so dedup, gap detection, and `listen()` callbacks all work identically to regular multicast refs.
+
+No additional setup is needed — the bootstrap handler is registered in `_init()` and cleaned up in `tearDown()`.
+
+### Cleanup
+
+```typescript
+connector.tearDown();
+// Removes all socket listeners and clears internal state
+```
+
 ## Examples
 
 See [src/example.ts](src/example.ts) for a complete working example demonstrating:
