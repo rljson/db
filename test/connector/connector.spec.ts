@@ -182,9 +182,9 @@ describe('Connector', () => {
     });
   });
 
-  describe('teardown', () => {
-    it('should teardown connector and stop listening', () => {
-      connector.teardown();
+  describe('tearDown', () => {
+    it('should tearDown connector and stop listening', () => {
+      connector.tearDown();
 
       expect(connector.isListening).toBe(false);
     });

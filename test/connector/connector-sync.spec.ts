@@ -115,7 +115,7 @@ describe('Connector sync protocol', () => {
       expect(payload.seq).toBeUndefined();
       expect(payload.p).toBeUndefined();
 
-      connector.teardown();
+      connector.tearDown();
     });
   });
 
@@ -131,7 +131,7 @@ describe('Connector sync protocol', () => {
       expect(connector.clientIdentity).toBeDefined();
       expect(isClientId(connector.clientIdentity!)).toBe(true);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should use provided clientIdentity over auto-generated', () => {
@@ -141,7 +141,7 @@ describe('Connector sync protocol', () => {
 
       expect(connector.clientIdentity).toBe(myId);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should attach c and t to payload when enabled', () => {
@@ -160,7 +160,7 @@ describe('Connector sync protocol', () => {
       expect(payload.t).toBeGreaterThanOrEqual(before);
       expect(payload.t).toBeLessThanOrEqual(after);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should not attach c/t when includeClientIdentity is false', () => {
@@ -176,7 +176,7 @@ describe('Connector sync protocol', () => {
       expect(payload.c).toBeUndefined();
       expect(payload.t).toBeUndefined();
 
-      connector.teardown();
+      connector.tearDown();
     });
   });
 
@@ -198,7 +198,7 @@ describe('Connector sync protocol', () => {
       expect(payload.seq).toBe(1);
       expect(connector.seq).toBe(1);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should increment seq with each send', () => {
@@ -218,7 +218,7 @@ describe('Connector sync protocol', () => {
       expect((callback.mock.calls[2][0] as ConnectorPayload).seq).toBe(3);
       expect(connector.seq).toBe(3);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should attach predecessors when set via setPredecessors', () => {
@@ -234,7 +234,7 @@ describe('Connector sync protocol', () => {
       const payload = callback.mock.calls[0][0] as ConnectorPayload;
       expect(payload.p).toEqual(['1700000000000:AbCd']);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should not attach p when predecessors is empty', () => {
@@ -249,7 +249,7 @@ describe('Connector sync protocol', () => {
       const payload = callback.mock.calls[0][0] as ConnectorPayload;
       expect(payload.p).toBeUndefined();
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should detect gap and emit gapFillReq', () => {
@@ -287,7 +287,7 @@ describe('Connector sync protocol', () => {
         afterSeq: 1,
       });
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should not detect gap for sequential messages', () => {
@@ -317,7 +317,7 @@ describe('Connector sync protocol', () => {
 
       expect(gapCallback).not.toHaveBeenCalled();
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should process gap-fill response refs', () => {
@@ -342,7 +342,7 @@ describe('Connector sync protocol', () => {
       expect(notifyCallback).toHaveBeenCalledWith('ref2');
       expect(notifyCallback).toHaveBeenCalledWith('ref3');
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should not re-process already received refs from gap-fill', () => {
@@ -375,7 +375,7 @@ describe('Connector sync protocol', () => {
       expect(notifyCallback).toHaveBeenCalledTimes(2);
       expect(notifyCallback).toHaveBeenLastCalledWith('ref3');
 
-      connector.teardown();
+      connector.tearDown();
     });
   });
 
@@ -400,7 +400,7 @@ describe('Connector sync protocol', () => {
       expect(ackCallback).toHaveBeenCalledTimes(1);
       expect(ackCallback).toHaveBeenCalledWith({ r: 'ref1' });
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should not emit ackClient when requireAck is false', () => {
@@ -417,7 +417,7 @@ describe('Connector sync protocol', () => {
 
       expect(ackCallback).not.toHaveBeenCalled();
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('sendWithAck should use default timeout when ackTimeoutMs is not set', async () => {
@@ -440,7 +440,7 @@ describe('Connector sync protocol', () => {
       const result = await ackPromise;
       expect(result.r).toBe(editHistory._hash);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('sendWithAck should resolve when ACK is received', async () => {
@@ -463,7 +463,7 @@ describe('Connector sync protocol', () => {
       const result = await ackPromise;
       expect(result).toEqual(ack);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('sendWithAck should reject on timeout', async () => {
@@ -475,7 +475,7 @@ describe('Connector sync protocol', () => {
         'ACK timeout',
       );
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('sendWithAck should ignore ACK for different ref', async () => {
@@ -505,7 +505,7 @@ describe('Connector sync protocol', () => {
       const result = await ackPromise;
       expect(result.r).toBe(editHistory._hash);
 
-      connector.teardown();
+      connector.tearDown();
     });
   });
 
@@ -537,7 +537,7 @@ describe('Connector sync protocol', () => {
       expect(payload.seq).toBe(1);
       expect(payload.p).toEqual(['1700000000000:AbCd']);
 
-      connector.teardown();
+      connector.tearDown();
     });
   });
 
@@ -555,7 +555,7 @@ describe('Connector sync protocol', () => {
       expect(connector.events.gapFillReq).toBe(`${route.flat}:gapfill:req`);
       expect(connector.events.gapFillRes).toBe(`${route.flat}:gapfill:res`);
 
-      connector.teardown();
+      connector.tearDown();
     });
   });
 
@@ -572,7 +572,7 @@ describe('Connector sync protocol', () => {
       };
       const connector = new Connector(db, route, socket, config);
 
-      connector.teardown();
+      connector.tearDown();
 
       expect(connector.isListening).toBe(false);
 
@@ -622,7 +622,7 @@ describe('Connector sync protocol', () => {
       connector.send('a');
       expect(callback).toHaveBeenCalledTimes(7);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should evict old received refs when maxDedupSetSize is reached', () => {
@@ -664,26 +664,26 @@ describe('Connector sync protocol', () => {
       } as ConnectorPayload);
       expect(notifyCallback).toHaveBeenCalledTimes(7);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should default to 10_000 when maxDedupSetSize is not set', () => {
       const connector = new Connector(db, route, socket);
       expect((connector as any)._maxDedup).toBe(10_000);
-      connector.teardown();
+      connector.tearDown();
     });
   });
 
   // =========================================================================
-  // onIncomingRef (safe callback via _processIncoming)
+  // listen (safe callback via _processIncoming)
   // =========================================================================
 
-  describe('onIncomingRef', () => {
+  describe('listen', () => {
     it('should receive deduplicated incoming refs', () => {
       const connector = new Connector(db, route, socket);
 
       const callback = vi.fn();
-      connector.onIncomingRef(callback);
+      connector.listen(callback);
 
       // Receive a ref
       socket.emit(events.ref, {
@@ -702,14 +702,14 @@ describe('Connector sync protocol', () => {
 
       expect(callback).toHaveBeenCalledTimes(1);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should filter self-origin refs', () => {
       const connector = new Connector(db, route, socket);
 
       const callback = vi.fn();
-      connector.onIncomingRef(callback);
+      connector.listen(callback);
 
       // Emit with connector's own origin — should be filtered
       socket.emit(events.ref, {
@@ -719,16 +719,16 @@ describe('Connector sync protocol', () => {
 
       expect(callback).not.toHaveBeenCalled();
 
-      connector.teardown();
+      connector.tearDown();
     });
 
-    it('should support multiple onIncomingRef callbacks', () => {
+    it('should support multiple listen callbacks', () => {
       const connector = new Connector(db, route, socket);
 
       const cb1 = vi.fn();
       const cb2 = vi.fn();
-      connector.onIncomingRef(cb1);
-      connector.onIncomingRef(cb2);
+      connector.listen(cb1);
+      connector.listen(cb2);
 
       socket.emit(events.ref, {
         o: 'other-origin',
@@ -738,7 +738,7 @@ describe('Connector sync protocol', () => {
       expect(cb1).toHaveBeenCalledTimes(1);
       expect(cb2).toHaveBeenCalledTimes(1);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should trigger gap detection when used with causalOrdering', () => {
@@ -749,7 +749,7 @@ describe('Connector sync protocol', () => {
       const connector = new Connector(db, route, socket, config);
 
       const refCallback = vi.fn();
-      connector.onIncomingRef(refCallback);
+      connector.listen(refCallback);
 
       const gapCallback = vi.fn();
       socket.on(events.gapFillReq, gapCallback);
@@ -775,7 +775,7 @@ describe('Connector sync protocol', () => {
       expect(refCallback).toHaveBeenCalledTimes(2);
       expect(gapCallback).toHaveBeenCalledTimes(1);
 
-      connector.teardown();
+      connector.tearDown();
     });
   });
 
@@ -802,7 +802,7 @@ describe('Connector sync protocol', () => {
       expect(result.r).toBe(editHistory._hash);
       expect(result.ok).toBe(true);
 
-      connector.teardown();
+      connector.tearDown();
     });
   });
 
@@ -838,7 +838,7 @@ describe('Connector sync protocol', () => {
       expect(emitted[0].r).toBe('ref-with-previous');
       expect(emitted[0].p).toEqual([predecessorTimeId]);
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should not attach p when previous is empty', async () => {
@@ -865,7 +865,7 @@ describe('Connector sync protocol', () => {
       expect(emitted[0].r).toBe('ref-no-previous');
       expect(emitted[0].p).toBeUndefined();
 
-      connector.teardown();
+      connector.tearDown();
     });
 
     it('should not attach p when causalOrdering is disabled', async () => {
@@ -888,7 +888,7 @@ describe('Connector sync protocol', () => {
       expect(emitted[0].r).toBe('ref-no-causal');
       expect(emitted[0].p).toBeUndefined();
 
-      connector.teardown();
+      connector.tearDown();
     });
   });
 });

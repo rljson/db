@@ -141,36 +141,14 @@ export class Connector {
 
   // ...........................................................................
   /**
-   * Registers a listener for incoming refs on this route.
-   * The callback receives the raw ref string (not the full payload).
+   * Registers a callback for incoming refs on this route.
    *
-   * **⚠️ Bypasses dedup, origin filtering, and gap detection.**
-   * Prefer {@link onIncomingRef} for safe, deduplicated delivery.
-   *
-   * @param callback - The callback to invoke with each incoming ref
-   */
-  listen(callback: (editHistoryRef: string) => Promise<void>) {
-    this._socket.on(this._events.ref, async (payload: ConnectorPayload) => {
-      /* v8 ignore next -- @preserve */
-      try {
-        await callback(payload.r);
-      } catch (error) {
-        console.error('Error in connector listener callback:', error);
-      }
-    });
-  }
-
-  // ...........................................................................
-  /**
-   * Registers a callback for incoming refs that are processed through the
-   * full sync pipeline: origin filtering, dedup, gap detection, and ACK.
-   *
-   * This is the recommended way to receive incoming refs. Unlike
-   * {@link listen}, this method benefits from all sync protocol protections.
+   * Incoming refs are processed through the full sync pipeline:
+   * origin filtering, dedup, gap detection, and ACK.
    *
    * @param callback - The callback to invoke with each deduplicated incoming ref
    */
-  onIncomingRef(callback: ConnectorCallback) {
+  listen(callback: ConnectorCallback) {
     this._callbacks.push(callback);
   }
 
@@ -223,7 +201,7 @@ export class Connector {
     this._isListening = true;
   }
 
-  public teardown() {
+  public tearDown() {
     this._socket.removeAllListeners(this._events.ref);
 
     if (this._syncConfig?.causalOrdering) {

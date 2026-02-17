@@ -947,13 +947,10 @@ const ack = await connector.sendWithAck(ref);
 ### Receiving refs
 
 ```typescript
-// Recommended — safe callback with dedup, origin filtering, gap detection
-connector.onIncomingRef((payload) => {
-  console.log('New ref:', payload.r);
+// Safe callback with dedup, origin filtering, gap detection
+connector.listen(async (ref) => {
+  console.log('New ref:', ref);
 });
-
-// Low-level (deprecated) — raw socket listener, bypasses all protections
-connector.listen((ref) => { /* ... */ });
 ```
 
 ### Predecessors
@@ -972,7 +969,7 @@ The Connector tracks recently sent and received refs to prevent duplicates. The 
 ### Cleanup
 
 ```typescript
-connector.teardown();
+connector.tearDown();
 // Removes all socket listeners and clears internal state
 ```
 

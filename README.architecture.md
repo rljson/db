@@ -801,7 +801,7 @@ The `Connector` class implements the client side of the RLJSON sync protocol. It
 │    3. Reject duplicate (ref already received)   │
 │    4. Detect sequence gaps → request gap-fill   │
 │    5. Emit client ACK (if requireAck)           │
-│    6. Invoke onIncomingRef callbacks            │
+│    6. Invoke listen() callbacks                │
 └────────────────────────────────────────────────┘
 ```
 
@@ -820,14 +820,9 @@ The eviction is O(1) — no per-entry bookkeeping — and avoids the overhead of
 
 When `causalOrdering` is enabled, the Connector's Db observer reads the `previous` field from each `InsertHistoryRow` emitted by `Db.notify`. These `InsertHistoryTimeId` values become the `p` (predecessors) array in the outgoing `ConnectorPayload`. This eliminates the need for manual `setPredecessors()` calls in normal database-driven workflows.
 
-### onIncomingRef vs listen()
+### listen()
 
-| Method            | Dedup | Origin filter | Gap detection | ACK | Recommended    |
-| ----------------- | ----- | ------------- | ------------- | --- | -------------- |
-| `onIncomingRef()` | ✅     | ✅             | ✅             | ✅   | ✅              |
-| `listen()`        | ❌     | ❌             | ❌             | ❌   | ❌ (deprecated) |
-
-`listen()` attaches a raw socket listener. It is retained for backward compatibility but bypasses all protocol safeguards. New code should use `onIncomingRef()`.
+`listen()` registers callbacks that receive incoming refs through the full sync pipeline: origin filtering, dedup, gap detection, and ACK. All protocol safeguards are applied before callbacks are invoked.
 
 ### sendWithAck ordering
 
