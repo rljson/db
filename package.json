@@ -64,6 +64,8 @@
     "onlyBuiltDependencies": [
       "esbuild"
     ],
-    "overrides": {}
+    "overrides": {
+      "@rljson/rljson": "link:../rljson-rljson"
+    }
   }
 }

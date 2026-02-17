@@ -96,7 +96,65 @@ This applies to source files AND test files. A change is not complete until all 
 - **`pnpm link` is acceptable** during development for local cross-repo dependencies.
 - **Before PR/merge**: unlink all local overrides (`git restore package.json pnpm-lock.yaml`, remove `pnpm.overrides`), verify tests still pass with published versions.
 
-## Coding Style
+## Publish Workflow (MANDATORY)
+
+All `@rljson/*` packages share the same publish workflow documented in `doc/develop.md` (or `doc/workflows/develop.md`). **Follow these steps in exact order:**
+
+### Pre-publish checklist
+
+1. **Unlink local overrides** — Remove all `pnpm.overrides` entries that use `link:../...` and restore `package.json` and `pnpm-lock.yaml` to use published versions:
+   ```bash
+   # Remove overrides from package.json (set "overrides": {})
+   # Then reinstall to get published versions:
+   pnpm install
+   ```
+2. **Run tests with published deps** — `pnpm test` must pass with 100% coverage using published (not linked) dependencies.
+3. **Rebuild** — `pnpm run build` (which runs tests via `prebuild`).
+4. **Increase version** — `pnpm version patch --no-git-tag-version` then `git commit -am"Increase version"`.
+5. **Commit ALL files** — including `package.json` and `pnpm-lock.yaml`. Nothing should be left uncommitted.
+
+### Merge & publish steps
+
+```bash
+git rebase main
+node scripts/push-branch.js
+gh pr create --base main --title "<PR title>" --body " "
+gh pr merge --auto --squash
+node scripts/wait-for-pr.js
+node scripts/delete-feature-branch.js
+git checkout main && git pull
+pnpm login
+pnpm publish
+```
+
+### Cross-repo publish order
+
+Packages MUST be published bottom-up by dependency order. A downstream package can only be published after its upstream dependency is on npm.
+
+| Order | Package            | Depends on                                                 |
+| ----- | ------------------ | ---------------------------------------------------------- |
+| 1     | `@rljson/rljson`   | — (Layer 0, no `@rljson` deps)                             |
+| 2     | `@rljson/io`       | `@rljson/rljson`                                           |
+| 3     | `@rljson/bs`       | `@rljson/rljson`, `@rljson/io`                             |
+| 4     | `@rljson/db`       | `@rljson/rljson`, `@rljson/io`                             |
+| 5     | `@rljson/server`   | `@rljson/rljson`, `@rljson/io`, `@rljson/bs`, `@rljson/db` |
+| 6     | `@rljson/fs-agent` | all of the above                                           |
+
+After publishing an upstream package, downstream packages must `pnpm update --latest` to pick up the new version before their own publish.
+
+## Dependency Pinning (MANDATORY)
+
+- **ESLint**: Pin to `~9.39.2`. ESLint 10+ breaks the build. Never allow `pnpm update --latest` to bump eslint beyond 9.x.
+
+  ```jsonc
+  // ✅ CORRECT
+  "eslint": "~9.39.2"
+
+  // ❌ WRONG — will pull in v10 which breaks everything
+  "eslint": "^10.0.0"
+  ```
+
+- After running `pnpm update --latest`, **always verify** eslint stayed on 9.x: `pnpm ls eslint`.
 
 - **TypeScript**: ESM modules (`"type": "module"`)
 - **License headers**: Required in all source files

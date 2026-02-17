@@ -966,6 +966,12 @@ connector.setPredecessors(['1700000000000:AbCd']);
 
 The Connector tracks recently sent and received refs to prevent duplicates. The dedup sets use **two-generation eviction**: when the current set reaches `maxDedupSetSize` (default 10 000), it rotates to previous and a new current set starts. Lookups check both generations. This caps memory usage at ≈ 2 × `maxDedupSetSize` entries.
 
+### Bootstrap handling
+
+The Connector automatically listens for `${route}:bootstrap` events from the server. When a client joins after data has already been sent, the server pushes the latest ref via this event. The Connector feeds it into `_processIncoming()`, so dedup, gap detection, and `listen()` callbacks all work identically to regular multicast refs.
+
+No additional setup is needed — the bootstrap handler is registered in `_init()` and cleaned up in `tearDown()`.
+
 ### Cleanup
 
 ```typescript

@@ -828,6 +828,17 @@ When `causalOrdering` is enabled, the Connector's Db observer reads the `previou
 
 The `sendWithAck()` method registers the ACK listener **before** emitting the ref on the socket. This prevents a race condition with synchronous transports (e.g., in-memory sockets used in tests) where the ACK fires during `send()` and would be lost if the listener were registered after.
 
+### Bootstrap handler
+
+The Connector registers a listener on `events.bootstrap` in `_init()` via `_registerBootstrapHandler()`. When the server sends a bootstrap message (latest ref on connect, or periodic heartbeat), the handler feeds the `ConnectorPayload` directly into `_processIncoming()`. This means:
+
+- **Dedup**: Refs already received via multicast are filtered out automatically
+- **Gap detection**: If `causalOrdering` is enabled, bootstrap refs participate in sequence tracking
+- **Callbacks**: `listen()` callbacks fire for genuinely new refs
+- **ACK**: If `requireAck` is enabled, client ACKs are sent back
+
+The `tearDown()` method cleans up the bootstrap listener alongside all other socket listeners.
+
 ## Future Enhancements
 
 ### Planned Features

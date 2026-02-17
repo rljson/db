@@ -891,4 +891,83 @@ describe('Connector sync protocol', () => {
       connector.tearDown();
     });
   });
+
+  // =========================================================================
+  // Bootstrap
+  // =========================================================================
+
+  describe('bootstrap', () => {
+    it('should process bootstrap messages from server', async () => {
+      const connector = new Connector(db, route, socket);
+
+      const received: string[] = [];
+      connector.listen(async (ref) => {
+        received.push(ref);
+      });
+
+      // Simulate server sending a bootstrap message
+      const bootstrapPayload: ConnectorPayload = {
+        o: '__server__',
+        r: 'bootstrap-ref-123',
+      };
+      socket.emit(events.bootstrap, bootstrapPayload);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(received).toHaveLength(1);
+      expect(received[0]).toBe('bootstrap-ref-123');
+
+      connector.tearDown();
+    });
+
+    it('should dedup bootstrap refs already received via multicast', async () => {
+      const connector = new Connector(db, route, socket);
+
+      const received: string[] = [];
+      connector.listen(async (ref) => {
+        received.push(ref);
+      });
+
+      // First: receive via normal multicast
+      const multicastPayload: ConnectorPayload = {
+        o: 'some-other-origin',
+        r: 'already-seen-ref',
+      };
+      socket.emit(events.ref, multicastPayload);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(received).toHaveLength(1);
+
+      // Then: same ref via bootstrap heartbeat — should be deduped
+      const bootstrapPayload: ConnectorPayload = {
+        o: '__server__',
+        r: 'already-seen-ref',
+      };
+      socket.emit(events.bootstrap, bootstrapPayload);
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(received).toHaveLength(1); // No duplicate
+
+      connector.tearDown();
+    });
+
+    it('should clean up bootstrap listener on tearDown', () => {
+      const connector = new Connector(db, route, socket);
+      connector.tearDown();
+
+      const received: string[] = [];
+      connector.listen(async (ref) => {
+        received.push(ref);
+      });
+
+      // Send bootstrap after tearDown — should not be processed
+      const payload: ConnectorPayload = {
+        o: '__server__',
+        r: 'after-teardown-ref',
+      };
+      socket.emit(events.bootstrap, payload);
+
+      expect(received).toHaveLength(0);
+    });
+  });
 });

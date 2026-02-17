@@ -192,6 +192,7 @@ export class Connector {
 
   private _init() {
     this._registerSocketObserver();
+    this._registerBootstrapHandler();
     this._registerDbObserver();
 
     if (this._syncConfig?.causalOrdering) {
@@ -203,6 +204,7 @@ export class Connector {
 
   public tearDown() {
     this._socket.removeAllListeners(this._events.ref);
+    this._socket.removeAllListeners(this._events.bootstrap);
 
     if (this._syncConfig?.causalOrdering) {
       this._socket.removeAllListeners(this._events.gapFillRes);
@@ -299,6 +301,17 @@ export class Connector {
       for (const p of res.refs) {
         this._processIncoming(p);
       }
+    });
+  }
+
+  /**
+   * Listens for bootstrap messages from the server.
+   * The server sends the latest ref on connect and optionally via heartbeat.
+   * _processIncoming handles dedup so already-seen refs are filtered out.
+   */
+  private _registerBootstrapHandler() {
+    this._socket.on(this._events.bootstrap, (p: ConnectorPayload) => {
+      this._processIncoming(p);
     });
   }
 
