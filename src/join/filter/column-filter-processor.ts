@@ -41,7 +41,7 @@ export class ColumnFilterProcessor {
   }
 
   // ...........................................................................
-  /* v8 ignore stop */
+  /* v8 ignore stop -- @preserve */
   static operatorsForType(type: string): string[] {
     switch (type) {
       case 'string':
