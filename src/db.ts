@@ -12,6 +12,8 @@ import {
   CakesTable,
   ComponentRef,
   ComponentsTable,
+  Conflict,
+  ConflictCallback,
   ContentType,
   Edit,
   EditHistory,
@@ -96,6 +98,8 @@ export class Db {
    * Notification system to register callbacks on data changes
    */
   readonly notify: Notify;
+
+  private _conflictCallbacks: Map<string, ConflictCallback[]> = new Map();
 
   private _cache: Map<string, Container> = new Map();
 
@@ -1497,6 +1501,48 @@ export class Db {
 
   // ...........................................................................
   /**
+   * Registers a callback to be called when a DAG conflict is detected
+   * on the given route.
+   * @param route - The route to register the conflict callback on
+   * @param callback - The callback to invoke with the Conflict
+   */
+  registerConflictObserver(route: Route, callback: ConflictCallback) {
+    const key = route.flat;
+    this._conflictCallbacks.set(key, [
+      ...(this._conflictCallbacks.get(key) || []),
+      callback,
+    ]);
+  }
+
+  // ...........................................................................
+  /**
+   * Unregisters a specific conflict callback from the given route.
+   * @param route - The route to unregister the callback from
+   * @param callback - The callback to remove
+   */
+  unregisterConflictObserver(route: Route, callback: ConflictCallback) {
+    const key = route.flat;
+    const callbacks = this._conflictCallbacks.get(key);
+    /* v8 ignore else -- @preserve */
+    if (callbacks) {
+      this._conflictCallbacks.set(
+        key,
+        callbacks.filter((cb) => cb !== callback),
+      );
+    }
+  }
+
+  // ...........................................................................
+  /**
+   * Unregisters all conflict callbacks from the given route.
+   * @param route - The route to clear conflict callbacks for
+   */
+  unregisterAllConflictObservers(route: Route) {
+    this._conflictCallbacks.delete(route.flat);
+  }
+
+  // ...........................................................................
+  /**
    * Get a controller for a specific table
    * @param tableKey - The key of the table to get the controller for
    * @param refs - Optional references required by some controllers
@@ -1548,6 +1594,67 @@ export class Db {
 
   // ...........................................................................
   /**
+   * Detects whether the InsertHistory for a table has diverged into
+   * multiple branches (multiple "tips" — leaf nodes in the DAG).
+   *
+   * A tip is a timeId that is NOT referenced as `previous` by any other
+   * InsertHistory row. Two or more tips indicate a DAG fork (conflict).
+   * @param table - The table name (without "InsertHistory" suffix)
+   * @returns A Conflict if a DAG branch is detected, or null otherwise
+   */
+  async detectDagBranch(table: string): Promise<Conflict | null> {
+    const insertHistoryTable = table + 'InsertHistory';
+    const hasTable = await this.core.hasTable(insertHistoryTable);
+    if (!hasTable) return null;
+
+    const dump = await this.core.dumpTable(insertHistoryTable);
+    const rows = dump[insertHistoryTable]._data as InsertHistoryRow<any>[];
+
+    if (rows.length < 2) return null;
+
+    // Build set of all timeIds that appear as someone's previous
+    const referencedAsParent = new Set<string>();
+    for (const row of rows) {
+      if (row.previous) {
+        for (const p of row.previous) {
+          referencedAsParent.add(p);
+        }
+      }
+    }
+
+    // Tips are rows whose timeId is NOT in referencedAsParent
+    const tips = rows.filter((row) => !referencedAsParent.has(row.timeId));
+
+    if (tips.length > 1) {
+      return {
+        table,
+        type: 'dagBranch',
+        detectedAt: Date.now(),
+        branches: tips.map((t) => t.timeId),
+      };
+    }
+
+    return null;
+  }
+
+  // ...........................................................................
+  /**
+   * Fires conflict callbacks registered on the route derived from the table.
+   * @param table - The table name
+   * @param conflict - The detected conflict
+   */
+  private _notifyConflict(table: string, conflict: Conflict) {
+    const route = Route.fromFlat(`/${table}`);
+    const callbacks = this._conflictCallbacks.get(route.flat);
+    if (callbacks) {
+      for (const cb of callbacks) {
+        cb(conflict);
+      }
+    }
+  }
+
+  // ...........................................................................
+  /**
    * Adds an InsertHistory row to the InsertHistory table of a table
    * @param table - The table the Insert was made on
    * @param InsertHistoryRow - The InsertHistory row to add
@@ -1566,6 +1673,12 @@ export class Db {
         _type: 'insertHistory',
       },
     });
+
+    // Detect DAG branches after writing
+    const conflict = await this.detectDagBranch(table);
+    if (conflict) {
+      this._notifyConflict(table, conflict);
+    }
   }
 
   // ...........................................................................
