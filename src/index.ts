@@ -11,6 +11,9 @@ export type {
 export type {
   AckPayload,
   ClientId,
+  Conflict,
+  ConflictCallback,
+  ConflictType,
   GapFillRequest,
   GapFillResponse,
   SyncConfig,

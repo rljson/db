@@ -54,7 +54,7 @@
     "@rljson/hash": "^0.0.18",
     "@rljson/io": "^0.0.66",
     "@rljson/json": "^0.0.23",
-    "@rljson/rljson": "^0.0.76",
+    "@rljson/rljson": "^0.0.77",
     "@rljson/validate": "^0.0.11",
     "filtrex": "^3.1.0",
     "object-traversal": "^1.0.1",
