@@ -9,6 +9,8 @@ import {
   AckPayload,
   ClientId,
   clientId as generateClientId,
+  Conflict,
+  ConflictCallback,
   ConnectorPayload,
   GapFillRequest,
   GapFillResponse,
@@ -28,6 +30,7 @@ export type ConnectorCallback = (ref: string) => Promise<any>;
 export class Connector {
   private _origin: string;
   private _callbacks: ConnectorCallback[] = [];
+  private _conflictCallbacks: ConflictCallback[] = [];
 
   private _isListening: boolean = false;
 
@@ -154,6 +157,22 @@ export class Connector {
 
   // ...........................................................................
   /**
+   * Registers a callback that fires when a DAG conflict is detected.
+   *
+   * A conflict occurs when the InsertHistory for this route's table
+   * has multiple "tips" (leaf nodes), indicating concurrent writes
+   * from different clients that have not yet been merged.
+   *
+   * Detection-only: the callback receives a `Conflict` object
+   * describing the branches. Resolution is left to upper layers.
+   * @param callback - Invoked with the detected Conflict
+   */
+  onConflict(callback: ConflictCallback) {
+    this._conflictCallbacks.push(callback);
+  }
+
+  // ...........................................................................
+  /**
    * Returns the current sequence number.
    * Only meaningful when `causalOrdering` is enabled.
    */
@@ -194,6 +213,7 @@ export class Connector {
     this._registerSocketObserver();
     this._registerBootstrapHandler();
     this._registerDbObserver();
+    this._registerConflictObserver();
 
     if (this._syncConfig?.causalOrdering) {
       this._registerGapFillHandler();
@@ -215,6 +235,7 @@ export class Connector {
     }
 
     this._db.unregisterAllObservers(this._route);
+    this._db.unregisterAllConflictObservers(this._route);
 
     this._isListening = false;
   }
@@ -312,6 +333,14 @@ export class Connector {
   private _registerBootstrapHandler() {
     this._socket.on(this._events.bootstrap, (p: ConnectorPayload) => {
       this._processIncoming(p);
+    });
+  }
+
+  private _registerConflictObserver() {
+    this._db.registerConflictObserver(this._route, (conflict: Conflict) => {
+      for (const cb of this._conflictCallbacks) {
+        cb(conflict);
+      }
     });
   }
 
