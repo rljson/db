@@ -979,6 +979,57 @@ connector.tearDown();
 // Removes all socket listeners and clears internal state
 ```
 
+### Conflict Detection
+
+The `Db` class detects DAG branch conflicts in the InsertHistory and notifies registered observers. A **DAG branch** occurs when two or more InsertHistory rows have no descendant — i.e., they are "tips" of the history graph — indicating concurrent writes from different clients that have not yet been merged.
+
+#### Manual Detection
+
+```typescript
+// Check whether a table's InsertHistory has diverged
+const conflict = await db.detectDagBranch('cars');
+if (conflict) {
+  console.log(conflict.table);    // 'cars'
+  console.log(conflict.type);     // 'dagBranch'
+  console.log(conflict.branches); // ['17000…:AbCd', '17000…:EfGh']
+}
+// Returns null when the history is linear (no conflict)
+```
+
+#### Automatic Detection via Observers
+
+Conflict detection runs automatically after every `_writeInsertHistory()` call. Register callbacks on the `Db` to be notified immediately:
+
+```typescript
+import type { Conflict, ConflictCallback } from '@rljson/db';
+
+const onConflict: ConflictCallback = (conflict: Conflict) => {
+  console.warn(`DAG branch in ${conflict.table}:`, conflict.branches);
+};
+
+// Register
+db.registerConflictObserver(route, onConflict);
+
+// Unregister a specific callback
+db.unregisterConflictObserver(route, onConflict);
+
+// Unregister all callbacks for a route
+db.unregisterAllConflictObservers(route);
+```
+
+#### Via Connector
+
+The `Connector` provides a convenience method that wraps the Db observer API:
+
+```typescript
+connector.onConflict((conflict) => {
+  console.warn(`Conflict detected:`, conflict);
+});
+// Cleaned up automatically on connector.tearDown()
+```
+
+**Detection only — no resolution.** The system signals that a conflict exists; merging divergent branches is left to application code.
+
 ## Examples
 
 See [src/example.ts](src/example.ts) for a complete working example demonstrating:
