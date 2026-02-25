@@ -839,6 +839,46 @@ The Connector registers a listener on `events.bootstrap` in `_init()` via `_regi
 
 The `tearDown()` method cleans up the bootstrap listener alongside all other socket listeners.
 
+### Conflict Detection
+
+The `Db` class integrates DAG branch conflict detection directly into the write path. After every call to `_writeInsertHistory()`, the system invokes `detectDagBranch(table)` to scan the InsertHistory for forks.
+
+**Algorithm (`detectDagBranch`)**:
+
+1. Load all rows from `{table}InsertHistory`.
+2. Build a set of all timeIds that appear as someone's `previous`.
+3. Tips = rows whose `timeId` is **not** in that set (no descendant).
+4. If more than one tip exists → DAG branch conflict.
+
+```text
+       ┌─── tip A  (17000…:AbCd)
+root ──┤
+       └─── tip B  (17000…:EfGh)
+       ↑
+   DAG branch: two concurrent writes, no merge yet
+```
+
+**Observer pipeline:**
+
+```text
+_writeInsertHistory()
+  └──► detectDagBranch(table)
+         └──► if conflict found:
+                _notifyConflict(table, conflict)
+                  └──► fire all callbacks in _conflictCallbacks[route]
+```
+
+**Connector integration**: `Connector.onConflict(callback)` calls `db.registerConflictObserver()` under the hood, so callbacks fire for conflicts on the route managed by that Connector. `tearDown()` calls `db.unregisterAllConflictObservers()` to clean up.
+
+**Key properties:**
+
+| Property          | Value                                                                        |
+| ----------------- | ---------------------------------------------------------------------------- |
+| Detection trigger | Every `_writeInsertHistory()` call                                           |
+| Scope             | Per-table (each table's InsertHistory is independent)                        |
+| Resolution        | Not provided — detection and signaling only                                  |
+| Merge detection   | A conflict **disappears** when a merge row references all tips as `previous` |
+
 ## Future Enhancements
 
 ### Planned Features
