@@ -78,14 +78,15 @@ if (isConnected) {
 
 Uses **pnpm**. Never modify the `scripts` section in `package.json` without explicit user permission.
 
-## Post-Edit Validation (MANDATORY)
+## Pre-Commit Checklist (MANDATORY — NEVER SKIP)
 
-**ALWAYS run these checks after editing ANY file. No exceptions.**
+**Before EVERY commit, run these checks IN ORDER. No exceptions.**
 
-1. **Check for TypeScript / lint errors** in every file you touched (use the IDE error checker)
-2. **Run `pnpm exec eslint <changed-files>`** to catch lint violations
-3. **Run `pnpm test`** to verify tests pass and coverage stays at 100%
-4. **Fix all errors before moving on** — never leave red squiggles behind
+1. **Update READMEs FIRST** — When adding or changing public API, features, or behavior, update the relevant README files (README.public.md, README.architecture.md, copilot-instructions.md, etc.) **BEFORE** proposing a commit. A feature is NOT complete until its documentation matches. This is the FIRST step, not the last.
+2. **Check for TypeScript / lint errors** in every file you touched (use the IDE error checker)
+3. **Run `pnpm exec eslint <changed-files>`** to catch lint violations
+4. **Run `pnpm test`** to verify tests pass and coverage stays at 100%
+5. **Fix all errors before moving on** — never leave red squiggles behind
 
 This applies to source files AND test files. A change is not complete until all diagnostics are clean.
 
@@ -93,8 +94,22 @@ This applies to source files AND test files. A change is not complete until all 
 
 - **NEVER commit directly to `main`.** Always work on a feature branch.
 - When proposing commits, provide a commit message, wait for user approval, then commit.
+- **GitKraken MCP tools** (`mcp_gitkraken_git_status`, `mcp_gitkraken_git_add_or_commit`, etc.) may timeout in large workspaces. **Always use `run_in_terminal` with raw git commands** (e.g., `git status --short`, `git add .`, `git commit -am"..."`) instead.
 - **`pnpm link` is acceptable** during development for local cross-repo dependencies.
 - **Before PR/merge**: unlink all local overrides (`git restore package.json pnpm-lock.yaml`, remove `pnpm.overrides`), verify tests still pass with published versions.
+
+### Repository scripts
+
+All git workflow operations **MUST** use the scripts in `scripts/`. Never use raw git commands for these operations.
+
+| Step | Script                                          | Purpose                                                    |
+| ---- | ----------------------------------------------- | ---------------------------------------------------------- |
+| 1    | `node scripts/create-branch.js "<description>"` | Create a kebab-case feature branch                         |
+| 2    | `node scripts/push-branch.js`                   | Push the feature branch (guards against pushing to `main`) |
+| 3    | `node scripts/wait-for-pr.js`                   | Poll PR status until merged/closed                         |
+| 4    | `node scripts/delete-feature-branch.js`         | Switch to `main`, pull, verify merge, delete local branch  |
+| 5    | `node scripts/add-version-tag.js`               | Create and push a `v<version>` git tag                     |
+| 6    | `node scripts/is-clean-repo.js`                 | Check if repo is clean and on up-to-date `main`            |
 
 ## Publish Workflow (MANDATORY)
 
@@ -125,6 +140,17 @@ node scripts/delete-feature-branch.js
 git checkout main && git pull
 pnpm login
 pnpm publish
+```
+
+**CRITICAL: Always use exactly `pnpm publish` — no flags, no piping.**
+
+```bash
+# ✅ CORRECT
+pnpm publish
+
+# ❌ WRONG — never add flags or pipe output
+pnpm publish --no-git-checks
+pnpm publish 2>&1 | tail -15
 ```
 
 ### Cross-repo publish order
@@ -159,3 +185,10 @@ After publishing an upstream package, downstream packages must `pnpm update --la
 - **TypeScript**: ESM modules (`"type": "module"`)
 - **License headers**: Required in all source files
 - **Test framework**: Vitest with `describe()`, `it()`, `expect()`
+
+## Testing
+
+- **Run all tests**: `pnpm test` (also runs lint)
+- **Build** (includes tests): `pnpm run build`
+- **Update golden files**: `pnpm updateGoldens` (sets `UPDATE_GOLDENS=true`, reruns tests)
+- **Debug tests in VS Code**: Open test file → set breakpoint → Alt+click play button in Test Explorer
