@@ -31,6 +31,7 @@ export class Connector {
   private _origin: string;
   private _callbacks: ConnectorCallback[] = [];
   private _conflictCallbacks: ConflictCallback[] = [];
+  private _missedRef: string | null = null;
 
   private _isListening: boolean = false;
 
@@ -82,6 +83,10 @@ export class Connector {
     if (this._hasSentRef(ref) || this._hasReceivedRef(ref)) return;
 
     this._addSentRef(ref);
+
+    // Clear any missed ref — we are sending fresher state, so the
+    // old bootstrap ref is stale and must not be replayed on listen().
+    this._missedRef = null;
 
     const payload: ConnectorPayload = {
       o: this._origin,
@@ -153,6 +158,19 @@ export class Connector {
    */
   listen(callback: ConnectorCallback) {
     this._callbacks.push(callback);
+
+    // Replay ref that arrived before any callback was registered.
+    // This fixes the bootstrap race: the server sends the latest ref
+    // immediately on connect, but the Connector may be constructed
+    // before listen() is called. Without replay, that initial ref is
+    // added to the dedup set (so it won't fire again) but no callback
+    // ever sees it.
+    if (this._missedRef !== null) {
+      const ref = this._missedRef;
+      this._missedRef = null;
+      /* v8 ignore next -- @preserve */
+      Promise.resolve(callback(ref)).catch(console.error);
+    }
   }
 
   // ...........................................................................
@@ -271,6 +289,11 @@ export class Connector {
   }
 
   private _notifyCallbacks(ref: string) {
+    if (this._callbacks.length === 0) {
+      // No callbacks registered yet — store for replay on first listen()
+      this._missedRef = ref;
+      return;
+    }
     /* v8 ignore next -- @preserve */
     Promise.all(this._callbacks.map((cb) => cb(ref))).catch((err) => {
       console.error(`Error notifying connector callbacks for ref ${ref}:`, err);
