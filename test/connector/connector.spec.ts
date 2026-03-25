@@ -165,7 +165,7 @@ describe('Connector', () => {
       expect(cb2).not.toHaveBeenCalled();
     });
 
-    it('should not replay missed ref after send()', async () => {
+    it('should replay missed ref even after send()', async () => {
       const origin = timeId();
 
       // Bootstrap arrives before any callback
@@ -175,14 +175,17 @@ describe('Connector', () => {
       } as ConnectorPayload;
       socket.emit(route.flat, payload);
 
-      // syncToDb sends fresher state — clears missed ref
+      // syncToDb sends fresher local state — but must NOT discard
+      // the bootstrap. listen() still needs it so syncFromDb can
+      // restore the server's tree.
       connector.send('fresh-local-ref');
 
-      // Now listen() should NOT replay the stale bootstrap
+      // listen() SHOULD replay the bootstrap ref
       const cb = vi.fn();
       connector.listen(cb);
       await new Promise((r) => setTimeout(r, 0));
-      expect(cb).not.toHaveBeenCalled();
+      expect(cb).toHaveBeenCalledTimes(1);
+      expect(cb).toHaveBeenCalledWith('old-bootstrap-ref');
     });
   });
 

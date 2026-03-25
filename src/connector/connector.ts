@@ -84,9 +84,12 @@ export class Connector {
 
     this._addSentRef(ref);
 
-    // Clear any missed ref — we are sending fresher state, so the
-    // old bootstrap ref is stale and must not be replayed on listen().
-    this._missedRef = null;
+    // Do NOT clear _missedRef here. The bootstrap ref must survive
+    // until listen() is called so the callback receives the server's
+    // latest state. Previously, clearing _missedRef caused a race:
+    // syncToDb's send() would discard the bootstrap, and the
+    // subsequent listen() in syncFromDb would get nothing — leaving
+    // the client permanently stuck.
 
     const payload: ConnectorPayload = {
       o: this._origin,
