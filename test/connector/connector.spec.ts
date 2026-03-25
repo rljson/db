@@ -117,6 +117,73 @@ describe('Connector', () => {
       expect(callback).toHaveBeenCalled();
       expect(callback).toHaveBeenCalledWith(payload.r);
     });
+
+    it('should replay missed ref that arrived before listen()', async () => {
+      const callback = vi.fn();
+      const origin = timeId();
+
+      // Emit BEFORE any callback is registered — simulates bootstrap race
+      const payload = {
+        r: editHistory._hash,
+        o: origin,
+      } as ConnectorPayload;
+      socket.emit(route.flat, payload);
+
+      // Callback not yet registered — should not have been called
+      expect(callback).not.toHaveBeenCalled();
+
+      // Now register the callback — missed ref should be replayed
+      connector.listen(callback);
+
+      // Allow microtask to settle (replay uses Promise.resolve)
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(callback).toHaveBeenCalledTimes(1);
+      expect(callback).toHaveBeenCalledWith(editHistory._hash);
+    });
+
+    it('should not replay missed ref on second listen()', async () => {
+      const origin = timeId();
+
+      // Emit before any callback
+      const payload = {
+        r: editHistory._hash,
+        o: origin,
+      } as ConnectorPayload;
+      socket.emit(route.flat, payload);
+
+      // First listen() consumes the missed ref
+      const cb1 = vi.fn();
+      connector.listen(cb1);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(cb1).toHaveBeenCalledTimes(1);
+
+      // Second listen() should NOT replay (already consumed)
+      const cb2 = vi.fn();
+      connector.listen(cb2);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(cb2).not.toHaveBeenCalled();
+    });
+
+    it('should not replay missed ref after send()', async () => {
+      const origin = timeId();
+
+      // Bootstrap arrives before any callback
+      const payload = {
+        r: 'old-bootstrap-ref',
+        o: origin,
+      } as ConnectorPayload;
+      socket.emit(route.flat, payload);
+
+      // syncToDb sends fresher state — clears missed ref
+      connector.send('fresh-local-ref');
+
+      // Now listen() should NOT replay the stale bootstrap
+      const cb = vi.fn();
+      connector.listen(cb);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(cb).not.toHaveBeenCalled();
+    });
   });
 
   describe('send', () => {

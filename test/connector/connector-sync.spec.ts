@@ -969,5 +969,29 @@ describe('Connector sync protocol', () => {
 
       expect(received).toHaveLength(0);
     });
+
+    it('should replay bootstrap ref that arrived before listen()', async () => {
+      const connector = new Connector(db, route, socket);
+
+      // Server sends bootstrap BEFORE any listen() callback
+      const bootstrapPayload: ConnectorPayload = {
+        o: '__server__',
+        r: 'early-bootstrap-ref',
+      };
+      socket.emit(events.bootstrap, bootstrapPayload);
+
+      // Now register callback — should receive the missed bootstrap
+      const received: string[] = [];
+      connector.listen(async (ref) => {
+        received.push(ref);
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(received).toHaveLength(1);
+      expect(received[0]).toBe('early-bootstrap-ref');
+
+      connector.tearDown();
+    });
   });
 });
