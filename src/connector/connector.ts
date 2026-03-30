@@ -8,12 +8,12 @@ import { Socket } from '@rljson/io';
 import {
   AckPayload,
   ClientId,
-  clientId as generateClientId,
   Conflict,
   ConflictCallback,
   ConnectorPayload,
   GapFillRequest,
   GapFillResponse,
+  clientId as generateClientId,
   InsertHistoryTimeId,
   Route,
   SyncConfig,
@@ -32,6 +32,7 @@ export class Connector {
   private _callbacks: ConnectorCallback[] = [];
   private _conflictCallbacks: ConflictCallback[] = [];
   private _missedRef: string | null = null;
+  private _lastSentRef: string | null = null;
 
   private _isListening: boolean = false;
 
@@ -108,6 +109,7 @@ export class Connector {
       }
     }
 
+    this._lastSentRef = ref;
     this.socket.emit(this._events.ref, payload);
   }
 
@@ -405,5 +407,9 @@ export class Connector {
 
   get isListening() {
     return this._isListening;
+  }
+
+  get lastSentRef(): string | null {
+    return this._lastSentRef;
   }
 }

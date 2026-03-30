@@ -117,6 +117,18 @@ describe('Connector sync protocol', () => {
 
       connector.tearDown();
     });
+
+    it('should track lastSentRef after send()', () => {
+      const connector = new Connector(db, route, socket);
+
+      expect(connector.lastSentRef).toBeNull();
+
+      connector.send(editHistory._hash);
+
+      expect(connector.lastSentRef).toBe(editHistory._hash);
+
+      connector.tearDown();
+    });
   });
 
   // =========================================================================
