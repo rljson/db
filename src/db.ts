@@ -1114,7 +1114,11 @@ export class Db {
   async insertTrees(
     treeKey: string,
     trees: Tree[],
-    options?: { skipNotification?: boolean; skipHistory?: boolean },
+    options?: {
+      skipNotification?: boolean;
+      skipHistory?: boolean;
+      previous?: InsertHistoryTimeId[];
+    },
   ): Promise<InsertHistoryRow<any>[]> {
     if (!trees || trees.length === 0) {
       throw new Error(
@@ -1152,6 +1156,15 @@ export class Db {
       ...rootResult,
       route: route.flat,
     };
+
+    // Explicit predecessor override — used to write a merge revision whose
+    // InsertHistory.previous references *both* tips of a forked DAG, collapsing
+    // the fork to a single tip so detectDagBranch stops re-firing. The override
+    // lives only on the InsertHistory row and never affects the tree's content
+    // hash, so the merged tree keeps its natural identity.
+    if (options?.previous) {
+      result.previous = options.previous;
+    }
 
     // Write InsertHistory
     if (!options?.skipHistory) {

@@ -2603,6 +2603,39 @@ describe('Db', () => {
       expect(results[0][`${treeKey}Ref`]).toBe(rootHash);
     });
 
+    it('writes a merge revision via the previous override, collapsing a forked DAG', async () => {
+      // Tip A — first revision (root, no predecessor).
+      const aRes = await treeDb.insertTrees(treeKey, treeFromObject({ a: 1 }));
+      const tA = aRes[0].timeId;
+
+      // Tip B — force previous=[] so it does NOT chain onto A, producing a
+      // genuine two-tip fork in the InsertHistory DAG.
+      const bRes = await treeDb.insertTrees(treeKey, treeFromObject({ b: 2 }), {
+        previous: [],
+      });
+      const tB = bRes[0].timeId;
+
+      const fork = await treeDb.detectDagBranch(treeKey);
+      expect(fork?.type).toBe('dagBranch');
+      expect([...(fork?.branches ?? [])].sort()).toEqual([tA, tB].sort());
+
+      // Merge revision D references BOTH tips → both become referenced parents,
+      // collapsing the fork back to a single tip.
+      const dRes = await treeDb.insertTrees(
+        treeKey,
+        treeFromObject({ merged: 3 }),
+        { previous: [tA, tB] },
+      );
+      const historyRow = await treeDb.getInsertHistoryRowByTimeId(
+        treeKey,
+        dRes[0].timeId,
+      );
+      expect(historyRow.previous).toEqual([tA, tB]);
+
+      // Fork is gone — single tip again.
+      expect(await treeDb.detectDagBranch(treeKey)).toBeNull();
+    });
+
     it('should produce same ref as db.core.import for identical data', async () => {
       const treeObject = {
         fileX: 'contentX',
