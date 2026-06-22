@@ -14,7 +14,6 @@ import {
   GapFillRequest,
   GapFillResponse,
   clientId as generateClientId,
-  InsertHistoryTimeId,
   Route,
   SyncConfig,
   SyncEventNames,
@@ -25,13 +24,23 @@ import {
 import { Db } from '../db.ts';
 
 export type { ConnectorPayload } from '@rljson/rljson';
-export type ConnectorCallback = (ref: string) => Promise<any>;
+/**
+ * Invoked for each deduplicated incoming ref. `predecessorRefs` carries the
+ * causal predecessor *content refs* (shared identity across clients) when
+ * `causalOrdering` is enabled, so the receiver can record correct ancestry in
+ * its own InsertHistory. Empty/undefined for roots or when causal ordering is off.
+ */
+export type ConnectorCallback = (
+  ref: string,
+  predecessorRefs?: string[],
+) => Promise<any>;
 
 export class Connector {
   private _origin: string;
   private _callbacks: ConnectorCallback[] = [];
   private _conflictCallbacks: ConflictCallback[] = [];
   private _missedRef: string | null = null;
+  private _missedPredecessorRefs: string[] | undefined = undefined;
   private _lastSentRef: string | null = null;
 
   private _isListening: boolean = false;
@@ -48,7 +57,10 @@ export class Connector {
   private readonly _clientId: ClientId | undefined;
   private readonly _events: SyncEventNames;
   private _seq: number = 0;
-  private _lastPredecessors: InsertHistoryTimeId[] = [];
+  // Predecessor *content refs* (not timeIds) attached to the next send. Refs are
+  // the only identity shared across clients, so the receiver can map them to its
+  // own local ancestry. Auto-populated from the InsertHistoryRow on db inserts.
+  private _lastPredecessors: string[] = [];
   private _peerSeqs: Map<ClientId, number> = new Map();
 
   constructor(
@@ -145,10 +157,12 @@ export class Connector {
 
   // ...........................................................................
   /**
-   * Sets the causal predecessors for the next send.
-   * @param predecessors - The InsertHistory timeIds of causal predecessors
+   * Sets the causal predecessors (content refs) attached to the next send.
+   * Normally auto-populated from the InsertHistoryRow; exposed for tests/manual
+   * control.
+   * @param predecessors - The predecessor content refs
    */
-  setPredecessors(predecessors: InsertHistoryTimeId[]) {
+  setPredecessors(predecessors: string[]) {
     this._lastPredecessors = predecessors;
   }
 
@@ -172,9 +186,13 @@ export class Connector {
     // ever sees it.
     if (this._missedRef !== null) {
       const ref = this._missedRef;
+      const predecessorRefs = this._missedPredecessorRefs;
       this._missedRef = null;
+      this._missedPredecessorRefs = undefined;
       /* v8 ignore next -- @preserve */
-      Promise.resolve(callback(ref)).catch(console.error);
+      Promise.resolve(
+        predecessorRefs ? callback(ref, predecessorRefs) : callback(ref),
+      ).catch(console.error);
     }
   }
 
@@ -293,14 +311,19 @@ export class Connector {
     }
   }
 
-  private _notifyCallbacks(ref: string) {
+  private _notifyCallbacks(ref: string, predecessorRefs?: string[]) {
     if (this._callbacks.length === 0) {
       // No callbacks registered yet — store for replay on first listen()
       this._missedRef = ref;
+      this._missedPredecessorRefs = predecessorRefs;
       return;
     }
     /* v8 ignore next -- @preserve */
-    Promise.all(this._callbacks.map((cb) => cb(ref))).catch((err) => {
+    Promise.all(
+      this._callbacks.map((cb) =>
+        predecessorRefs ? cb(ref, predecessorRefs) : cb(ref),
+      ),
+    ).catch((err) => {
       console.error(`Error notifying connector callbacks for ref ${ref}:`, err);
     });
   }
@@ -327,7 +350,9 @@ export class Connector {
     }
 
     this._addReceivedRef(ref);
-    this._notifyCallbacks(ref);
+    // `payload.p` carries the sender's predecessor content refs (shared
+    // identity) so the receiver can record correct local ancestry.
+    this._notifyCallbacks(ref, payload.p);
 
     // Send individual client ACK if required
     if (this._syncConfig?.requireAck) {
@@ -373,23 +398,31 @@ export class Connector {
   }
 
   private _registerDbObserver() {
-    this._db.registerObserver(this._route, (ins) => {
-      return new Promise<void>((resolve) => {
-        const ref = (ins as any)[this.route.root.tableKey + 'Ref'] as string;
-        /* v8 ignore next -- @preserve */
-        if (this._hasSentRef(ref)) {
-          resolve();
-          return;
-        }
+    this._db.registerObserver(this._route, async (ins) => {
+      const tableKey = this.route.root.tableKey;
+      const ref = (ins as any)[tableKey + 'Ref'] as string;
+      /* v8 ignore next -- @preserve */
+      if (this._hasSentRef(ref)) {
+        return;
+      }
 
-        // Auto-populate predecessors from InsertHistoryRow
-        if (this._syncConfig?.causalOrdering && ins.previous?.length) {
-          this._lastPredecessors = [...ins.previous];
+      // Auto-populate predecessors from the InsertHistoryRow, translating each
+      // local predecessor timeId into its shared *content ref*. timeIds are
+      // per-db (not shared across clients); the content ref is the only stable
+      // cross-client identity, so the wire carries refs.
+      if (this._syncConfig?.causalOrdering && ins.previous?.length) {
+        const refs: string[] = [];
+        for (const timeId of ins.previous) {
+          const predRef = await this._db.getRefOfTimeId(tableKey, timeId);
+          /* v8 ignore next -- @preserve a stored predecessor always has a ref */
+          if (predRef) {
+            refs.push(predRef);
+          }
         }
+        this._lastPredecessors = refs;
+      }
 
-        this.send(ref);
-        resolve();
-      });
+      this.send(ref);
     });
   }
 
