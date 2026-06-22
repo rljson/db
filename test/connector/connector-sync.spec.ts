@@ -302,6 +302,32 @@ describe('Connector sync protocol', () => {
       connector.tearDown();
     });
 
+    it('forwards predecessor content refs (payload.p) to the listen callback', () => {
+      const config: SyncConfig = {
+        causalOrdering: true,
+        includeClientIdentity: true,
+      };
+      const connector = new Connector(db, route, socket, config);
+
+      const callback = vi.fn();
+      connector.listen(callback);
+
+      // Incoming revision carrying its predecessor content ref.
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'child-ref',
+        c: 'client_Peer',
+        seq: 1,
+        p: ['parent-content-ref'],
+      } as ConnectorPayload);
+
+      expect(callback).toHaveBeenCalledWith('child-ref', [
+        'parent-content-ref',
+      ]);
+
+      connector.tearDown();
+    });
+
     it('should not detect gap for sequential messages', () => {
       const config: SyncConfig = {
         causalOrdering: true,
@@ -823,7 +849,7 @@ describe('Connector sync protocol', () => {
   // =========================================================================
 
   describe('auto-predecessor from Db observer', () => {
-    it('should attach p from InsertHistoryRow.previous when causalOrdering', async () => {
+    it('attaches p as predecessor content refs (timeId→ref translation) when causalOrdering', async () => {
       const config: SyncConfig = {
         causalOrdering: true,
         includeClientIdentity: true,
@@ -833,9 +859,13 @@ describe('Connector sync protocol', () => {
       const emitted: ConnectorPayload[] = [];
       socket.on(events.ref, (p: ConnectorPayload) => emitted.push(p));
 
-      // Simulate Db notifying the connector with an InsertHistoryRow
-      // that has a non-empty previous
+      // timeIds are per-db; the wire must carry the shared *content ref*. The
+      // connector translates each predecessor timeId via getRefOfTimeId.
       const predecessorTimeId = timeId();
+      const refSpy = vi
+        .spyOn(db, 'getRefOfTimeId')
+        .mockResolvedValue('predecessor-content-ref');
+
       db.notify.notify(route, {
         [cakeKey + 'EditHistoryRef']: 'ref-with-previous',
         timeId: timeId(),
@@ -843,12 +873,16 @@ describe('Connector sync protocol', () => {
         previous: [predecessorTimeId],
       } as any);
 
-      // Wait for async notify
+      // Wait for async notify (translation awaits getRefOfTimeId)
       await new Promise((resolve) => setTimeout(resolve, 10));
 
+      expect(refSpy).toHaveBeenCalledWith(
+        route.root.tableKey,
+        predecessorTimeId,
+      );
       expect(emitted).toHaveLength(1);
       expect(emitted[0].r).toBe('ref-with-previous');
-      expect(emitted[0].p).toEqual([predecessorTimeId]);
+      expect(emitted[0].p).toEqual(['predecessor-content-ref']);
 
       connector.tearDown();
     });
