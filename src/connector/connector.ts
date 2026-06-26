@@ -214,6 +214,25 @@ export class Connector {
 
   // ...........................................................................
   /**
+   * Removes a ref from the received-dedup set so a later re-advertisement of
+   * the same ref (e.g. the server's bootstrap heartbeat, which only re-sends
+   * the *latest* ref) is delivered to listeners again instead of being
+   * silently deduplicated.
+   *
+   * A ref is added to the dedup set the instant it is *received* — before the
+   * listener callback (which materializes it) has a chance to succeed. If that
+   * apply step fails terminally, the ref is stuck in the dedup set forever and
+   * the heartbeat can never heal it. Consumers whose apply failed call this so
+   * recovery becomes eventually-consistent rather than permanent loss.
+   * @param ref - The ref to allow re-delivery for.
+   */
+  invalidateReceived(ref: string): void {
+    this._receivedRefsCurrent.delete(ref);
+    this._receivedRefsPrevious.delete(ref);
+  }
+
+  // ...........................................................................
+  /**
    * Returns the current sequence number.
    * Only meaningful when `causalOrdering` is enabled.
    */
