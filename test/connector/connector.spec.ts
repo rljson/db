@@ -236,6 +236,48 @@ describe('Connector', () => {
     });
   });
 
+  describe('invalidateReceived', () => {
+    it('allows a received ref to be re-delivered (heartbeat recovery)', async () => {
+      const callback = vi.fn();
+      const origin = timeId();
+      connector.listen(callback);
+
+      const payload = {
+        r: editHistory._hash,
+        o: origin,
+      } as ConnectorPayload;
+
+      // First delivery — callback fires, ref enters the received-dedup set.
+      socket.emit(route.flat, payload);
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      // A re-advertisement (e.g. the server's bootstrap heartbeat re-sending
+      // the latest ref) is suppressed as a duplicate — this is what makes a
+      // failed apply permanent.
+      socket.emit(route.flat, payload);
+      expect(callback).toHaveBeenCalledTimes(1);
+
+      // After invalidating, the same ref is delivered again so the heartbeat
+      // can re-trigger the apply once the transient condition clears.
+      connector.invalidateReceived(editHistory._hash);
+      socket.emit(route.flat, payload);
+      expect(callback).toHaveBeenCalledTimes(2);
+    });
+
+    it('is a no-op for a ref that was never received', () => {
+      // Must not throw and must not affect later delivery of a fresh ref.
+      expect(() => connector.invalidateReceived('never-seen-ref')).not.toThrow();
+
+      const callback = vi.fn();
+      connector.listen(callback);
+      socket.emit(route.flat, {
+        r: editHistory._hash,
+        o: timeId(),
+      } as ConnectorPayload);
+      expect(callback).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('registerDbObserver', () => {
     it('should register Db observer for new EditHistory additions', async () => {
       const callback = vi.fn();
