@@ -6,7 +6,7 @@
 
 import { rmhsh } from '@rljson/hash';
 import { Io } from '@rljson/io';
-import { Json, JsonValue, merge } from '@rljson/json';
+import { Json, JsonValue } from '@rljson/json';
 import {
   Cake,
   CakesTable,
@@ -51,7 +51,6 @@ import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRow, JoinRows } from './join/join.ts';
 import { ColumnSelection } from './join/selection/column-selection.ts';
 import { Notify, NotifyCallback } from './notify.ts';
-import { makeUnique } from './tools/make-unique.ts';
 
 export type Cell = {
   route: Route;
@@ -912,11 +911,45 @@ export class Db {
       }
     }
 
-    // Merge Children Data - skip if not needed
-    /* v8 ignore next -- @preserve */
-    const nodeChildren = opts.skipRljson
-      ? ({} as Rljson)
-      : makeUnique(merge(...(nodeChildrenArray as Rljson[])) as Rljson);
+    // Merge Children Data - skip if not needed. Children tables are
+    // accumulated in one pass with hash-dedup (first occurrence wins)
+    // instead of deep-merging all child results and re-traversing them.
+    const nodeChildren = {} as Rljson;
+    /* v8 ignore else -- @preserve */
+    if (!opts.skipRljson) {
+      const seenRowHashes = new Map<string, Set<string>>();
+      for (const childRljson of nodeChildrenArray as Rljson[]) {
+        for (const tableKey of Object.keys(childRljson)) {
+          const table = childRljson[tableKey];
+          const existing = nodeChildren[tableKey];
+
+          let seen = seenRowHashes.get(tableKey);
+          /* v8 ignore next -- @preserve */
+          const rows: Json[] = existing ? (existing._data as Json[]) : [];
+          if (!seen) {
+            seen = new Set<string>();
+            seenRowHashes.set(tableKey, seen);
+          }
+
+          for (const row of table._data as Json[]) {
+            const rowHash = (row as any)._hash as string;
+            if (!seen.has(rowHash)) {
+              seen.add(rowHash);
+              rows.push(row);
+            }
+          }
+
+          // Non-array table properties: later values win (merge
+          // semantics)
+          /* v8 ignore next -- @preserve */
+          nodeChildren[tableKey] = (
+            existing
+              ? { ...existing, ...table, _data: rows }
+              : { ...table, _data: rows }
+          ) as any;
+        }
+      }
+    }
 
     // Return Node with matched Children
     const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());

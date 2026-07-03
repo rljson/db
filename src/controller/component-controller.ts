@@ -229,7 +229,6 @@ export class ComponentController<
   protected async _getByWhere(where: Json, filter?: Json): Promise<Rljson> {
     // If reference columns are present, resolve them
     // Check if where clause contains reference columns
-    const consolidatedWheres: Json[] = [];
     const consolidatedRows: Map<string, Json> = new Map();
     const hasReferenceColumns = this._hasReferenceColumns(where);
     if (hasReferenceColumns) {
@@ -237,31 +236,22 @@ export class ComponentController<
         await this._resolveReferences(this._getWhereReferences(where));
       const refWhereClauses =
         this._referencesToWhereClauses(resolvedReferences);
-      for (const refWhere of refWhereClauses) {
-        consolidatedWheres.push({
-          ...this._getWhereBase(where),
-          ...refWhere,
-        });
 
-        /* ....................................................................
-        1:1 reference resolution
-        const {
-          [this._tableKey]: { _data: refRows },
-        } = await this._core.readRows(this._tableKey, {
-          ...refWhere,
-          ...filter,
-        } as { [column: string]: JsonValue });
-        .................................................................... */
-
+      /* v8 ignore else -- @preserve */
+      if (refWhereClauses.length > 0) {
+        // Dump the table once for all reference clauses instead of once
+        // per clause, and match rows synchronously
         const {
           [this._tableKey]: { _data: tableData },
         } = await this._core.dumpTable(this._tableKey);
 
-        const column = Object.keys(refWhere)[0];
-        const refValue = refWhere[column]!;
-        for (const row of tableData as Json[]) {
-          if (await this.filterRow(row, column, refValue)) {
-            consolidatedRows.set((row as any)._hash, row);
+        for (const refWhere of refWhereClauses) {
+          const column = Object.keys(refWhere)[0];
+          const refValue = refWhere[column]!;
+          for (const row of tableData as Json[]) {
+            if (this._rowMatches(row as Json, column, refValue)) {
+              consolidatedRows.set((row as any)._hash, row);
+            }
           }
         }
       }
@@ -334,22 +324,6 @@ export class ComponentController<
       }
     }
     return whereRefs;
-  }
-
-  // ...........................................................................
-  /**
-   * Removes reference columns from the where clause.
-   * @param where - The condition to filter the data.
-   * @returns An object representing the where clause without reference columns.
-   */
-  private _getWhereBase(where: Json): Json {
-    const whereWithoutRefs: Json = { ...where };
-    for (const colCfg of this._referenceColumns) {
-      if (colCfg.key in whereWithoutRefs) {
-        delete whereWithoutRefs[colCfg.key];
-      }
-    }
-    return whereWithoutRefs;
   }
 
   // ...........................................................................
@@ -511,6 +485,14 @@ export class ComponentController<
   }
 
   async filterRow(row: Json, key: string, value: JsonValue): Promise<boolean> {
+    return this._rowMatches(row, key, value);
+  }
+
+  /**
+   * Synchronous core of filterRow — avoids per-row promise overhead in
+   * table scans.
+   */
+  private _rowMatches(row: Json, key: string, value: JsonValue): boolean {
     for (const [propertyKey, propertyValue] of Object.entries(row)) {
       if (propertyKey === key && equals(propertyValue, value)) {
         return true;
