@@ -147,13 +147,58 @@ export class Core {
   }
 
   // ...........................................................................
+  /**
+   * Content-addressed row cache. Rows are identified by their content
+   * hash and are immutable, so a cached (table, hash) result can never
+   * become stale. Only successful single-row reads are cached — a miss
+   * may become a hit after a later insert.
+   */
+  private readonly _rowCache = new Map<string, Rljson>();
+
+  /** In-flight single-row reads, used to coalesce concurrent requests */
+  private readonly _rowReadsInFlight = new Map<string, Promise<Rljson>>();
+
+  /** Maximum number of cached rows (FIFO eviction) */
+  private _maxRowCacheEntries = 10000;
+
+  // ...........................................................................
   /** Reads a specific row from a database table */
   async readRow(table: string, rowHash: string): Promise<Rljson> {
-    const result = await this._io.readRows({
-      table,
-      where: { _hash: rowHash },
-    });
-    return result;
+    const key = table + '|' + rowHash;
+
+    const cached = this._rowCache.get(key);
+    if (cached) {
+      return cached;
+    }
+
+    // Coalesce concurrent reads of the same row
+    const inFlight = this._rowReadsInFlight.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const read = this._io
+      .readRows({
+        table,
+        where: { _hash: rowHash },
+      })
+      .then((result) => {
+        // Only cache successful single-row lookups
+        if (result[table]?._data?.length === 1) {
+          if (this._rowCache.size >= this._maxRowCacheEntries) {
+            const oldest = this._rowCache.keys().next().value as string;
+            this._rowCache.delete(oldest);
+          }
+          this._rowCache.set(key, result);
+        }
+        return result;
+      })
+      .finally(() => {
+        this._rowReadsInFlight.delete(key);
+      });
+
+    this._rowReadsInFlight.set(key, read);
+    return read;
   }
 
   // ...........................................................................
