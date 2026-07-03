@@ -1039,31 +1039,39 @@ export class Db {
       (cake as Cake).sliceIdsTable,
       (cake as Cake).sliceIdsRow,
     );
+
+    // Parse each column route once; all slices share them
+    const columnRoutes = columnSelection.columns.map((columnInfo) =>
+      Route.fromFlat(columnInfo.route).toRouteWithProperty(),
+    );
+
+    // Fetch all slice/column containers in parallel. Results are
+    // assembled in the original slice and column order afterwards.
+    const sliceRows = await Promise.all(
+      sliceIds.map((sliceId) =>
+        Promise.all(
+          columnRoutes.map(async (columnRoute) => {
+            const columnContainer = await this.get(
+              columnRoute,
+              cakeRef,
+              undefined,
+              [sliceId],
+            );
+
+            const column: JoinColumn = {
+              route: columnRoute,
+              value: columnContainer,
+              inserts: null,
+            };
+            return column;
+          }),
+        ),
+      ),
+    );
+
     const rows: JoinRows = {};
-    for (const sliceId of sliceIds) {
-      const row: JoinRow = [];
-
-      for (const columnInfo of columnSelection.columns) {
-        const columnRoute = Route.fromFlat(
-          columnInfo.route,
-        ).toRouteWithProperty();
-
-        const columnContainer = await this.get(
-          columnRoute,
-          cakeRef,
-          undefined,
-          [sliceId],
-        );
-
-        const column: JoinColumn = {
-          route: columnRoute,
-          value: columnContainer,
-          inserts: null,
-        };
-        row.push(column);
-      }
-
-      rows[sliceId] = row;
+    for (let i = 0; i < sliceIds.length; i++) {
+      rows[sliceIds[i]] = sliceRows[i] as JoinRow;
     }
 
     // Return Join
