@@ -101,6 +101,9 @@ export class Join {
   setValue(setValue: SetValue): Join {
     const data: JoinRowsHashed = {};
 
+    // Parse the target route once instead of per column per row
+    const setValueRoute = Route.fromFlat(setValue.route);
+
     for (const [sliceId, joinRowH] of Object.entries(this.data)) {
       const cols = [...joinRowH.columns];
       const insertCols = [];
@@ -111,7 +114,7 @@ export class Join {
         };
 
         /*v8 ignore else -- @preserve */
-        if (Route.fromFlat(setValue.route).equalsWithoutRefs(col.route)) {
+        if (setValueRoute.equalsWithoutRefs(col.route)) {
           for (const cell of col.value.cell) {
             /* v8 ignore next -- @preserve */
             if (cell.path.length === 0) {
@@ -228,8 +231,7 @@ export class Join {
 
     // Select the columns
     const data: JoinRowsHashed = {};
-    for (let i = 0; i < this.rowCount; i++) {
-      const [sliceId, row] = Object.entries(this.data)[i];
+    for (const [sliceId, row] of Object.entries(this.data)) {
       const cols: JoinColumn[] = [];
       // Select only the requested columns
       for (let j = 0; j < masterColumnIndices.length; j++) {
@@ -396,16 +398,41 @@ export class Join {
 
   // ...........................................................................
   /**
+   * Route caches per column selection. Column selections are immutable,
+   * so derived routes can be memoized for the lifetime of the selection.
+   */
+  private static readonly _derivedRoutes = new WeakMap<
+    ColumnSelection,
+    { component?: Route[]; layer?: Route[]; cake?: Route[] }
+  >();
+
+  private _derivedRoutesFor(selection: ColumnSelection): {
+    component?: Route[];
+    layer?: Route[];
+    cake?: Route[];
+  } {
+    let entry = Join._derivedRoutes.get(selection);
+    if (!entry) {
+      entry = {};
+      Join._derivedRoutes.set(selection, entry);
+    }
+    return entry;
+  }
+
+  // ...........................................................................
+  /**
    * Returns all component routes of the join
    */
   get componentRoutes(): Route[] {
-    return Array.from(
+    const cached = this._derivedRoutesFor(this.columnSelection);
+    cached.component ??= Array.from(
       new Set(
         Object.values(this.columnSelection.columns).map(
           (c) => Route.fromFlat(c.route).upper().flatWithoutRefs,
         ),
       ),
     ).map((r) => Route.fromFlat(r));
+    return cached.component;
   }
 
   // ...........................................................................
@@ -413,7 +440,8 @@ export class Join {
    * Returns all layer routes of the join
    */
   get layerRoutes(): Route[] {
-    return Array.from(
+    const cached = this._derivedRoutesFor(this.columnSelection);
+    cached.layer ??= Array.from(
       new Set(
         Object.values(this.columnSelection.columns)
           .map((c) => [
@@ -423,6 +451,7 @@ export class Join {
           .map((segments) => new Route(segments).flat),
       ),
     ).map((r) => Route.fromFlat(r));
+    return cached.layer;
   }
 
   // ...........................................................................
@@ -430,13 +459,14 @@ export class Join {
    * Returns the cake route of the join
    */
   get cakeRoute(): Route {
-    const cakeRoute = Array.from(
+    const cached = this._derivedRoutesFor(this.columnSelection);
+    const cakeRoute = (cached.cake ??= Array.from(
       new Set(
         Object.values(this.columnSelection.columns).map(
           (c) => Route.fromFlat(c.route).top.tableKey,
         ),
       ),
-    ).map((r) => Route.fromFlat(r));
+    ).map((r) => Route.fromFlat(r)));
 
     /* v8 ignore if -- @preserve */
     if (cakeRoute.length !== 1) {
