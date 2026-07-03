@@ -4,9 +4,9 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { hsh, rmhsh } from '@rljson/hash';
+import { rmhsh } from '@rljson/hash';
 import { Io } from '@rljson/io';
-import { Json, JsonValue, merge } from '@rljson/json';
+import { Json, JsonValue } from '@rljson/json';
 import {
   Cake,
   CakesTable,
@@ -51,7 +51,6 @@ import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRow, JoinRows } from './join/join.ts';
 import { ColumnSelection } from './join/selection/column-selection.ts';
 import { Notify, NotifyCallback } from './notify.ts';
-import { makeUnique } from './tools/make-unique.ts';
 
 export type Cell = {
   route: Route;
@@ -194,20 +193,29 @@ export class Db {
     let cacheHash = '';
 
     if (cacheable) {
-      //Activate Cache
-      const params = {
-        route: route.flat,
-        where,
-        filter,
-        sliceIds,
-        routeAccumulator: routeAccumulator ? routeAccumulator.flat : '',
-        options: opts,
-      };
-      cacheHash = (hsh(rmhsh(params)) as any)._hash as string;
+      //Activate Cache. A plain string key is an order of magnitude cheaper
+      //than hashing a deep clone of the parameters.
+      cacheHash =
+        route.flat +
+        '|' +
+        (typeof where === 'string' ? where : JSON.stringify(where)) +
+        '|' +
+        (filter ? JSON.stringify(filter) : '') +
+        '|' +
+        (sliceIds ? sliceIds.join(',') : '') +
+        '|' +
+        (routeAccumulator ? routeAccumulator.flat : '') +
+        '|' +
+        (opts.skipRljson ? '1' : '0') +
+        (opts.skipTree ? '1' : '0') +
+        (opts.skipCell ? '1' : '0');
 
-      const isCached = this._cache.has(cacheHash);
-      if (isCached) {
-        return this._cache.get(cacheHash)!;
+      const cached = this._cache.get(cacheHash);
+      if (cached) {
+        // Refresh LRU recency
+        this._cache.delete(cacheHash);
+        this._cache.set(cacheHash, cached);
+        return cached;
       }
     }
 
@@ -468,7 +476,9 @@ export class Db {
         }
 
         //Set Cache
-        this._cache.set(cacheHash, result);
+        if (cacheable) {
+          this._cacheSet(cacheHash, result, route);
+        }
 
         return result;
       }
@@ -502,7 +512,7 @@ export class Db {
 
       if (cacheable) {
         //Set Cache
-        this._cache.set(cacheHash, result);
+        this._cacheSet(cacheHash, result, route);
       }
 
       return result;
@@ -543,15 +553,23 @@ export class Db {
             }, new Map<string, string>())
         : null;
 
-    // Batch fetch all childRefs in parallel for better performance
+    // Batch fetch all childRefs in parallel. The rows are already in
+    // memory, so they are not re-queried by hash.
     const childRefsPromises = nodeRowsFiltered.map((nodeRow) =>
-      nodeController.getChildRefs((nodeRow as any)._hash),
+      nodeController.getChildRefsOfRow(nodeRow),
     );
     const allChildRefs = await Promise.all(childRefsPromises);
 
-    // Iterate over Node Rows to get Children
-    for (let i = 0; i < nodeRowsFiltered.length; i++) {
-      const nodeRow = nodeRowsFiltered[i];
+    // Precompute the accumulator route once — it is identical for all rows
+    const childrenRouteAccumulator = Route.fromFlat(
+      (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
+        (nodeHash ? `@${nodeHash}` : '') +
+        '/' +
+        childrenTableKey,
+    );
+
+    // Derive per-row children metadata (synchronous)
+    const rowContexts = nodeRowsFiltered.map((nodeRow, i) => {
       const nodeRowHash = (nodeRow as any)._hash;
 
       // Child References of this Node Row = Filter for Children
@@ -616,24 +634,41 @@ export class Db {
           ? undefined
           : nodeSliceIds;
 
+      return {
+        nodeRow,
+        nodeRowHash,
+        childrenRefs,
+        childrenRefTypes,
+        cakeIsReferenced,
+        childrenSliceIds,
+      };
+    });
+
+    // Fetch the children of all rows in parallel
+    const rowChildrenResults = await Promise.all(
+      rowContexts.map((ctx) =>
+        this._get(
+          childrenRoute,
+          childrenWhere,
+          controllers,
+          ctx.childrenRefs,
+          ctx.childrenSliceIds,
+          childrenRouteAccumulator,
+          opts,
+        ),
+      ),
+    );
+
+    // Iterate over Node Rows to assemble their children
+    for (let i = 0; i < rowContexts.length; i++) {
+      const { nodeRow, nodeRowHash, childrenRefs, childrenRefTypes, cakeIsReferenced } =
+        rowContexts[i];
+
       const {
         rljson: rowChildrenRljson,
         tree: rowChildrenTree,
         cell: rowChildrenCell,
-      } = await this._get(
-        childrenRoute,
-        childrenWhere,
-        controllers,
-        childrenRefs,
-        childrenSliceIds,
-        Route.fromFlat(
-          (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
-            (nodeHash ? `@${nodeHash}` : '') +
-            '/' +
-            childrenTableKey,
-        ),
-        opts,
-      );
+      } = rowChildrenResults[i];
 
       // No Children found for where + route => skip
       if (
@@ -876,11 +911,45 @@ export class Db {
       }
     }
 
-    // Merge Children Data - skip if not needed
-    /* v8 ignore next -- @preserve */
-    const nodeChildren = opts.skipRljson
-      ? ({} as Rljson)
-      : makeUnique(merge(...(nodeChildrenArray as Rljson[])) as Rljson);
+    // Merge Children Data - skip if not needed. Children tables are
+    // accumulated in one pass with hash-dedup (first occurrence wins)
+    // instead of deep-merging all child results and re-traversing them.
+    const nodeChildren = {} as Rljson;
+    /* v8 ignore else -- @preserve */
+    if (!opts.skipRljson) {
+      const seenRowHashes = new Map<string, Set<string>>();
+      for (const childRljson of nodeChildrenArray as Rljson[]) {
+        for (const tableKey of Object.keys(childRljson)) {
+          const table = childRljson[tableKey];
+          const existing = nodeChildren[tableKey];
+
+          let seen = seenRowHashes.get(tableKey);
+          /* v8 ignore next -- @preserve */
+          const rows: Json[] = existing ? (existing._data as Json[]) : [];
+          if (!seen) {
+            seen = new Set<string>();
+            seenRowHashes.set(tableKey, seen);
+          }
+
+          for (const row of table._data as Json[]) {
+            const rowHash = (row as any)._hash as string;
+            if (!seen.has(rowHash)) {
+              seen.add(rowHash);
+              rows.push(row);
+            }
+          }
+
+          // Non-array table properties: later values win (merge
+          // semantics)
+          /* v8 ignore next -- @preserve */
+          nodeChildren[tableKey] = (
+            existing
+              ? { ...existing, ...table, _data: rows }
+              : { ...table, _data: rows }
+          ) as any;
+        }
+      }
+    }
 
     // Return Node with matched Children
     const matchedNodeRows = Array.from(nodeRowsMatchingChildrenRefs.values());
@@ -937,9 +1006,62 @@ export class Db {
     };
 
     //Set Cache
-    this._cache.set(cacheHash, result);
+    if (cacheable) {
+      this._cacheSet(cacheHash, result, route);
+    }
 
     return result;
+  }
+
+  // ...........................................................................
+  /**
+   * Maximum number of entries kept in the query cache (LRU eviction)
+   */
+  private _maxCacheEntries = 500;
+
+  /**
+   * Cache keys indexed by the tables their results were built from.
+   * Used to invalidate affected entries when a table receives an insert.
+   */
+  private readonly _cacheKeysByTable = new Map<string, Set<string>>();
+
+  /**
+   * Stores a query result in the cache, evicting the least recently used
+   * entry when the cache is full
+   * @param key - The cache key
+   * @param value - The container to cache
+   * @param route - The route the result was built from; its tables index
+   *   the entry for invalidation
+   */
+  private _cacheSet(key: string, value: Container, route: Route): void {
+    if (this._cache.size >= this._maxCacheEntries) {
+      const oldest = this._cache.keys().next().value as string;
+      this._cache.delete(oldest);
+    }
+    this._cache.set(key, value);
+
+    for (const segment of route.segments) {
+      let keys = this._cacheKeysByTable.get(segment.tableKey);
+      if (!keys) {
+        keys = new Set<string>();
+        this._cacheKeysByTable.set(segment.tableKey, keys);
+      }
+      keys.add(key);
+    }
+  }
+
+  /**
+   * Drops all cached query results that involve the given table
+   * @param tableKey - The table that received new data
+   */
+  private _invalidateCacheForTable(tableKey: string): void {
+    const keys = this._cacheKeysByTable.get(tableKey);
+    if (keys) {
+      for (const key of keys) {
+        this._cache.delete(key);
+      }
+      this._cacheKeysByTable.delete(tableKey);
+    }
   }
 
   // ...........................................................................
@@ -1006,31 +1128,39 @@ export class Db {
       (cake as Cake).sliceIdsTable,
       (cake as Cake).sliceIdsRow,
     );
+
+    // Parse each column route once; all slices share them
+    const columnRoutes = columnSelection.columns.map((columnInfo) =>
+      Route.fromFlat(columnInfo.route).toRouteWithProperty(),
+    );
+
+    // Fetch all slice/column containers in parallel. Results are
+    // assembled in the original slice and column order afterwards.
+    const sliceRows = await Promise.all(
+      sliceIds.map((sliceId) =>
+        Promise.all(
+          columnRoutes.map(async (columnRoute) => {
+            const columnContainer = await this.get(
+              columnRoute,
+              cakeRef,
+              undefined,
+              [sliceId],
+            );
+
+            const column: JoinColumn = {
+              route: columnRoute,
+              value: columnContainer,
+              inserts: null,
+            };
+            return column;
+          }),
+        ),
+      ),
+    );
+
     const rows: JoinRows = {};
-    for (const sliceId of sliceIds) {
-      const row: JoinRow = [];
-
-      for (const columnInfo of columnSelection.columns) {
-        const columnRoute = Route.fromFlat(
-          columnInfo.route,
-        ).toRouteWithProperty();
-
-        const columnContainer = await this.get(
-          columnRoute,
-          cakeRef,
-          undefined,
-          [sliceId],
-        );
-
-        const column: JoinColumn = {
-          route: columnRoute,
-          value: columnContainer,
-          inserts: null,
-        };
-        row.push(column);
-      }
-
-      rows[sliceId] = row;
+    for (let i = 0; i < sliceIds.length; i++) {
+      rows[sliceIds[i]] = sliceRows[i] as JoinRow;
     }
 
     // Return Join
@@ -1038,10 +1168,22 @@ export class Db {
   }
 
   // ...........................................................................
+  /**
+   * Resolved sliceIds by (table, row hash). SliceIds rows are content
+   * addressed and immutable, so results stay valid for the Db lifetime.
+   */
+  private readonly _resolvedSliceIdsCache = new Map<string, SliceId[]>();
+
   private async _resolveSliceIds(
     sliceIdTable: string,
     sliceIdRow: string,
   ): Promise<SliceId[]> {
+    const cacheKey = sliceIdTable + '|' + sliceIdRow;
+    const cached = this._resolvedSliceIdsCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const sliceIdController: SliceIdController<any, any> =
       new SliceIdController(this.core, sliceIdTable);
     sliceIdController.init();
@@ -1061,7 +1203,9 @@ export class Db {
       }
     }
 
-    return Array.from(resolvedSliceIds);
+    const result = Array.from(resolvedSliceIds);
+    this._resolvedSliceIdsCache.set(cacheKey, result);
+    return result;
   }
 
   // ...........................................................................
@@ -1088,6 +1232,11 @@ export class Db {
     //Write insertHistory
     if (!options?.skipHistory)
       await this._writeInsertHistory(route.top.tableKey, insertHistoryRow[0]);
+
+    //Invalidate cached query results of the affected tables
+    for (const tableKey of Object.keys(controllers)) {
+      this._invalidateCacheForTable(tableKey);
+    }
 
     return insertHistoryRow;
   }
@@ -1170,6 +1319,9 @@ export class Db {
     if (!options?.skipHistory) {
       await this._writeInsertHistory(treeKey, result);
     }
+
+    //Invalidate cached query results of the affected table
+    this._invalidateCacheForTable(treeKey);
 
     // Notify observers (Connector picks this up automatically)
     if (!options?.skipNotification) {
@@ -1277,56 +1429,70 @@ export class Db {
       }
       if (nodeType === 'layers') {
         const layers = (nodeTree as LayersTable)._data;
-        for (const layer of layers) {
-          const layerInsert: Record<SliceId, ComponentRef> = {};
 
-          //Check what if there is no layer or no compomentTree --> Add new one
+        //Check what if there is no layer or no compomentTree --> Add new one
 
-          for (const [sliceId, componentTree] of Object.entries(layer.add)) {
-            if (sliceId === '_hash') continue;
-
-            const writtenComponents = await this._insert(
-              childRoute,
-              componentTree as any,
-              runFns,
+        // Write the components of all layers and slices in parallel
+        const layerResults = await Promise.all(
+          layers.map(async (layer) => {
+            const sliceEntries = Object.entries(layer.add).filter(
+              ([sliceId]) => sliceId !== '_hash',
             );
 
-            /* v8 ignore next -- @preserve */
-            if (writtenComponents.length > 1) {
-              throw new Error(
-                `Db._insert: Multiple components written for layer "${
-                  (layer as any)._hash
-                }" and sliceId "${sliceId}" is currently not supported.`,
-              );
-            }
+            const writtenSlices = await Promise.all(
+              sliceEntries.map(async ([sliceId, componentTree]) => {
+                const writtenComponents = await this._insert(
+                  childRoute,
+                  componentTree as any,
+                  runFns,
+                );
 
-            const writtenComponent = writtenComponents[0];
+                /* v8 ignore next -- @preserve */
+                if (writtenComponents.length > 1) {
+                  throw new Error(
+                    `Db._insert: Multiple components written for layer "${
+                      (layer as any)._hash
+                    }" and sliceId "${sliceId}" is currently not supported.`,
+                  );
+                }
 
-            /* v8 ignore next -- @preserve */
-            if (
-              !writtenComponent ||
-              !(writtenComponent as any)[childTableKey + 'Ref']
-            ) {
-              throw new Error(
-                `Db._insert: No component reference returned for layer "${
-                  (layer as any)._hash
-                }" and sliceId "${sliceId}".`,
-              );
-            }
+                const writtenComponent = writtenComponents[0];
 
-            layerInsert[sliceId] = (writtenComponent as any)[
-              childTableKey + 'Ref'
-            ];
-          }
-          const runFn = runFns[nodeTableKey];
-          const result = await runFn(
-            'add',
-            rmhsh({
-              ...layer,
-              ...{ add: layerInsert },
-            }),
-            'db.insert',
-          );
+                /* v8 ignore next -- @preserve */
+                if (
+                  !writtenComponent ||
+                  !(writtenComponent as any)[childTableKey + 'Ref']
+                ) {
+                  throw new Error(
+                    `Db._insert: No component reference returned for layer "${
+                      (layer as any)._hash
+                    }" and sliceId "${sliceId}".`,
+                  );
+                }
+
+                return [
+                  sliceId,
+                  (writtenComponent as any)[childTableKey + 'Ref'],
+                ] as const;
+              }),
+            );
+
+            const layerInsert: Record<SliceId, ComponentRef> =
+              Object.fromEntries(writtenSlices);
+
+            const runFn = runFns[nodeTableKey];
+            return runFn(
+              'add',
+              rmhsh({
+                ...layer,
+                ...{ add: layerInsert },
+              }),
+              'db.insert',
+            );
+          }),
+        );
+
+        for (const result of layerResults) {
           results.push(
             ...result.map((r) => ({
               ...r,
@@ -1349,29 +1515,32 @@ export class Db {
       ) {
         const runFn = runFns[nodeTableKey];
         const components = (nodeTree as ComponentsTable<Json>)._data;
-        for (const component of components) {
-          const resolvedComponent = { ...component } as Json;
-          for (const [property, value] of Object.entries(component)) {
-            if (
-              (value as any).hasOwnProperty('_tableKey') &&
-              (value as any)._tableKey === childTableKey
-            ) {
-              const writtenReferences = await this._insert(
-                childRoute,
-                { [childTableKey]: value as any },
-                runFns,
-              );
-              resolvedComponent[property] = writtenReferences.map(
-                (wr) => (wr as any)[childTableKey + 'Ref'],
-              );
-            }
-          }
 
-          const result = await runFn(
-            'add',
-            rmhsh(resolvedComponent),
-            'db.insert',
-          );
+        // Resolve and write all components in parallel
+        const componentResults = await Promise.all(
+          components.map(async (component) => {
+            const resolvedComponent = { ...component } as Json;
+            for (const [property, value] of Object.entries(component)) {
+              if (
+                (value as any).hasOwnProperty('_tableKey') &&
+                (value as any)._tableKey === childTableKey
+              ) {
+                const writtenReferences = await this._insert(
+                  childRoute,
+                  { [childTableKey]: value as any },
+                  runFns,
+                );
+                resolvedComponent[property] = writtenReferences.map(
+                  (wr) => (wr as any)[childTableKey + 'Ref'],
+                );
+              }
+            }
+
+            return runFn('add', rmhsh(resolvedComponent), 'db.insert');
+          }),
+        );
+
+        for (const result of componentResults) {
           results.push(
             ...result.map((r) => ({
               ...r,
@@ -1400,14 +1569,22 @@ export class Db {
           (tree as any)[nodeTableKey],
         ) as ComponentsTable<Json>;
 
-        for (const component of components._data) {
+        // Write all components in parallel, results in original order
+        const componentResults = await Promise.all(
+          components._data.map((component) => {
+            /* v8 ignore next -- @preserve */
+            if (!component) return null;
+
+            delete (component as any)._tableKey;
+            delete (component as any)._type;
+
+            return runFn('add', component, 'db.insert');
+          }),
+        );
+
+        for (const result of componentResults) {
           /* v8 ignore next -- @preserve */
-          if (!component) continue;
-
-          delete (component as any)._tableKey;
-          delete (component as any)._type;
-
-          const result = await runFn('add', component, 'db.insert');
+          if (!result) continue;
           results.push(
             ...result.map((r) => ({
               ...r,
@@ -1419,9 +1596,12 @@ export class Db {
       }
       if (nodeType === 'layers') {
         const layers = rmhsh((tree as any)[nodeTableKey]);
-        for (const layer of (layers as LayersTable)._data) {
-          const result = await runFn('add', layer, 'db.insert');
-
+        const layerResults = await Promise.all(
+          (layers as LayersTable)._data.map((layer) =>
+            runFn('add', layer, 'db.insert'),
+          ),
+        );
+        for (const result of layerResults) {
           results.push(
             ...result.map((r) => ({
               ...r,
@@ -1433,9 +1613,12 @@ export class Db {
       }
       if (nodeType === 'cakes') {
         const cakes = rmhsh((tree as any)[nodeTableKey]);
-        for (const cake of (cakes as CakesTable)._data) {
-          const result = await runFn('add', cake, 'db.insert');
-
+        const cakeResults = await Promise.all(
+          (cakes as CakesTable)._data.map((cake) =>
+            runFn('add', cake, 'db.insert'),
+          ),
+        );
+        for (const result of cakeResults) {
           results.push(
             ...result.map((r) => ({
               ...r,
@@ -1475,10 +1658,13 @@ export class Db {
       }
     }
 
-    for (const result of results) {
-      //Notify listeners
-      if (!options?.skipNotification)
-        this.notify.notify(Route.fromFlat(result.route), result);
+    //Notify listeners. All results of this level share the same route,
+    //so it is parsed only once.
+    if (!options?.skipNotification && results.length > 0) {
+      const notifyRoute = Route.fromFlat(results[0].route);
+      for (const result of results) {
+        this.notify.notify(notifyRoute, result);
+      }
     }
 
     return results;
@@ -1562,7 +1748,31 @@ export class Db {
    * @returns A controller for the specified table
    * @throws {Error} If the table does not exist or if the table type is not supported
    */
+  /**
+   * Initialized controllers by table key. Only ref-less controllers are
+   * cached — controllers with refs carry per-call state. Invalidated
+   * when the table configuration version changes.
+   */
+  private readonly _controllerCache = new Map<
+    string,
+    Controller<any, any, any>
+  >();
+  private _controllerCacheCfgVersion = -1;
+
   async getController(tableKey: string, refs?: ControllerRefs) {
+    const cacheable = refs === undefined;
+
+    if (cacheable) {
+      if (this._controllerCacheCfgVersion !== this.core.cfgVersion) {
+        this._controllerCache.clear();
+        this._controllerCacheCfgVersion = this.core.cfgVersion;
+      }
+      const cached = this._controllerCache.get(tableKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     // Validate Table
     const hasTable = await this.core.hasTable(tableKey);
     if (!hasTable) {
@@ -1573,7 +1783,18 @@ export class Db {
     const contentType = await this.core.contentType(tableKey);
 
     // Create Controller
-    return createController(contentType, this.core, tableKey, refs);
+    const controller = await createController(
+      contentType,
+      this.core,
+      tableKey,
+      refs,
+    );
+
+    if (cacheable) {
+      this._controllerCache.set(tableKey, controller);
+    }
+
+    return controller;
   }
 
   // ...........................................................................
@@ -1616,14 +1837,46 @@ export class Db {
    * @returns A Conflict if a DAG branch is detected, or null otherwise
    */
   async detectDagBranch(table: string): Promise<Conflict | null> {
+    const tips = await this._dagTipsFor(table);
+    if (!tips) return null;
+
+    if (tips.size > 1) {
+      return {
+        table,
+        type: 'dagBranch',
+        detectedAt: Date.now(),
+        branches: [...tips],
+      };
+    }
+
+    return null;
+  }
+
+  // ...........................................................................
+  /**
+   * Current InsertHistory DAG tips per table. A tip is a timeId that no
+   * other row references as `previous`. The set is initialized with one
+   * full scan and then maintained incrementally on every insert,
+   * avoiding a full history dump per written row.
+   */
+  private readonly _dagTips = new Map<string, Set<string>>();
+
+  /**
+   * Returns the DAG tips of a table's InsertHistory, scanning the
+   * history once on first access.
+   * @param table - The table name (without "InsertHistory" suffix)
+   * @returns The set of tips or null if the history table does not exist
+   */
+  private async _dagTipsFor(table: string): Promise<Set<string> | null> {
+    const existing = this._dagTips.get(table);
+    if (existing) return existing;
+
     const insertHistoryTable = table + 'InsertHistory';
     const hasTable = await this.core.hasTable(insertHistoryTable);
     if (!hasTable) return null;
 
     const dump = await this.core.dumpTable(insertHistoryTable);
     const rows = dump[insertHistoryTable]._data as InsertHistoryRow<any>[];
-
-    if (rows.length < 2) return null;
 
     // Build set of all timeIds that appear as someone's previous
     const referencedAsParent = new Set<string>();
@@ -1636,18 +1889,34 @@ export class Db {
     }
 
     // Tips are rows whose timeId is NOT in referencedAsParent
-    const tips = rows.filter((row) => !referencedAsParent.has(row.timeId));
-
-    if (tips.length > 1) {
-      return {
-        table,
-        type: 'dagBranch',
-        detectedAt: Date.now(),
-        branches: tips.map((t) => t.timeId),
-      };
+    const tips = new Set<string>();
+    for (const row of rows) {
+      if (!referencedAsParent.has(row.timeId)) {
+        tips.add(row.timeId);
+      }
     }
 
-    return null;
+    this._dagTips.set(table, tips);
+    return tips;
+  }
+
+  /**
+   * Applies a freshly written InsertHistory row to the tracked DAG tips.
+   * Only updates already initialized tip sets — a cold start scans the
+   * full history including the new row anyway.
+   * @param table - The table the row was written for
+   * @param row - The written InsertHistory row
+   */
+  private _applyRowToDagTips(table: string, row: InsertHistoryRow<any>): void {
+    const tips = this._dagTips.get(table);
+    if (!tips) return;
+
+    if (row.previous) {
+      for (const p of row.previous) {
+        tips.delete(p);
+      }
+    }
+    tips.add(row.timeId);
   }
 
   // ...........................................................................
@@ -1679,13 +1948,21 @@ export class Db {
   ): Promise<void> {
     const insertHistoryTable = table + 'InsertHistory';
 
-    //Write InsertHistory row to io
-    await this.core.import({
-      [insertHistoryTable]: {
-        _data: [insertHistoryRow],
-        _type: 'insertHistory',
+    //Write InsertHistory row to io. The row is constructed internally,
+    //so validation can be skipped.
+    await this.core.import(
+      {
+        [insertHistoryTable]: {
+          _data: [insertHistoryRow],
+          _type: 'insertHistory',
+        },
       },
-    });
+      { validate: false },
+    );
+
+    // Maintain the DAG tips incrementally instead of re-scanning the
+    // whole history per insert
+    this._applyRowToDagTips(table, insertHistoryRow);
 
     // Detect DAG branches after writing
     const conflict = await this.detectDagBranch(table);
@@ -1801,11 +2078,18 @@ export class Db {
     const { [cakeKey + 'EditHistory']: result } =
       await editHistoryController.get(where);
 
+    // Precompute timestamps once instead of re-parsing them inside the
+    // sort comparator
+    const rows = result._data as EditHistory[];
+    const timestamps = new Map<string, number>();
+    for (const row of rows) {
+      timestamps.set(row.timeId, getTimeIdTimestamp(row.timeId)!);
+    }
+
     /* v8 ignore next -- @preserve */
-    return result._data.sort(
-      (h1, h2) =>
-        getTimeIdTimestamp(h2.timeId)! - getTimeIdTimestamp(h1.timeId)!,
-    ) as EditHistory[];
+    return rows.sort(
+      (h1, h2) => timestamps.get(h2.timeId)! - timestamps.get(h1.timeId)!,
+    );
   }
 
   // ...........................................................................
@@ -1940,16 +2224,19 @@ export class Db {
    * @returns A route with extracted property key
    */
   async isolatePropertyKeyFromRoute(route: Route): Promise<Route> {
-    const segmentLength = route.segments.length;
+    const segments = route.segments;
+    // Probe all segments in parallel (results are independent)
+    const tablesExist = await Promise.all(
+      segments.map((segment) => this.core.hasTable(segment.tableKey)),
+    );
+
     let propertyKey = '';
     let result: Route = route;
-    for (let i = segmentLength; i > 0; i--) {
-      const segment = route.segments[i - 1];
-      const tableKey = segment.tableKey;
-      const tableExists = await this._io.tableExists(tableKey);
+    for (let i = segments.length; i > 0; i--) {
+      const segment = segments[i - 1];
 
       /* v8 ignore next -- @preserve */
-      if (!tableExists) {
+      if (!tablesExist[i - 1]) {
         propertyKey =
           propertyKey.length > 0
             ? segment.tableKey + '/' + propertyKey

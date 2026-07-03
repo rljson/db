@@ -133,10 +133,40 @@ export class ComponentController<
     filter?: Json,
   ): Promise<ControllerChildProperty[]> {
     const { [this._tableKey]: table } = await this.get(where, filter);
-    const { columns } = await this._core.tableCfg(this._tableKey);
 
     //Unique child refs
     const childRefs: Map<string, ControllerChildProperty> = new Map();
+
+    for (const row of table._data) {
+      this._collectChildRefsOfRow(row as Json, childRefs);
+    }
+
+    return Array.from(childRefs.values());
+  }
+
+  // ...........................................................................
+  /**
+   * Retrieves references to child entries of an already fetched row.
+   * Avoids re-querying the row that the caller is already holding.
+   * @param row - The row to collect child references from
+   */
+  async getChildRefsOfRow(row: Json): Promise<ControllerChildProperty[]> {
+    const childRefs: Map<string, ControllerChildProperty> = new Map();
+    this._collectChildRefsOfRow(row, childRefs);
+    return Array.from(childRefs.values());
+  }
+
+  // ...........................................................................
+  /**
+   * Collects child references of a single row into the given map.
+   * @param row - The row to inspect
+   * @param childRefs - The map collecting unique child references
+   */
+  private _collectChildRefsOfRow(
+    row: Json,
+    childRefs: Map<string, ControllerChildProperty>,
+  ): void {
+    const columns = this.tableCfg().columns;
 
     for (const colCfg of columns) {
       if (!colCfg.ref || colCfg.ref === undefined) continue;
@@ -144,55 +174,50 @@ export class ComponentController<
       const propertyKey = colCfg.key;
       const childRefTableKey = colCfg.ref.tableKey;
 
-      for (const row of table._data) {
-        const refValue = (row as any)[propertyKey];
+      const refValue = (row as any)[propertyKey];
 
-        //Plain hashes given, reference table from columnCfg
-        if (typeof refValue === 'string') {
-          childRefs.set(`${childRefTableKey}|${propertyKey}|${refValue}`, {
-            tableKey: childRefTableKey,
-            columnKey: propertyKey,
-            ref: refValue,
-          } as ControllerChildProperty);
-          continue;
-        }
+      //Plain hashes given, reference table from columnCfg
+      if (typeof refValue === 'string') {
+        childRefs.set(`${childRefTableKey}|${propertyKey}|${refValue}`, {
+          tableKey: childRefTableKey,
+          columnKey: propertyKey,
+          ref: refValue,
+        } as ControllerChildProperty);
+        continue;
+      }
 
-        /* v8 ignore if -- @preserve */
-        if (Array.isArray(refValue)) {
-          for (const refItem of refValue) {
-            //Plain hashes given, reference table from columnCfg
-            if (typeof refItem === 'string') {
-              childRefs.set(`${childRefTableKey}|${propertyKey}|${refItem}`, {
+      /* v8 ignore if -- @preserve */
+      if (Array.isArray(refValue)) {
+        for (const refItem of refValue) {
+          //Plain hashes given, reference table from columnCfg
+          if (typeof refItem === 'string') {
+            childRefs.set(`${childRefTableKey}|${propertyKey}|${refItem}`, {
+              tableKey: childRefTableKey,
+              columnKey: propertyKey,
+              ref: refItem,
+            } as ControllerChildProperty);
+            continue;
+          }
+
+          //CakeRef: Object with ref and sliceIds given
+          if (typeof refItem === 'object' && refItem !== null) {
+            const cakeReference = refItem as CakeReference;
+            childRefs.set(
+              `${childRefTableKey}|${propertyKey}|${
+                cakeReference.ref
+              }|${cakeReference.sliceIds?.join(',')}`,
+              {
                 tableKey: childRefTableKey,
                 columnKey: propertyKey,
-                ref: refItem,
-              } as ControllerChildProperty);
-              continue;
-            }
-
-            //CakeRef: Object with ref and sliceIds given
-            if (typeof refItem === 'object' && refItem !== null) {
-              const cakeReference = refItem as CakeReference;
-              childRefs.set(
-                `${childRefTableKey}|${propertyKey}|${
-                  cakeReference.ref
-                }|${cakeReference.sliceIds?.join(',')}`,
-                {
-                  tableKey: childRefTableKey,
-                  columnKey: propertyKey,
-                  ref: cakeReference.ref,
-                  sliceIds: cakeReference.sliceIds,
-                } as ControllerChildProperty,
-              );
-              continue;
-            }
+                ref: cakeReference.ref,
+                sliceIds: cakeReference.sliceIds,
+              } as ControllerChildProperty,
+            );
+            continue;
           }
-          continue;
         }
       }
     }
-
-    return Array.from(childRefs.values());
   }
 
   // ...........................................................................
@@ -204,7 +229,6 @@ export class ComponentController<
   protected async _getByWhere(where: Json, filter?: Json): Promise<Rljson> {
     // If reference columns are present, resolve them
     // Check if where clause contains reference columns
-    const consolidatedWheres: Json[] = [];
     const consolidatedRows: Map<string, Json> = new Map();
     const hasReferenceColumns = this._hasReferenceColumns(where);
     if (hasReferenceColumns) {
@@ -212,31 +236,22 @@ export class ComponentController<
         await this._resolveReferences(this._getWhereReferences(where));
       const refWhereClauses =
         this._referencesToWhereClauses(resolvedReferences);
-      for (const refWhere of refWhereClauses) {
-        consolidatedWheres.push({
-          ...this._getWhereBase(where),
-          ...refWhere,
-        });
 
-        /* ....................................................................
-        1:1 reference resolution
-        const {
-          [this._tableKey]: { _data: refRows },
-        } = await this._core.readRows(this._tableKey, {
-          ...refWhere,
-          ...filter,
-        } as { [column: string]: JsonValue });
-        .................................................................... */
-
+      /* v8 ignore else -- @preserve */
+      if (refWhereClauses.length > 0) {
+        // Dump the table once for all reference clauses instead of once
+        // per clause, and match rows synchronously
         const {
           [this._tableKey]: { _data: tableData },
         } = await this._core.dumpTable(this._tableKey);
 
-        const column = Object.keys(refWhere)[0];
-        const refValue = refWhere[column]!;
-        for (const row of tableData as Json[]) {
-          if (await this.filterRow(row, column, refValue)) {
-            consolidatedRows.set((row as any)._hash, row);
+        for (const refWhere of refWhereClauses) {
+          const column = Object.keys(refWhere)[0];
+          const refValue = refWhere[column]!;
+          for (const row of tableData as Json[]) {
+            if (this._rowMatches(row as Json, column, refValue)) {
+              consolidatedRows.set((row as any)._hash, row);
+            }
           }
         }
       }
@@ -309,22 +324,6 @@ export class ComponentController<
       }
     }
     return whereRefs;
-  }
-
-  // ...........................................................................
-  /**
-   * Removes reference columns from the where clause.
-   * @param where - The condition to filter the data.
-   * @returns An object representing the where clause without reference columns.
-   */
-  private _getWhereBase(where: Json): Json {
-    const whereWithoutRefs: Json = { ...where };
-    for (const colCfg of this._referenceColumns) {
-      if (colCfg.key in whereWithoutRefs) {
-        delete whereWithoutRefs[colCfg.key];
-      }
-    }
-    return whereWithoutRefs;
   }
 
   // ...........................................................................
@@ -474,12 +473,11 @@ export class ComponentController<
       }
     }
 
-    //If we have multiple where clauses, merge the results
+    //If we have multiple where clauses, run them in parallel and merge
     if (splitted.length > 0) {
-      const results = [];
-      for (const s of splitted) {
-        results.push(await this._core.readRows(table, s));
-      }
+      const results = await Promise.all(
+        splitted.map((s) => this._core.readRows(table, s)),
+      );
       return merge(...results) as Rljson;
     } else {
       return this._core.readRows(table, where);
@@ -487,6 +485,14 @@ export class ComponentController<
   }
 
   async filterRow(row: Json, key: string, value: JsonValue): Promise<boolean> {
+    return this._rowMatches(row, key, value);
+  }
+
+  /**
+   * Synchronous core of filterRow — avoids per-row promise overhead in
+   * table scans.
+   */
+  private _rowMatches(row: Json, key: string, value: JsonValue): boolean {
     for (const [propertyKey, propertyValue] of Object.entries(row)) {
       if (propertyKey === key && equals(propertyValue, value)) {
         return true;
