@@ -14,7 +14,7 @@ Multi-Edit system) found **four systemic performance paradigms** that dominate r
 catalogue of 24 concrete findings:
 
 | # | Systemic problem | Where it hits hardest |
-|---|---|---|
+| --- | --- | --- |
 | S1 | **N+1 / sequential I/O** — independent Io reads and writes are awaited one-by-one in loops instead of being batched or parallelized | `Db._get` child recursion, `Db.join`, `TreeController.get`, `_insert`, `MultiEditManager.edit` |
 | S2 | **Redundant recomputation** — the same data is re-fetched, re-parsed, re-hashed or re-built although it is immutable (content-addressed!) | `Join.rows` getter, `getChildRefs`, cache keys via SHA, `Core.tableCfg`, controller re-creation |
 | S3 | **Accidental quadratic/cubic algorithms** — full scans or full re-builds inside loops | `Join.value()` inside filters (O(R²C²)), `Join.select` (O(R²)), `detectDagBranch` (O(N) per insert ⇒ O(N²) cumulative), `ComponentController._getByWhere` (dumpTable per ref) |
@@ -29,7 +29,7 @@ columns)** per join. Reducing *call count* is worth more than any micro-optimiza
 validated by the Phase-0 benchmark suite):
 
 | Scenario | Today (complexity) | After | Estimated speedup |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `Db.join` — 100 sliceIds × 10 columns | ~1000 sequential full `Db.get` route resolutions | ~2–4 batched/parallel gets + local column extraction | **50–500×** |
 | Join `filter()` on 1 000 rows × 10 cols | O(R²·C²) with route re-parsing per cell | O(R·C) on a pre-materialized value matrix | **100–1000×** |
 | Multi-edit chain replay (20 edits) | full join re-query per edit + full replay | cached processors + incremental joins | **10–100×** |
@@ -354,7 +354,7 @@ into a local map, walk in memory (the chains are content-addressed — perfect f
 ## 5. Implementation Plan
 
 | Phase | Content | Findings | Effort | Expected gain |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | **0** | Benchmark suite (`test/bench/*.bench.ts` via vitest bench; scenarios from §1 using `example-static` mass data) + baseline numbers committed to the concept | — | 0.5–1 d | measurement basis |
 | **1** | **Quick wins, zero-risk:** F2, F3a/b, F5, F11, F13, F14, F15, F17, F21, F22, F26–F29 | 13 items | 1–2 d | 2–10× broad |
 | **2** | **Join engine:** F9 (stages 1+2), F10, F12; **Filters:** matrix materialization | 4 items | 2–4 d | 50–500× joins/edits |
@@ -367,12 +367,47 @@ CLAUDE.md), each passing `pnpm test` at 100 % coverage, docs updated first. Benc
 deltas recorded in this file per phase. Merge to `main` only when all phases through 4 are complete
 and validated (per your instruction).
 
-### Compatibility guarantees
+### Compatibility guarantees (verified against `src/index.ts` and the test suite)
 
-- No public API signature changes (only additive options: `validate?`, `getChildRefsFromRow`).
-- Container/cell/tree output shapes unchanged — verified by the golden tests.
-- Semantics guards: cache invalidation on insert (F3c) *fixes* a latent staleness bug; F14 *fixes*
-  a latent duplicate-row hazard. Both will be called out in commit messages.
+**Public package API (exports of `index.ts`): fully preserved.**
+`Db`, `Connector`, `MultiEditManager`, `Join`, `inject`, `isolate`, `makeUnique`, `mergeTrees`,
+the example exports and all re-exported types keep their exact signatures and observable behavior.
+All changes to these are either internal (caching, batching, parallelization) or **additive**:
+
+- `Core.import(data)` → `Core.import(data, options?: { validate?: boolean })` — optional param,
+  default `true` = today's behavior.
+- `Controller.getChildRefsFromRow(row)` — new method; existing `getChildRefs(where)` stays and
+  keeps its semantics (used directly by tests, 5 call sites).
+- `Db.cache` stays typed `Map<string, Container>` and `setCache(Map)` stays — the LRU bound (F3b)
+  is implemented *on top of* a Map (insertion-order eviction), so `cache.size`, `cache.get`,
+  `setCache(new Map())` (asserted in `db.spec.ts:68-86, 605-620`) keep working.
+
+**Semi-public methods called directly by the test suite — signatures and results preserved:**
+`detectDagBranch` (11 call sites — F23 only accelerates it internally, same `Conflict|null`),
+`filterRow` (6 — stays `Promise<boolean>`; only the *per-row awaiting inside scans* is removed),
+`getChildRefs` (5), `buildTreeFromTrees`/`buildCellsFromTree`, `resolveBaseLayer`, `Join.rows`
+(26 call sites — F10 caches the matrix; identical values), `Join.value`, `_get`/`_insert`
+(signatures unchanged).
+
+**Output shapes are pinned by goldens** (`test/goldens/`: view, view-with-data, column-selection):
+Container `rljson`/`tree`/`cell` structures — including cell `path` arrays (F8) and `_data`
+ordering (F18 tree expansion) — must reproduce byte-identical goldens. Any diff in
+`pnpm updateGoldens` output = regression, not an acceptable change.
+
+**Known, deliberate test updates (bug-fix fallout — exactly two):**
+1. `db.spec.ts:606` asserts `cache.size === 7` after a nested get. That count includes entries
+   written by the unconditional `cache.set` even for non-cacheable calls (the `''`-key bug, F3a).
+   Fixing F3a lowers the count; the assertion is updated *in the same commit* with an explanation.
+2. Any future test that relied on stale cache after insert would be affected by F3c invalidation —
+   none found in the current suite; the documented `notify → clearCache` pattern remains valid.
+
+F14 (duplicate filter indices) changes **no** observable result — the final `Set` dedup already
+masked it; only wasted work is removed.
+
+**Test strategy per phase:** every commit runs the full suite at 100 % coverage (repo rule).
+Phase 0 additionally locks behavior with benchmark fixtures reusing `example-static` mass data, so
+performance changes are measured against the same data the correctness suite uses. New code paths
+(RowStore, tip tracking, matrix cache) get their own unit tests to hold the 100 % bar.
 
 ---
 
@@ -381,7 +416,7 @@ and validated (per your instruction).
 Multipliers compose across layers (call-count reduction × per-call reduction × parallelism):
 
 | Workload | Phase 1 | + Phase 2 | + Phase 3 | + Phase 4 |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | Wide join (100×10) | 2–3× | **50–200×** | 100–500× | — |
 | Interactive edit step (setValue on head) | 2–5× | 20–100× | 30–150× | **50–300×** |
 | Nested `Db.get` (3 levels, 100 rows) | 2–3× | — | **20–80×** | — |
@@ -411,7 +446,7 @@ In `@rljson/io` (would multiply all of the above; requires separate tickets in t
 ## 8. Appendix: Finding × File Map
 
 | File | Findings |
-|---|---|
+| --- | --- |
 | `src/db.ts` | F1–F9, F22–F24, F26, F27 |
 | `src/core.ts` | F20, F21, F22 |
 | `src/join/join.ts` | F10–F13, F29 |
