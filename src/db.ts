@@ -1429,56 +1429,70 @@ export class Db {
       }
       if (nodeType === 'layers') {
         const layers = (nodeTree as LayersTable)._data;
-        for (const layer of layers) {
-          const layerInsert: Record<SliceId, ComponentRef> = {};
 
-          //Check what if there is no layer or no compomentTree --> Add new one
+        //Check what if there is no layer or no compomentTree --> Add new one
 
-          for (const [sliceId, componentTree] of Object.entries(layer.add)) {
-            if (sliceId === '_hash') continue;
-
-            const writtenComponents = await this._insert(
-              childRoute,
-              componentTree as any,
-              runFns,
+        // Write the components of all layers and slices in parallel
+        const layerResults = await Promise.all(
+          layers.map(async (layer) => {
+            const sliceEntries = Object.entries(layer.add).filter(
+              ([sliceId]) => sliceId !== '_hash',
             );
 
-            /* v8 ignore next -- @preserve */
-            if (writtenComponents.length > 1) {
-              throw new Error(
-                `Db._insert: Multiple components written for layer "${
-                  (layer as any)._hash
-                }" and sliceId "${sliceId}" is currently not supported.`,
-              );
-            }
+            const writtenSlices = await Promise.all(
+              sliceEntries.map(async ([sliceId, componentTree]) => {
+                const writtenComponents = await this._insert(
+                  childRoute,
+                  componentTree as any,
+                  runFns,
+                );
 
-            const writtenComponent = writtenComponents[0];
+                /* v8 ignore next -- @preserve */
+                if (writtenComponents.length > 1) {
+                  throw new Error(
+                    `Db._insert: Multiple components written for layer "${
+                      (layer as any)._hash
+                    }" and sliceId "${sliceId}" is currently not supported.`,
+                  );
+                }
 
-            /* v8 ignore next -- @preserve */
-            if (
-              !writtenComponent ||
-              !(writtenComponent as any)[childTableKey + 'Ref']
-            ) {
-              throw new Error(
-                `Db._insert: No component reference returned for layer "${
-                  (layer as any)._hash
-                }" and sliceId "${sliceId}".`,
-              );
-            }
+                const writtenComponent = writtenComponents[0];
 
-            layerInsert[sliceId] = (writtenComponent as any)[
-              childTableKey + 'Ref'
-            ];
-          }
-          const runFn = runFns[nodeTableKey];
-          const result = await runFn(
-            'add',
-            rmhsh({
-              ...layer,
-              ...{ add: layerInsert },
-            }),
-            'db.insert',
-          );
+                /* v8 ignore next -- @preserve */
+                if (
+                  !writtenComponent ||
+                  !(writtenComponent as any)[childTableKey + 'Ref']
+                ) {
+                  throw new Error(
+                    `Db._insert: No component reference returned for layer "${
+                      (layer as any)._hash
+                    }" and sliceId "${sliceId}".`,
+                  );
+                }
+
+                return [
+                  sliceId,
+                  (writtenComponent as any)[childTableKey + 'Ref'],
+                ] as const;
+              }),
+            );
+
+            const layerInsert: Record<SliceId, ComponentRef> =
+              Object.fromEntries(writtenSlices);
+
+            const runFn = runFns[nodeTableKey];
+            return runFn(
+              'add',
+              rmhsh({
+                ...layer,
+                ...{ add: layerInsert },
+              }),
+              'db.insert',
+            );
+          }),
+        );
+
+        for (const result of layerResults) {
           results.push(
             ...result.map((r) => ({
               ...r,
@@ -1501,29 +1515,32 @@ export class Db {
       ) {
         const runFn = runFns[nodeTableKey];
         const components = (nodeTree as ComponentsTable<Json>)._data;
-        for (const component of components) {
-          const resolvedComponent = { ...component } as Json;
-          for (const [property, value] of Object.entries(component)) {
-            if (
-              (value as any).hasOwnProperty('_tableKey') &&
-              (value as any)._tableKey === childTableKey
-            ) {
-              const writtenReferences = await this._insert(
-                childRoute,
-                { [childTableKey]: value as any },
-                runFns,
-              );
-              resolvedComponent[property] = writtenReferences.map(
-                (wr) => (wr as any)[childTableKey + 'Ref'],
-              );
-            }
-          }
 
-          const result = await runFn(
-            'add',
-            rmhsh(resolvedComponent),
-            'db.insert',
-          );
+        // Resolve and write all components in parallel
+        const componentResults = await Promise.all(
+          components.map(async (component) => {
+            const resolvedComponent = { ...component } as Json;
+            for (const [property, value] of Object.entries(component)) {
+              if (
+                (value as any).hasOwnProperty('_tableKey') &&
+                (value as any)._tableKey === childTableKey
+              ) {
+                const writtenReferences = await this._insert(
+                  childRoute,
+                  { [childTableKey]: value as any },
+                  runFns,
+                );
+                resolvedComponent[property] = writtenReferences.map(
+                  (wr) => (wr as any)[childTableKey + 'Ref'],
+                );
+              }
+            }
+
+            return runFn('add', rmhsh(resolvedComponent), 'db.insert');
+          }),
+        );
+
+        for (const result of componentResults) {
           results.push(
             ...result.map((r) => ({
               ...r,
@@ -1552,14 +1569,22 @@ export class Db {
           (tree as any)[nodeTableKey],
         ) as ComponentsTable<Json>;
 
-        for (const component of components._data) {
+        // Write all components in parallel, results in original order
+        const componentResults = await Promise.all(
+          components._data.map((component) => {
+            /* v8 ignore next -- @preserve */
+            if (!component) return null;
+
+            delete (component as any)._tableKey;
+            delete (component as any)._type;
+
+            return runFn('add', component, 'db.insert');
+          }),
+        );
+
+        for (const result of componentResults) {
           /* v8 ignore next -- @preserve */
-          if (!component) continue;
-
-          delete (component as any)._tableKey;
-          delete (component as any)._type;
-
-          const result = await runFn('add', component, 'db.insert');
+          if (!result) continue;
           results.push(
             ...result.map((r) => ({
               ...r,
@@ -1571,9 +1596,12 @@ export class Db {
       }
       if (nodeType === 'layers') {
         const layers = rmhsh((tree as any)[nodeTableKey]);
-        for (const layer of (layers as LayersTable)._data) {
-          const result = await runFn('add', layer, 'db.insert');
-
+        const layerResults = await Promise.all(
+          (layers as LayersTable)._data.map((layer) =>
+            runFn('add', layer, 'db.insert'),
+          ),
+        );
+        for (const result of layerResults) {
           results.push(
             ...result.map((r) => ({
               ...r,
@@ -1585,9 +1613,12 @@ export class Db {
       }
       if (nodeType === 'cakes') {
         const cakes = rmhsh((tree as any)[nodeTableKey]);
-        for (const cake of (cakes as CakesTable)._data) {
-          const result = await runFn('add', cake, 'db.insert');
-
+        const cakeResults = await Promise.all(
+          (cakes as CakesTable)._data.map((cake) =>
+            runFn('add', cake, 'db.insert'),
+          ),
+        );
+        for (const result of cakeResults) {
           results.push(
             ...result.map((r) => ({
               ...r,

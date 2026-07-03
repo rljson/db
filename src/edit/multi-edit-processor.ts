@@ -172,8 +172,21 @@ export class MultiEditProcessor {
 
     const multiEdit = multiEdits[0];
 
+    const editCountBefore = this._edits.length;
     await this._resolve(multiEdit);
-    await this._processAll();
+
+    /* v8 ignore if -- @preserve */
+    if (!this._join) {
+      // No join processed yet — replay the whole chain
+      await this._processAll();
+      return this;
+    }
+
+    // Process only the newly resolved edits (oldest first) on top of the
+    // existing join instead of replaying the whole chain
+    for (let i = this._edits.length - 1; i >= editCountBefore; i--) {
+      this._join = await this._process(this._edits[i]);
+    }
 
     return this;
   }
