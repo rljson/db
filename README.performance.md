@@ -72,6 +72,7 @@ Each finding: **[ID] Location — Problem → Fix → Estimated effect / Effort 
 `db.ts:553-877`: `for (let i = 0; i < nodeRowsFiltered.length; i++) { ... await this._get(childrenRoute, ...) }`.
 Every parent row triggers its own recursive child query; each of those is ≥1 full-scan `readRows`.
 → **Fix (2 stages):**
+
   1. *Parallelize*: collect the per-row `_get` promises and `Promise.all` them (results are
      independent; the per-row post-processing stays as-is).
   2. *Batch*: resolve all `childrenRefs` of **all** rows in one child query (single `_get` with the
@@ -150,6 +151,7 @@ or use a prefix-chain (linked-list) flattened once at the top of the recursion.
 100 slices × 10 columns = **1 000 sequential full route resolutions**, each walking
 cake→layer→component with all the costs above.
 → **Fix (3 stages):**
+
   1. *Dedupe*: columns share route prefixes — group `columnSelection.columns` by
      `route.flatWithoutRefs` minus property key (typically 1–3 unique component tables). One `get`
      per unique table route per sliceId, then extract per-column values locally from the returned
@@ -395,6 +397,7 @@ ordering (F18 tree expansion) — must reproduce byte-identical goldens. Any dif
 `pnpm updateGoldens` output = regression, not an acceptable change.
 
 **Known, deliberate test updates (bug-fix fallout — exactly two):**
+
 1. `db.spec.ts:606` asserts `cache.size === 7` after a nested get. That count includes entries
    written by the unconditional `cache.set` even for non-cacheable calls (the `''`-key bug, F3a).
    Fixing F3a lowers the count; the assertion is updated *in the same commit* with an explanation.
@@ -408,6 +411,24 @@ masked it; only wasted work is removed.
 Phase 0 additionally locks behavior with benchmark fixtures reusing `example-static` mass data, so
 performance changes are measured against the same data the correctness suite uses. New code paths
 (RowStore, tip tracking, matrix cache) get their own unit tests to hold the 100 % bar.
+
+---
+
+## 5.2 Phase 0 — Measured Baseline (2026-07-03, IoMem, Apple Silicon, vitest bench)
+
+Suite: `test/bench/db-perf.bench.ts` — run with `pnpm exec vitest bench --run`.
+Note: setup uses top-level await; `beforeAll` is not executed in vitest benchmark mode.
+
+| Benchmark | Baseline mean | Notes |
+| --- | --- | --- |
+| `db.join` mass-data (102 slices × 12 cols) | **853.5 ms** | cache cleared per iteration |
+| `join.filter` string startsWith (102 rows) | **386.4 ms** | confirms F10 O(R²C²) blowup |
+| `join.rows` materialization (102×12) | 3.89 ms | rebuilt per access |
+| `join.select` 3 of 12 columns | 0.46 ms | |
+| `db.get` nested cake→layer→component | 0.66 ms | small static fixture |
+| `db.get` flat component table | 0.014 ms | |
+| Tree expansion via route ref (~176 nodes) | 2.84 ms | route `tree@ref/root` |
+| `db.insert` component (history grows) | 4.41 ms | includes validation + DAG scan |
 
 ---
 
