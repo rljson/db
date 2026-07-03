@@ -60,11 +60,42 @@ export class Join {
 
   private _processes: JoinProcess[] = [];
 
+  /**
+   * Materialized row matrices per data object. Data objects are created
+   * once per process step and never mutated, so the matrix can be reused
+   * for every subsequent access.
+   */
+  private static readonly _rowsCache = new WeakMap<JoinRowsHashed, any[][]>();
+
   constructor(rows: JoinRows, columnSelection: ColumnSelection) {
     // Hash the rows
     this._base = this._hashedRows(rows);
 
     this._baseColumnSelection = columnSelection;
+  }
+
+  // ...........................................................................
+  /**
+   * Creates a JoinRowHashed whose rowHash is computed lazily on first
+   * access. Nothing on the hot path reads rowHash, so eager SHA hashing
+   * of every row on every process step is avoided.
+   *
+   * @param columns The columns of the row
+   * @param hashInput Produces the values to hash
+   * @returns The hashed join row
+   */
+  private static _lazyHashedRow(
+    columns: JoinColumn[],
+    hashInput: () => any[],
+  ): JoinRowHashed {
+    const row = { columns } as JoinRowHashed;
+    let cached: Ref | undefined;
+    Object.defineProperty(row, 'rowHash', {
+      enumerable: true,
+      configurable: true,
+      get: () => (cached ??= Hash.default.calcHash(hashInput()) as Ref),
+    });
+    return row;
   }
 
   // ...........................................................................
@@ -170,14 +201,13 @@ export class Join {
         insertCols.push(insertCol);
       }
 
-      data[sliceId] = {
-        rowHash: Hash.default.calcHash(
+      data[sliceId] = Join._lazyHashedRow(
+        insertCols,
+        () =>
           insertCols.map((col) =>
             col.value.cell.flatMap((c) => c.value),
           ) as any[],
-        ),
-        columns: insertCols,
-      };
+      );
     }
 
     // Create the process entry
@@ -238,12 +268,11 @@ export class Join {
         cols.push(row.columns[masterColumnIndices[j]]);
       }
       // Store the selected columns
-      data[sliceId] = {
-        rowHash: Hash.default.calcHash(
+      data[sliceId] = Join._lazyHashedRow(
+        cols,
+        () =>
           cols.map((col) => col.value.cell.flatMap((c) => c.value)) as any[],
-        ),
-        columns: cols,
-      };
+      );
     }
 
     // Create the process entry
@@ -551,18 +580,40 @@ export class Join {
    * @return The rows of the join
    */
   get rows(): any[][] {
-    const result: any[][] = [];
-    const sliceIds = Object.keys(this.data);
-    for (const sliceId of sliceIds) {
-      const dataColumns = (this.data[sliceId] as JoinRowHashed).columns;
-      const row: any[] = [];
-      for (const colInfo of this.columnSelection.columns) {
-        const joinCol = dataColumns.find((dataCol) => {
-          const colInfoRoute = Route.fromFlat(colInfo.route);
-          const dataColRoute = dataCol.route;
+    const data = this.data;
+    const cached = Join._rowsCache.get(data);
+    if (cached) {
+      return cached;
+    }
 
-          return colInfoRoute.equalsWithoutRefs(dataColRoute);
-        });
+    const result: any[][] = [];
+    const sliceIds = Object.keys(data);
+
+    if (sliceIds.length === 0) {
+      Join._rowsCache.set(data, result);
+      return result;
+    }
+
+    // The column order is uniform across all rows: resolve each selected
+    // column's index once against the first row instead of route-parsing
+    // inside a find() per cell.
+    const firstRowColumns = (data[sliceIds[0]] as JoinRowHashed).columns;
+    const routeToIndex = new Map<string, number>();
+    for (let i = 0; i < firstRowColumns.length; i++) {
+      routeToIndex.set(firstRowColumns[i].route.flatWithoutRefs, i);
+    }
+    const columnIndices = this.columnSelection.columns.map((colInfo) => {
+      const index = routeToIndex.get(Route.fromFlat(colInfo.route).flatWithoutRefs);
+      /* v8 ignore next -- @preserve */
+      return index === undefined ? -1 : index;
+    });
+
+    for (const sliceId of sliceIds) {
+      const dataColumns = (data[sliceId] as JoinRowHashed).columns;
+      const row: any[] = [];
+      for (const index of columnIndices) {
+        /* v8 ignore next -- @preserve */
+        const joinCol = index >= 0 ? dataColumns[index] : undefined;
         /* v8 ignore next -- @preserve */
         const insertValue =
           joinCol && joinCol.inserts
@@ -580,6 +631,8 @@ export class Join {
       }
       result.push(row);
     }
+
+    Join._rowsCache.set(data, result);
     return result;
   }
 
@@ -600,18 +653,16 @@ export class Join {
     for (const sliceId of sliceIds) {
       const cols = rows[sliceId];
       /* v8 ignore next -- @preserve */
-      const rowHash = Hash.default.calcHash(
-        cols.map((col) =>
-          col.inserts?.flatMap((con) => con.cell.flatMap((c) => c.value)) ??
-          col.value.cell
-            ? col.value.cell.flatMap((c) => c.value)
-            : [],
-        ) as any[],
+      hashedRows[sliceId] = Join._lazyHashedRow(
+        cols,
+        () =>
+          cols.map((col) =>
+            col.inserts?.flatMap((con) => con.cell.flatMap((c) => c.value)) ??
+            col.value.cell
+              ? col.value.cell.flatMap((c) => c.value)
+              : [],
+          ) as any[],
       );
-      hashedRows[sliceId] = {
-        rowHash,
-        columns: cols,
-      };
     }
     return hashedRows;
   }

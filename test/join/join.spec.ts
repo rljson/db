@@ -147,6 +147,48 @@ describe('Join', () => {
 
       expect(rows.length).toBe(sliceIds.size);
     });
+
+    it('should return the same materialized matrix on repeated access', async () => {
+      const join = await db.join(columnSelection, cakeKey, cakeRef);
+      const first = join.rows;
+      const second = join.rows;
+
+      expect(second).toBe(first);
+    });
+
+    it('should return empty rows for an empty join', async () => {
+      const { Join } = await import('../../src/join/join');
+      expect(Join.empty().rows).toEqual([]);
+    });
+  });
+
+  describe('rowHash', () => {
+    it('computes rowHash lazily and returns a stable value', async () => {
+      const join = await db.join(columnSelection, cakeKey, cakeRef);
+
+      // Base rows
+      const baseRow = Object.values(join.data)[0];
+      const baseHash = baseRow.rowHash;
+      expect(typeof baseHash).toBe('string');
+      expect(baseHash.length).toBeGreaterThan(0);
+      expect(baseRow.rowHash).toBe(baseHash);
+
+      // Selected rows
+      const selected = join
+        .clone()
+        .select(new ColumnSelection([columnSelection.columns[0]]));
+      const selectedRow = Object.values(selected.data)[0];
+      expect(typeof selectedRow.rowHash).toBe('string');
+
+      // Rows with set values
+      const setValue: SetValue = {
+        route: '/carCake/carGeneralLayer/carGeneral/brand',
+        value: 'Opel',
+      };
+      const edited = join.clone().setValue(setValue);
+      const editedRow = Object.values(edited.data)[0];
+      expect(typeof editedRow.rowHash).toBe('string');
+    });
   });
 
   describe('setValue', () => {
