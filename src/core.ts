@@ -163,10 +163,17 @@ export class Core {
   // ...........................................................................
   async tableCfg(table: string): Promise<TableCfg> {
     this._tableCfgsCache ??= await this._io.rawTableCfgs();
-    const tableCfg = this._tableCfgsCache.find(
-      (tc) => tc.key === table,
-    ) as TableCfg;
-    return tableCfg;
+    let tableCfg = this._tableCfgsCache.find((tc) => tc.key === table);
+
+    // The table may have been created by another Db instance sharing the
+    // Io, or appeared on a remote io (IoMulti) after the first fetch —
+    // refetch once before giving up.
+    if (!tableCfg) {
+      this._tableCfgsCache = await this._io.rawTableCfgs();
+      tableCfg = this._tableCfgsCache.find((tc) => tc.key === table);
+    }
+
+    return tableCfg as TableCfg;
   }
 
   // ...........................................................................

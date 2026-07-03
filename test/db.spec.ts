@@ -2623,6 +2623,35 @@ describe('Db', () => {
       expect(await treeDb.detectDagBranch(treeKey)).toBeNull();
     });
 
+    it('keeps DAG tips correct for out-of-order history arrival', async () => {
+      // Warm the tip state with a first insert
+      const firstTrees: Array<Tree> = treeFromObject({ base: 'value' });
+      const [first] = await treeDb.insertTrees(treeKey, firstTrees);
+
+      expect(await treeDb.detectDagBranch(treeKey)).toBeNull();
+
+      const state = (treeDb as any)._dagTips.get(treeKey);
+      expect(state.tips.has(first.timeId)).toBe(true);
+
+      // Simulate a descendant arriving BEFORE its parent (out-of-order
+      // sync): child C references parent P that is not yet present
+      (treeDb as any)._applyRowToDagTips(treeKey, {
+        timeId: 'C',
+        previous: ['P'],
+      });
+      // The parent arrives later, extending the first insert
+      (treeDb as any)._applyRowToDagTips(treeKey, {
+        timeId: 'P',
+        previous: [first.timeId],
+      });
+
+      // P is referenced by C and must NOT be a tip; C is the only tip
+      expect(state.tips.has('P')).toBe(false);
+      expect(state.tips.has(first.timeId)).toBe(false);
+      expect(state.tips.has('C')).toBe(true);
+      expect(state.tips.size).toBe(1);
+    });
+
     it('should write InsertHistory to the history table', async () => {
       const trees: Array<Tree> = treeFromObject({ leaf: 'value' });
 
