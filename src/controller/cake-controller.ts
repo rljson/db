@@ -109,13 +109,28 @@ export class CakeController<N extends string, C extends Cake>
 
     const cakes = table._data as Cake[];
     for (const cake of cakes) {
-      for (const layerTable of Object.keys(cake.layers)) {
-        if (layerTable.startsWith('_')) continue; // Skip internal keys
-        childRefs.push({
-          tableKey: layerTable as TableKey,
-          ref: cake.layers[layerTable],
-        });
-      }
+      childRefs.push(...(await this.getChildRefsOfRow(cake as Json)));
+    }
+
+    return childRefs;
+  }
+
+  // ...........................................................................
+  /**
+   * Retrieves references to child entries of an already fetched row.
+   * Avoids re-querying the row that the caller is already holding.
+   * @param row - The cake row to collect layer references from
+   */
+  async getChildRefsOfRow(row: Json): Promise<ControllerChildProperty[]> {
+    const cake = row as Cake;
+    const childRefs: ControllerChildProperty[] = [];
+
+    for (const layerTable of Object.keys(cake.layers)) {
+      if (layerTable.startsWith('_')) continue; // Skip internal keys
+      childRefs.push({
+        tableKey: layerTable as TableKey,
+        ref: cake.layers[layerTable],
+      });
     }
 
     return childRefs;

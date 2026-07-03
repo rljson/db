@@ -358,6 +358,15 @@ export class TreeController<N extends string, C extends Tree>
     return cells;
   }
 
+  /**
+   * Mirrors the hash-query behavior of getChildRefs: children of an
+   * already fetched tree row are not expanded to prevent infinite
+   * recursion in db._get().
+   */
+  async getChildRefsOfRow(): Promise<ControllerChildProperty[]> {
+    return [];
+  }
+
   async getChildRefs(
     where: string | Json,
     filter?: Json,

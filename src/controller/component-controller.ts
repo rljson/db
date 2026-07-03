@@ -133,10 +133,40 @@ export class ComponentController<
     filter?: Json,
   ): Promise<ControllerChildProperty[]> {
     const { [this._tableKey]: table } = await this.get(where, filter);
-    const { columns } = await this._core.tableCfg(this._tableKey);
 
     //Unique child refs
     const childRefs: Map<string, ControllerChildProperty> = new Map();
+
+    for (const row of table._data) {
+      this._collectChildRefsOfRow(row as Json, childRefs);
+    }
+
+    return Array.from(childRefs.values());
+  }
+
+  // ...........................................................................
+  /**
+   * Retrieves references to child entries of an already fetched row.
+   * Avoids re-querying the row that the caller is already holding.
+   * @param row - The row to collect child references from
+   */
+  async getChildRefsOfRow(row: Json): Promise<ControllerChildProperty[]> {
+    const childRefs: Map<string, ControllerChildProperty> = new Map();
+    this._collectChildRefsOfRow(row, childRefs);
+    return Array.from(childRefs.values());
+  }
+
+  // ...........................................................................
+  /**
+   * Collects child references of a single row into the given map.
+   * @param row - The row to inspect
+   * @param childRefs - The map collecting unique child references
+   */
+  private _collectChildRefsOfRow(
+    row: Json,
+    childRefs: Map<string, ControllerChildProperty>,
+  ): void {
+    const columns = this.tableCfg().columns;
 
     for (const colCfg of columns) {
       if (!colCfg.ref || colCfg.ref === undefined) continue;
@@ -144,55 +174,50 @@ export class ComponentController<
       const propertyKey = colCfg.key;
       const childRefTableKey = colCfg.ref.tableKey;
 
-      for (const row of table._data) {
-        const refValue = (row as any)[propertyKey];
+      const refValue = (row as any)[propertyKey];
 
-        //Plain hashes given, reference table from columnCfg
-        if (typeof refValue === 'string') {
-          childRefs.set(`${childRefTableKey}|${propertyKey}|${refValue}`, {
-            tableKey: childRefTableKey,
-            columnKey: propertyKey,
-            ref: refValue,
-          } as ControllerChildProperty);
-          continue;
-        }
+      //Plain hashes given, reference table from columnCfg
+      if (typeof refValue === 'string') {
+        childRefs.set(`${childRefTableKey}|${propertyKey}|${refValue}`, {
+          tableKey: childRefTableKey,
+          columnKey: propertyKey,
+          ref: refValue,
+        } as ControllerChildProperty);
+        continue;
+      }
 
-        /* v8 ignore if -- @preserve */
-        if (Array.isArray(refValue)) {
-          for (const refItem of refValue) {
-            //Plain hashes given, reference table from columnCfg
-            if (typeof refItem === 'string') {
-              childRefs.set(`${childRefTableKey}|${propertyKey}|${refItem}`, {
+      /* v8 ignore if -- @preserve */
+      if (Array.isArray(refValue)) {
+        for (const refItem of refValue) {
+          //Plain hashes given, reference table from columnCfg
+          if (typeof refItem === 'string') {
+            childRefs.set(`${childRefTableKey}|${propertyKey}|${refItem}`, {
+              tableKey: childRefTableKey,
+              columnKey: propertyKey,
+              ref: refItem,
+            } as ControllerChildProperty);
+            continue;
+          }
+
+          //CakeRef: Object with ref and sliceIds given
+          if (typeof refItem === 'object' && refItem !== null) {
+            const cakeReference = refItem as CakeReference;
+            childRefs.set(
+              `${childRefTableKey}|${propertyKey}|${
+                cakeReference.ref
+              }|${cakeReference.sliceIds?.join(',')}`,
+              {
                 tableKey: childRefTableKey,
                 columnKey: propertyKey,
-                ref: refItem,
-              } as ControllerChildProperty);
-              continue;
-            }
-
-            //CakeRef: Object with ref and sliceIds given
-            if (typeof refItem === 'object' && refItem !== null) {
-              const cakeReference = refItem as CakeReference;
-              childRefs.set(
-                `${childRefTableKey}|${propertyKey}|${
-                  cakeReference.ref
-                }|${cakeReference.sliceIds?.join(',')}`,
-                {
-                  tableKey: childRefTableKey,
-                  columnKey: propertyKey,
-                  ref: cakeReference.ref,
-                  sliceIds: cakeReference.sliceIds,
-                } as ControllerChildProperty,
-              );
-              continue;
-            }
+                ref: cakeReference.ref,
+                sliceIds: cakeReference.sliceIds,
+              } as ControllerChildProperty,
+            );
+            continue;
           }
-          continue;
         }
       }
     }
-
-    return Array.from(childRefs.values());
   }
 
   // ...........................................................................
