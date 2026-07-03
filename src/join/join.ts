@@ -137,7 +137,7 @@ export class Join {
 
     for (const [sliceId, joinRowH] of Object.entries(this.data)) {
       const cols = [...joinRowH.columns];
-      const insertCols = [];
+      const insertCols: JoinColumn[] = [];
       for (const col of cols) {
         const insertCol = {
           ...col,
