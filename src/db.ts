@@ -477,7 +477,7 @@ export class Db {
 
         //Set Cache
         if (cacheable) {
-          this._cacheSet(cacheHash, result);
+          this._cacheSet(cacheHash, result, route);
         }
 
         return result;
@@ -512,7 +512,7 @@ export class Db {
 
       if (cacheable) {
         //Set Cache
-        this._cacheSet(cacheHash, result);
+        this._cacheSet(cacheHash, result, route);
       }
 
       return result;
@@ -1007,7 +1007,7 @@ export class Db {
 
     //Set Cache
     if (cacheable) {
-      this._cacheSet(cacheHash, result);
+      this._cacheSet(cacheHash, result, route);
     }
 
     return result;
@@ -1020,17 +1020,48 @@ export class Db {
   private _maxCacheEntries = 500;
 
   /**
+   * Cache keys indexed by the tables their results were built from.
+   * Used to invalidate affected entries when a table receives an insert.
+   */
+  private readonly _cacheKeysByTable = new Map<string, Set<string>>();
+
+  /**
    * Stores a query result in the cache, evicting the least recently used
    * entry when the cache is full
    * @param key - The cache key
    * @param value - The container to cache
+   * @param route - The route the result was built from; its tables index
+   *   the entry for invalidation
    */
-  private _cacheSet(key: string, value: Container): void {
+  private _cacheSet(key: string, value: Container, route: Route): void {
     if (this._cache.size >= this._maxCacheEntries) {
       const oldest = this._cache.keys().next().value as string;
       this._cache.delete(oldest);
     }
     this._cache.set(key, value);
+
+    for (const segment of route.segments) {
+      let keys = this._cacheKeysByTable.get(segment.tableKey);
+      if (!keys) {
+        keys = new Set<string>();
+        this._cacheKeysByTable.set(segment.tableKey, keys);
+      }
+      keys.add(key);
+    }
+  }
+
+  /**
+   * Drops all cached query results that involve the given table
+   * @param tableKey - The table that received new data
+   */
+  private _invalidateCacheForTable(tableKey: string): void {
+    const keys = this._cacheKeysByTable.get(tableKey);
+    if (keys) {
+      for (const key of keys) {
+        this._cache.delete(key);
+      }
+      this._cacheKeysByTable.delete(tableKey);
+    }
   }
 
   // ...........................................................................
@@ -1202,6 +1233,11 @@ export class Db {
     if (!options?.skipHistory)
       await this._writeInsertHistory(route.top.tableKey, insertHistoryRow[0]);
 
+    //Invalidate cached query results of the affected tables
+    for (const tableKey of Object.keys(controllers)) {
+      this._invalidateCacheForTable(tableKey);
+    }
+
     return insertHistoryRow;
   }
 
@@ -1283,6 +1319,9 @@ export class Db {
     if (!options?.skipHistory) {
       await this._writeInsertHistory(treeKey, result);
     }
+
+    //Invalidate cached query results of the affected table
+    this._invalidateCacheForTable(treeKey);
 
     // Notify observers (Connector picks this up automatically)
     if (!options?.skipNotification) {
@@ -1767,14 +1806,46 @@ export class Db {
    * @returns A Conflict if a DAG branch is detected, or null otherwise
    */
   async detectDagBranch(table: string): Promise<Conflict | null> {
+    const tips = await this._dagTipsFor(table);
+    if (!tips) return null;
+
+    if (tips.size > 1) {
+      return {
+        table,
+        type: 'dagBranch',
+        detectedAt: Date.now(),
+        branches: [...tips],
+      };
+    }
+
+    return null;
+  }
+
+  // ...........................................................................
+  /**
+   * Current InsertHistory DAG tips per table. A tip is a timeId that no
+   * other row references as `previous`. The set is initialized with one
+   * full scan and then maintained incrementally on every insert,
+   * avoiding a full history dump per written row.
+   */
+  private readonly _dagTips = new Map<string, Set<string>>();
+
+  /**
+   * Returns the DAG tips of a table's InsertHistory, scanning the
+   * history once on first access.
+   * @param table - The table name (without "InsertHistory" suffix)
+   * @returns The set of tips or null if the history table does not exist
+   */
+  private async _dagTipsFor(table: string): Promise<Set<string> | null> {
+    const existing = this._dagTips.get(table);
+    if (existing) return existing;
+
     const insertHistoryTable = table + 'InsertHistory';
     const hasTable = await this.core.hasTable(insertHistoryTable);
     if (!hasTable) return null;
 
     const dump = await this.core.dumpTable(insertHistoryTable);
     const rows = dump[insertHistoryTable]._data as InsertHistoryRow<any>[];
-
-    if (rows.length < 2) return null;
 
     // Build set of all timeIds that appear as someone's previous
     const referencedAsParent = new Set<string>();
@@ -1787,18 +1858,34 @@ export class Db {
     }
 
     // Tips are rows whose timeId is NOT in referencedAsParent
-    const tips = rows.filter((row) => !referencedAsParent.has(row.timeId));
-
-    if (tips.length > 1) {
-      return {
-        table,
-        type: 'dagBranch',
-        detectedAt: Date.now(),
-        branches: tips.map((t) => t.timeId),
-      };
+    const tips = new Set<string>();
+    for (const row of rows) {
+      if (!referencedAsParent.has(row.timeId)) {
+        tips.add(row.timeId);
+      }
     }
 
-    return null;
+    this._dagTips.set(table, tips);
+    return tips;
+  }
+
+  /**
+   * Applies a freshly written InsertHistory row to the tracked DAG tips.
+   * Only updates already initialized tip sets — a cold start scans the
+   * full history including the new row anyway.
+   * @param table - The table the row was written for
+   * @param row - The written InsertHistory row
+   */
+  private _applyRowToDagTips(table: string, row: InsertHistoryRow<any>): void {
+    const tips = this._dagTips.get(table);
+    if (!tips) return;
+
+    if (row.previous) {
+      for (const p of row.previous) {
+        tips.delete(p);
+      }
+    }
+    tips.add(row.timeId);
   }
 
   // ...........................................................................
@@ -1841,6 +1928,10 @@ export class Db {
       },
       { validate: false },
     );
+
+    // Maintain the DAG tips incrementally instead of re-scanning the
+    // whole history per insert
+    this._applyRowToDagTips(table, insertHistoryRow);
 
     // Detect DAG branches after writing
     const conflict = await this.detectDagBranch(table);

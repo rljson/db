@@ -2596,6 +2596,33 @@ describe('Db', () => {
       expect(result.timeId).toBeDefined();
     });
 
+    it('maintains DAG tips incrementally across inserts', async () => {
+      // First insert cold-starts the tip tracking
+      const firstTrees: Array<Tree> = treeFromObject({ first: 'value' });
+      const [first] = await treeDb.insertTrees(treeKey, firstTrees);
+
+      expect(await treeDb.detectDagBranch(treeKey)).toBeNull();
+
+      // Second insert without predecessors hits the warm tip set and
+      // creates a second tip -> conflict
+      const secondTrees: Array<Tree> = treeFromObject({ second: 'value' });
+      const [second] = await treeDb.insertTrees(treeKey, secondTrees);
+
+      const conflict = await treeDb.detectDagBranch(treeKey);
+      expect(conflict).not.toBeNull();
+      expect(conflict!.branches.sort()).toEqual(
+        [first.timeId, second.timeId].sort(),
+      );
+
+      // A merge revision referencing both tips collapses the fork
+      const mergeTreesData: Array<Tree> = treeFromObject({ merged: 'value' });
+      await treeDb.insertTrees(treeKey, mergeTreesData, {
+        previous: [first.timeId, second.timeId],
+      });
+
+      expect(await treeDb.detectDagBranch(treeKey)).toBeNull();
+    });
+
     it('should write InsertHistory to the history table', async () => {
       const trees: Array<Tree> = treeFromObject({ leaf: 'value' });
 
