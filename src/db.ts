@@ -561,9 +561,16 @@ export class Db {
     );
     const allChildRefs = await Promise.all(childRefsPromises);
 
-    // Iterate over Node Rows to get Children
-    for (let i = 0; i < nodeRowsFiltered.length; i++) {
-      const nodeRow = nodeRowsFiltered[i];
+    // Precompute the accumulator route once — it is identical for all rows
+    const childrenRouteAccumulator = Route.fromFlat(
+      (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
+        (nodeHash ? `@${nodeHash}` : '') +
+        '/' +
+        childrenTableKey,
+    );
+
+    // Derive per-row children metadata (synchronous)
+    const rowContexts = nodeRowsFiltered.map((nodeRow, i) => {
       const nodeRowHash = (nodeRow as any)._hash;
 
       // Child References of this Node Row = Filter for Children
@@ -628,24 +635,41 @@ export class Db {
           ? undefined
           : nodeSliceIds;
 
+      return {
+        nodeRow,
+        nodeRowHash,
+        childrenRefs,
+        childrenRefTypes,
+        cakeIsReferenced,
+        childrenSliceIds,
+      };
+    });
+
+    // Fetch the children of all rows in parallel
+    const rowChildrenResults = await Promise.all(
+      rowContexts.map((ctx) =>
+        this._get(
+          childrenRoute,
+          childrenWhere,
+          controllers,
+          ctx.childrenRefs,
+          ctx.childrenSliceIds,
+          childrenRouteAccumulator,
+          opts,
+        ),
+      ),
+    );
+
+    // Iterate over Node Rows to assemble their children
+    for (let i = 0; i < rowContexts.length; i++) {
+      const { nodeRow, nodeRowHash, childrenRefs, childrenRefTypes, cakeIsReferenced } =
+        rowContexts[i];
+
       const {
         rljson: rowChildrenRljson,
         tree: rowChildrenTree,
         cell: rowChildrenCell,
-      } = await this._get(
-        childrenRoute,
-        childrenWhere,
-        controllers,
-        childrenRefs,
-        childrenSliceIds,
-        Route.fromFlat(
-          (routeAccumulator ? routeAccumulator.flat : nodeTableKey) +
-            (nodeHash ? `@${nodeHash}` : '') +
-            '/' +
-            childrenTableKey,
-        ),
-        opts,
-      );
+      } = rowChildrenResults[i];
 
       // No Children found for where + route => skip
       if (
@@ -1621,7 +1645,31 @@ export class Db {
    * @returns A controller for the specified table
    * @throws {Error} If the table does not exist or if the table type is not supported
    */
+  /**
+   * Initialized controllers by table key. Only ref-less controllers are
+   * cached — controllers with refs carry per-call state. Invalidated
+   * when the table configuration version changes.
+   */
+  private readonly _controllerCache = new Map<
+    string,
+    Controller<any, any, any>
+  >();
+  private _controllerCacheCfgVersion = -1;
+
   async getController(tableKey: string, refs?: ControllerRefs) {
+    const cacheable = refs === undefined;
+
+    if (cacheable) {
+      if (this._controllerCacheCfgVersion !== this.core.cfgVersion) {
+        this._controllerCache.clear();
+        this._controllerCacheCfgVersion = this.core.cfgVersion;
+      }
+      const cached = this._controllerCache.get(tableKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
     // Validate Table
     const hasTable = await this.core.hasTable(tableKey);
     if (!hasTable) {
@@ -1632,7 +1680,18 @@ export class Db {
     const contentType = await this.core.contentType(tableKey);
 
     // Create Controller
-    return createController(contentType, this.core, tableKey, refs);
+    const controller = await createController(
+      contentType,
+      this.core,
+      tableKey,
+      refs,
+    );
+
+    if (cacheable) {
+      this._controllerCache.set(tableKey, controller);
+    }
+
+    return controller;
   }
 
   // ...........................................................................

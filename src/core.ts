@@ -36,6 +36,23 @@ export class Core {
    */
   private readonly _existingTables = new Set<string>();
 
+  /**
+   * Content types by table. The content type of a table is fixed at
+   * creation time and never changes.
+   */
+  private readonly _contentTypes = new Map<string, ContentType>();
+
+  /**
+   * Incremented whenever a table is created or extended. Consumers can
+   * use this to invalidate configuration-derived caches.
+   */
+  private _cfgVersion = 0;
+
+  /** The current configuration version */
+  get cfgVersion(): number {
+    return this._cfgVersion;
+  }
+
   // ...........................................................................
   /**
    * Creates a table and an insertHistory for the table
@@ -52,6 +69,7 @@ export class Core {
    */
   async createTable(tableCfg: TableCfg): Promise<void> {
     this._tableCfgsCache = null;
+    this._cfgVersion++;
     return this._io.createOrExtendTable({ tableCfg });
   }
   /**
@@ -133,7 +151,12 @@ export class Core {
 
   // ...........................................................................
   async contentType(table: string): Promise<ContentType> {
+    const cached = this._contentTypes.get(table);
+    if (cached) {
+      return cached;
+    }
     const contentType = await this._io.contentType({ table });
+    this._contentTypes.set(table, contentType);
     return contentType;
   }
 
