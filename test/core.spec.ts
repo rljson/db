@@ -195,6 +195,40 @@ describe('Core', () => {
     });
   });
 
+  describe('tableCfg(table)', () => {
+    it('finds tables created by another instance sharing the io', async () => {
+      // Warm the config cache
+      const warm = await core.tableCfg('table');
+      expect(warm).toBeDefined();
+
+      // Create a new table through a SECOND Core sharing the same io —
+      // the first Core's cache does not see the creation
+      const core2 = new Core(io);
+      const externalCfg: TableCfg = {
+        version: 0,
+        key: 'externalTable',
+        type: 'components',
+        isHead: false,
+        isRoot: false,
+        isShared: true,
+        columns: [
+          { titleLong: 'Hash', titleShort: 'Hash', key: '_hash', type: 'string' },
+          { titleLong: 'X', titleShort: 'X', key: 'x', type: 'string' },
+        ],
+      };
+      await core2.createTable(externalCfg);
+
+      // The first Core refetches on miss and finds the new table
+      const found = await core.tableCfg('externalTable');
+      expect(found).toBeDefined();
+      expect(found.key).toBe('externalTable');
+
+      // A truly missing table stays undefined after the refetch
+      const missing = await core.tableCfg('doesNotExistAnywhere');
+      expect(missing).toBeUndefined();
+    });
+  });
+
   describe('readRow(table, rowHash)', () => {
     it('returns a specific row from a database table', async () => {
       const dump = await core.dumpTable('table');

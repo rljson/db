@@ -1837,15 +1837,15 @@ export class Db {
    * @returns A Conflict if a DAG branch is detected, or null otherwise
    */
   async detectDagBranch(table: string): Promise<Conflict | null> {
-    const tips = await this._dagTipsFor(table);
-    if (!tips) return null;
+    const state = await this._dagTipsFor(table);
+    if (!state) return null;
 
-    if (tips.size > 1) {
+    if (state.tips.size > 1) {
       return {
         table,
         type: 'dagBranch',
         detectedAt: Date.now(),
-        branches: [...tips],
+        branches: [...state.tips],
       };
     }
 
@@ -1854,20 +1854,28 @@ export class Db {
 
   // ...........................................................................
   /**
-   * Current InsertHistory DAG tips per table. A tip is a timeId that no
-   * other row references as `previous`. The set is initialized with one
-   * full scan and then maintained incrementally on every insert,
-   * avoiding a full history dump per written row.
+   * Current InsertHistory DAG state per table. `tips` are timeIds no
+   * other row references as `previous`; `referenced` are all timeIds
+   * appearing as someone's `previous`. Tracking both makes the
+   * incremental update equal to a fresh scan for ANY row arrival order
+   * (e.g. a parent row synced after its descendant). Initialized with
+   * one full scan, then maintained per insert — no full history dump
+   * per written row.
    */
-  private readonly _dagTips = new Map<string, Set<string>>();
+  private readonly _dagTips = new Map<
+    string,
+    { tips: Set<string>; referenced: Set<string> }
+  >();
 
   /**
-   * Returns the DAG tips of a table's InsertHistory, scanning the
+   * Returns the DAG tip state of a table's InsertHistory, scanning the
    * history once on first access.
    * @param table - The table name (without "InsertHistory" suffix)
-   * @returns The set of tips or null if the history table does not exist
+   * @returns The tip state or null if the history table does not exist
    */
-  private async _dagTipsFor(table: string): Promise<Set<string> | null> {
+  private async _dagTipsFor(
+    table: string,
+  ): Promise<{ tips: Set<string>; referenced: Set<string> } | null> {
     const existing = this._dagTips.get(table);
     if (existing) return existing;
 
@@ -1879,44 +1887,51 @@ export class Db {
     const rows = dump[insertHistoryTable]._data as InsertHistoryRow<any>[];
 
     // Build set of all timeIds that appear as someone's previous
-    const referencedAsParent = new Set<string>();
+    const referenced = new Set<string>();
     for (const row of rows) {
       if (row.previous) {
         for (const p of row.previous) {
-          referencedAsParent.add(p);
+          referenced.add(p);
         }
       }
     }
 
-    // Tips are rows whose timeId is NOT in referencedAsParent
+    // Tips are rows whose timeId is NOT referenced
     const tips = new Set<string>();
     for (const row of rows) {
-      if (!referencedAsParent.has(row.timeId)) {
+      if (!referenced.has(row.timeId)) {
         tips.add(row.timeId);
       }
     }
 
-    this._dagTips.set(table, tips);
-    return tips;
+    const state = { tips, referenced };
+    this._dagTips.set(table, state);
+    return state;
   }
 
   /**
-   * Applies a freshly written InsertHistory row to the tracked DAG tips.
-   * Only updates already initialized tip sets — a cold start scans the
-   * full history including the new row anyway.
+   * Applies a freshly written InsertHistory row to the tracked DAG tip
+   * state. Only updates already initialized states — a cold start scans
+   * the full history including the new row anyway.
    * @param table - The table the row was written for
    * @param row - The written InsertHistory row
    */
   private _applyRowToDagTips(table: string, row: InsertHistoryRow<any>): void {
-    const tips = this._dagTips.get(table);
-    if (!tips) return;
+    const state = this._dagTips.get(table);
+    if (!state) return;
 
     if (row.previous) {
       for (const p of row.previous) {
-        tips.delete(p);
+        state.referenced.add(p);
+        state.tips.delete(p);
       }
     }
-    tips.add(row.timeId);
+
+    // A row already referenced by an earlier-arrived descendant is not
+    // a tip (out-of-order arrival)
+    if (!state.referenced.has(row.timeId)) {
+      state.tips.add(row.timeId);
+    }
   }
 
   // ...........................................................................
