@@ -1,7 +1,7 @@
 # @rljson/db — Performance Optimization Concept
 
 Branch: `performance-optimization`
-Status: **CONCEPT — awaiting approval, no implementation yet**
+Status: **IMPLEMENTED (Phases 0–4) — measured results in §5.3**
 Scope: `@rljson/db` (this package). Cross-repo opportunities in `@rljson/io` are listed separately in §7 and are optional.
 
 ---
@@ -429,6 +429,52 @@ Note: setup uses top-level await; `beforeAll` is not executed in vitest benchmar
 | `db.get` flat component table | 0.014 ms | |
 | Tree expansion via route ref (~176 nodes) | 2.84 ms | route `tree@ref/root` |
 | `db.insert` component (history grows) | 4.41 ms | includes validation + DAG scan |
+
+---
+
+## 5.3 Measured Results After Implementation (same machine/suite as §5.2)
+
+| Benchmark | Baseline | After Phases 1–4 | Speedup |
+| --- | --- | --- | --- |
+| `db.join` mass-data (102 slices × 12 cols) | 853.5 ms | **151–179 ms** | **~5–5.6×** |
+| `join.filter` string startsWith (102 rows) | 386.4 ms | **0.018 ms** | **~21 000×** |
+| `join.rows` materialization (102×12) | 3.89 ms | ~0.00002 ms (memoized) | effectively free |
+| `join.select` 3 of 12 columns | 0.46 ms | 0.052 ms | ~9× |
+| `db.get` nested cake→layer→component | 0.66 ms | 0.14 ms | ~4.7× |
+| `db.get` flat component table | 0.014 ms | 0.013 ms | ~1× (already trivial) |
+| Tree expansion via route ref (~176 nodes) | 2.84 ms | 0.37 ms | ~7.6× |
+| `db.insert` component (growing history) | 4.41 ms | 4.32 ms | ~1× — **io-bound, see below** |
+
+### Insert path analysis (why insert did not speed up)
+
+Profiling shows the residual insert cost is **entirely in `IoMem.write`** (~4 ms
+per call: O(table) dedup `find`, full-table re-sort and SHA re-hash per write —
+IO-3 in §7). The db-layer contribution is now negligible:
+
+- `core.import` raw write (validation off): ~4.2 ms — the io floor
+- full `db.insert` incl. validation, history row, conflict detection: ~3.8 ms
+
+What DID change structurally: conflict detection no longer dumps and scans the
+full InsertHistory per insert (F23). Insert cost is now **flat** in history
+length instead of O(N) — at 10 000 history rows this alone would dominate.
+Further insert gains require the `@rljson/io` items in §7 (IO-2/IO-3),
+which are out of scope for this package.
+
+### Deviations from the concept
+
+- **F22 (skip validation) applied only to internal writes** (`_writeInsertHistory`).
+  Controller `insert` payloads are user-provided via `db.insert`, so their
+  validation is load-bearing and stays on.
+- **F9 stage 1 (route-group dedupe) and stage 3 (single-pass slicing) deferred.**
+  After Phases 1–3 the join dropped 853→~165 ms via caching/parallelism alone.
+  The remaining cost is ~1 200 `_get` chains at ~0.13 ms; stage 1 would halve
+  the chains (columns share ~6 route groups), stage 3 would reduce them to
+  O(unique layer tables). Both remain the top follow-up items, together with
+  IO-4 (batch reads).
+- **F18 implemented per-node instead of table-dump.** A full-table dump breaks
+  the IoMulti per-row cascade (caught by `io-multi-tree-cascade` tests);
+  expansion is now parallel per level and served by the F20 row cache on
+  repeated reads.
 
 ---
 

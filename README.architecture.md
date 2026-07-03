@@ -8,7 +8,7 @@ This document provides a deep dive into the architecture, design patterns, and i
 - [Architecture Layers](#architecture-layers)
 - [Core Components](#core-components)
 - [Data Flow](#data-flow)
-- [Controller Pattern](#controller-pattern)
+- [Controller Pattern](#3-controller-pattern)
 - [Route Resolution](#route-resolution)
 - [Caching Strategy](#caching-strategy)
 - [Tree Processing](#tree-processing)
@@ -31,7 +31,7 @@ This document provides a deep dive into the architecture, design patterns, and i
 
 ## Architecture Layers
 
-```
+```text
 ┌─────────────────────────────────────────────┐
 │              Application Layer              │
 │         (User Queries & Mutations)          │
@@ -224,7 +224,7 @@ class LayerController extends Controller {
 
 ### Query Flow (db.get)
 
-```
+```text
 1. Parse Route
    Route.fromFlat('/users/projects/tasks')
    ↓
@@ -255,7 +255,7 @@ class LayerController extends Controller {
 
 ### Insert Flow (db.insert)
 
-```
+```text
 1. Validate Route
    ↓
 2. Index Controllers
@@ -281,7 +281,7 @@ Routes define paths through related data. The route system supports:
 
 ### Route Syntax
 
-```
+```text
 /tableName                          # Root table
 /tableName@hash                     # Specific row by hash
 /tableName@timeId                   # Historic version
@@ -314,7 +314,7 @@ type RouteSegment = {
 
 Route: `/users@hash123/projects`
 
-```
+```text
 Segment 1: users@hash123
 ├─ Table: users
 ├─ Ref: hash123
@@ -328,38 +328,55 @@ Segment 2: projects
 
 ## Caching Strategy
 
-### Cache Key Generation
+The database uses several complementary caches, all exploiting the
+content-addressed immutability of RLJSON data:
+
+### 1. Query cache (`Db._cache`)
+
+Cache keys are plain deterministic strings (route + serialized
+where/filter/sliceIds/options) — an order of magnitude cheaper than the
+former SHA-hash-of-deep-clone keys.
 
 ```typescript
-const cacheKey = hsh({
-  route: route.flat,
-  where: where,
-  filter: filter,
-  sliceIds: sliceIds,
-  routeAccumulator: routeAccumulator.flat,
-  options: options
-})._hash;
+const cacheKey =
+  route.flat + '|' + JSON.stringify(where) + '|' + JSON.stringify(filter) +
+  '|' + sliceIds.join(',') + '|' + routeAccumulator.flat + '|' + optionBits;
 ```
 
-### Cache Conditions
+Caching is enabled when the route contains hash references (`@hash`) or
+filters are applied; plain unfiltered queries are never cached.
 
-Caching is enabled when:
+**Invalidation:**
 
-- Route contains hash references (`@hash`)
-- Filters are applied
-- SliceIds are specified
+- Automatic: cache entries are indexed by the tables of their route and
+  dropped when those tables receive data via `Db.insert`/`Db.insertTrees`
+- Manual: `db.setCache(new Map())`
+- Size-based: bounded LRU (500 entries, hit refreshes recency)
 
-Caching is disabled for:
+### 2. Content-addressed row cache (`Core.readRow`)
 
-- Empty WHERE clauses
-- Routes without references
-- Time-based queries (to ensure freshness)
+Rows are immutable and identified by content hash, so a successful
+`(table, hash)` read is cached forever (bounded FIFO, 10 000 entries).
+Concurrent reads of the same row are coalesced into one Io request.
+Misses are not cached — a row may appear after a later insert.
 
-### Cache Invalidation
+### 3. Configuration caches (`Core`)
 
-- Manual: `db.clearCache()`
-- Automatic: On insert operations (via notify callbacks)
-- Size-based: LRU eviction (if implemented)
+`rawTableCfgs` (invalidated on table creation/extension), positive
+`hasTable` results and per-table content types are cached — they are
+immutable or only grow.
+
+### 4. Controller cache (`Db.getController`)
+
+Initialized ref-less controllers are reused per table and invalidated
+via a configuration version counter. Controllers memoize resolved base
+layers and sliceIds by content hash.
+
+### 5. Incremental DAG tips (`Db.detectDagBranch`)
+
+InsertHistory tips are computed with one scan on first access and then
+maintained in O(|previous|) per insert — conflict detection no longer
+dumps the history per written row.
 
 ## Tree Processing
 
@@ -507,7 +524,7 @@ class Join {
 
 ### Join Processing Pipeline
 
-```
+```text
 Container (rljson, tree, cell)
     ↓
 Initialize Join
@@ -573,7 +590,7 @@ The MultiEditManager provides transactional editing capabilities.
 
 ### Architecture
 
-```
+```text
 MultiEditManager
 ├─ Tracks head MultiEditProcessor
 ├─ Registers as Db notify callback
@@ -598,7 +615,7 @@ type EditAction = {
 
 ### Transaction Flow
 
-```
+```text
 1. Create MultiEditManager
    ↓
 2. Start multiEdit()
@@ -783,7 +800,7 @@ The `Connector` class implements the client side of the RLJSON sync protocol. It
 
 ### Responsibilities
 
-```
+```text
 ┌────────────────────────────────────────────────┐
 │                  Connector                     │
 │                                                │
