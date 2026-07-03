@@ -4,7 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { rmhsh } from '@rljson/hash';
+import { hip, rmhsh } from '@rljson/hash';
 import { Io, IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import {
@@ -1672,6 +1672,72 @@ describe('Db', () => {
         const nodes = result.rljson[largeTreeKey]._data;
         expect(nodes).toHaveLength(1);
         expect(nodes[0]._hash).toBe(largeRootHash);
+      });
+
+      it('expands a childless root node to itself', async () => {
+        const soloTreeKey = 'soloTree';
+        await treeDb.core.createTableWithInsertHistory(
+          createTreesTableCfg(soloTreeKey),
+        );
+
+        // Node without a children property
+        const solo = hip({
+          id: 'root',
+          meta: {},
+          isParent: false,
+          _hash: '',
+        });
+
+        await treeDb.core.import(
+          {
+            [soloTreeKey]: { _type: 'trees', _data: [solo] },
+          },
+          { validate: false },
+        );
+
+        const route = `/${soloTreeKey}@${solo._hash}/root`;
+        const { rljson } = await treeDb.get(Route.fromFlat(route), {});
+
+        const hashes = rljson[soloTreeKey]._data.map((r: any) => r._hash);
+        expect(hashes).toEqual([solo._hash]);
+      });
+
+      it('skips children that cannot be resolved during expansion', async () => {
+        const brokenTreeKey = 'brokenTree';
+        await treeDb.core.createTableWithInsertHistory(
+          createTreesTableCfg(brokenTreeKey),
+        );
+
+        const leaf = hip({
+          id: 'leaf',
+          children: [],
+          meta: {},
+          isParent: false,
+          _hash: '',
+        });
+        const root = hip({
+          id: 'root',
+          children: ['MISSING-CHILD-HASH', leaf._hash],
+          meta: {},
+          isParent: true,
+          _hash: '',
+        });
+
+        // validate:false — the validator would (rightly) reject the
+        // missing child node; expansion robustness is tested here
+        await treeDb.core.import(
+          {
+            [brokenTreeKey]: { _type: 'trees', _data: [leaf, root] },
+          },
+          { validate: false },
+        );
+
+        const route = `/${brokenTreeKey}@${root._hash}/root`;
+        const { rljson } = await treeDb.get(Route.fromFlat(route), {});
+
+        // The missing child is skipped; leaf + root remain
+        const hashes = rljson[brokenTreeKey]._data.map((r: any) => r._hash);
+        expect(hashes).toEqual([leaf._hash, root._hash]);
       });
     });
   });

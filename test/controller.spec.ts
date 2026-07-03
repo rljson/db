@@ -146,6 +146,29 @@ describe('Controller', () => {
         );
       });
 
+      it('filterRow', async () => {
+        //Create ComponentController
+        const carGeneralComponentController = await createController(
+          'components',
+          core,
+          'carGeneral',
+        );
+
+        const row = staticExample().carGeneral._data[0] as unknown as Json;
+        const brand = (row as any).brand;
+
+        expect(
+          await carGeneralComponentController.filterRow(row, 'brand', brand),
+        ).toBe(true);
+        expect(
+          await carGeneralComponentController.filterRow(
+            row,
+            'brand',
+            'NON_EXISTING_BRAND',
+          ),
+        ).toBe(false);
+      });
+
       it('getChildRefs', async () => {
         //Create ComponentController
         const carTechnicalComponentController = await createController(
