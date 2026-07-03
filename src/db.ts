@@ -554,9 +554,10 @@ export class Db {
             }, new Map<string, string>())
         : null;
 
-    // Batch fetch all childRefs in parallel for better performance
+    // Batch fetch all childRefs in parallel. The rows are already in
+    // memory, so they are not re-queried by hash.
     const childRefsPromises = nodeRowsFiltered.map((nodeRow) =>
-      nodeController.getChildRefs((nodeRow as any)._hash),
+      nodeController.getChildRefsOfRow(nodeRow),
     );
     const allChildRefs = await Promise.all(childRefsPromises);
 
@@ -1079,10 +1080,22 @@ export class Db {
   }
 
   // ...........................................................................
+  /**
+   * Resolved sliceIds by (table, row hash). SliceIds rows are content
+   * addressed and immutable, so results stay valid for the Db lifetime.
+   */
+  private readonly _resolvedSliceIdsCache = new Map<string, SliceId[]>();
+
   private async _resolveSliceIds(
     sliceIdTable: string,
     sliceIdRow: string,
   ): Promise<SliceId[]> {
+    const cacheKey = sliceIdTable + '|' + sliceIdRow;
+    const cached = this._resolvedSliceIdsCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const sliceIdController: SliceIdController<any, any> =
       new SliceIdController(this.core, sliceIdTable);
     sliceIdController.init();
@@ -1102,7 +1115,9 @@ export class Db {
       }
     }
 
-    return Array.from(resolvedSliceIds);
+    const result = Array.from(resolvedSliceIds);
+    this._resolvedSliceIdsCache.set(cacheKey, result);
+    return result;
   }
 
   // ...........................................................................

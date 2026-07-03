@@ -178,10 +178,42 @@ export class LayerController<N extends string, C extends Layer>
     }
   }
 
+  /**
+   * Resolved base layers by layer content hash. Layers are immutable,
+   * so a resolved result stays valid for the controller's lifetime.
+   */
+  private readonly _resolvedLayers = new Map<
+    string,
+    { add: Record<string, string>; sliceIds: SliceId[] }
+  >();
+
+  /** Shared SliceIdControllers, one per sliceIds table */
+  private readonly _sliceIdControllers = new Map<
+    string,
+    SliceIdController<any, any>
+  >();
+
+  private _sliceIdController(table: string): SliceIdController<any, any> {
+    let controller = this._sliceIdControllers.get(table);
+    if (!controller) {
+      controller = new SliceIdController(this._core, table);
+      this._sliceIdControllers.set(table, controller);
+    }
+    return controller;
+  }
+
   async resolveBaseLayer(layer: Layer): Promise<{
     add: Record<string, string>;
     sliceIds: SliceId[];
   }> {
+    const layerHash = (layer as any)._hash as string | undefined;
+    if (layerHash) {
+      const cached = this._resolvedLayers.get(layerHash);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const add = new Map<string, string>();
     const sliceIds: Set<SliceId> = new Set<SliceId>();
 
@@ -232,8 +264,7 @@ export class LayerController<N extends string, C extends Layer>
       // Resolve base layer sliceIds recursively
       for (const sIds of baseLayerSliceIds as SliceIds[]) {
         //Resolve base SliceIds
-        const sliceIdController = new SliceIdController(
-          this._core,
+        const sliceIdController = this._sliceIdController(
           baseLayerSliceIdsTable,
         );
         const resolvedSliceIds = await sliceIdController.resolveBaseSliceIds(
@@ -300,7 +331,16 @@ export class LayerController<N extends string, C extends Layer>
         }
       }
 
-    return { add: Object.fromEntries(add), sliceIds: Array.from(sliceIds) };
+    const result = {
+      add: Object.fromEntries(add),
+      sliceIds: Array.from(sliceIds),
+    };
+
+    if (layerHash) {
+      this._resolvedLayers.set(layerHash, result);
+    }
+
+    return result;
   }
 
   async getChildRefs(
@@ -311,19 +351,32 @@ export class LayerController<N extends string, C extends Layer>
     const childRefs: ControllerChildProperty[] = [];
 
     for (const row of table._data) {
-      const layer = row as Layer;
-      const resolvedLayer = await this.resolveBaseLayer(layer);
+      childRefs.push(...(await this.getChildRefsOfRow(row as Json)));
+    }
 
-      for (const [sliceId, ref] of Object.entries(resolvedLayer.add)) {
-        /* v8 ignore next -- @preserve */ /* v8 ignore next -- @preserve */
-        if (sliceId.startsWith('_')) continue;
+    return childRefs;
+  }
 
-        childRefs.push({
-          tableKey: layer.componentsTable,
-          ref,
-          sliceIds: [sliceId],
-        });
-      }
+  // ...........................................................................
+  /**
+   * Retrieves references to child entries of an already fetched row.
+   * Avoids re-querying the row that the caller is already holding.
+   * @param row - The layer row to collect component references from
+   */
+  async getChildRefsOfRow(row: Json): Promise<ControllerChildProperty[]> {
+    const layer = row as Layer;
+    const resolvedLayer = await this.resolveBaseLayer(layer);
+    const childRefs: ControllerChildProperty[] = [];
+
+    for (const [sliceId, ref] of Object.entries(resolvedLayer.add)) {
+      /* v8 ignore next -- @preserve */ /* v8 ignore next -- @preserve */
+      if (sliceId.startsWith('_')) continue;
+
+      childRefs.push({
+        tableKey: layer.componentsTable,
+        ref,
+        sliceIds: [sliceId],
+      });
     }
 
     return childRefs;
