@@ -1508,10 +1508,13 @@ export class Db {
       }
     }
 
-    for (const result of results) {
-      //Notify listeners
-      if (!options?.skipNotification)
-        this.notify.notify(Route.fromFlat(result.route), result);
+    //Notify listeners. All results of this level share the same route,
+    //so it is parsed only once.
+    if (!options?.skipNotification && results.length > 0) {
+      const notifyRoute = Route.fromFlat(results[0].route);
+      for (const result of results) {
+        this.notify.notify(notifyRoute, result);
+      }
     }
 
     return results;
@@ -1838,11 +1841,18 @@ export class Db {
     const { [cakeKey + 'EditHistory']: result } =
       await editHistoryController.get(where);
 
+    // Precompute timestamps once instead of re-parsing them inside the
+    // sort comparator
+    const rows = result._data as EditHistory[];
+    const timestamps = new Map<string, number>();
+    for (const row of rows) {
+      timestamps.set(row.timeId, getTimeIdTimestamp(row.timeId)!);
+    }
+
     /* v8 ignore next -- @preserve */
-    return result._data.sort(
-      (h1, h2) =>
-        getTimeIdTimestamp(h2.timeId)! - getTimeIdTimestamp(h1.timeId)!,
-    ) as EditHistory[];
+    return rows.sort(
+      (h1, h2) => timestamps.get(h2.timeId)! - timestamps.get(h1.timeId)!,
+    );
   }
 
   // ...........................................................................

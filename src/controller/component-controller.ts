@@ -474,12 +474,11 @@ export class ComponentController<
       }
     }
 
-    //If we have multiple where clauses, merge the results
+    //If we have multiple where clauses, run them in parallel and merge
     if (splitted.length > 0) {
-      const results = [];
-      for (const s of splitted) {
-        results.push(await this._core.readRows(table, s));
-      }
+      const results = await Promise.all(
+        splitted.map((s) => this._core.readRows(table, s)),
+      );
       return merge(...results) as Rljson;
     } else {
       return this._core.readRows(table, where);
