@@ -74,6 +74,7 @@ export interface Controller<
     where: string | Json,
     filter?: Json,
   ): Promise<ControllerChildProperty[]>;
+  getChildRefsOfRow(row: Json): Promise<ControllerChildProperty[]>;
   filterRow(row: Json, key: string, value: JsonValue): Promise<boolean>;
   contentType(): ContentType;
   tableCfg(): TableCfg;

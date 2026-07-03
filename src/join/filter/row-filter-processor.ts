@@ -206,6 +206,9 @@ export class RowFilterProcessor {
       for (const cellValue of cellValues) {
         if (filter.matches(cellValue as string)) {
           result.push(i);
+          // A row must only be kept once, even when several of its cell
+          // values match
+          break;
         }
       }
     }
@@ -268,6 +271,7 @@ export class RowFilterProcessor {
       for (const cellValue of cellValues) {
         if (filter.matches(cellValue as string)) {
           applyTo[r] = true;
+          break;
         }
       }
     }

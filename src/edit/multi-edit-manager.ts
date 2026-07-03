@@ -56,18 +56,22 @@ export class MultiEditManager {
       );
     }
 
-    // Store the new Edit
-    await this._persistEdit(edit);
-
     let multiEditProc: MultiEditProcessor;
+    let multiEditRef: string;
     if (!this.head) {
+      // The processor reads the edit back from the db, so it must be
+      // persisted first
+      await this._persistEdit(edit);
+
       const multiEdit: MultiEdit = {
         _hash: '',
         edit: hsh(edit)._hash,
         previous: null,
       };
 
-      await this._persistMultiEdit(multiEdit);
+      // Persisting the MultiEdit and building the processor are
+      // independent — run them concurrently
+      const persistMultiEditPromise = this._persistMultiEdit(multiEdit);
 
       multiEditProc = await MultiEditProcessor.fromMultiEdit(
         this._db,
@@ -75,12 +79,20 @@ export class MultiEditManager {
         cakeRef!,
         multiEdit,
       );
-    } else {
-      multiEditProc = await this.head.processor.edit(edit);
-    }
 
-    // Store the new MultiEdit
-    const multiEditRef = await this._persistMultiEdit(multiEditProc.multiEdit);
+      multiEditRef = await persistMultiEditPromise;
+    } else {
+      // The processor works on the edit object directly — persist the
+      // edit concurrently with processing it
+      const persistEditPromise = this._persistEdit(edit);
+
+      multiEditProc = await this.head.processor.edit(edit);
+
+      await persistEditPromise;
+
+      // Store the new MultiEdit
+      multiEditRef = await this._persistMultiEdit(multiEditProc.multiEdit);
+    }
 
     // Create and store the new EditHistory pointing to the new MultiEdit
     const editHistoryRef = await this._persistEditHistory({

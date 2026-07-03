@@ -54,6 +54,9 @@ export abstract class BaseController<
   ): Promise<ControllerChildProperty[]>;
 
   // ...........................................................................
+  abstract getChildRefsOfRow(row: Json): Promise<ControllerChildProperty[]>;
+
+  // ...........................................................................
   abstract filterRow(
     row: Json,
     key: string,

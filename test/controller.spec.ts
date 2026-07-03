@@ -146,6 +146,29 @@ describe('Controller', () => {
         );
       });
 
+      it('filterRow', async () => {
+        //Create ComponentController
+        const carGeneralComponentController = await createController(
+          'components',
+          core,
+          'carGeneral',
+        );
+
+        const row = staticExample().carGeneral._data[0] as unknown as Json;
+        const brand = (row as any).brand;
+
+        expect(
+          await carGeneralComponentController.filterRow(row, 'brand', brand),
+        ).toBe(true);
+        expect(
+          await carGeneralComponentController.filterRow(
+            row,
+            'brand',
+            'NON_EXISTING_BRAND',
+          ),
+        ).toBe(false);
+      });
+
       it('getChildRefs', async () => {
         //Create ComponentController
         const carTechnicalComponentController = await createController(
@@ -1039,6 +1062,18 @@ describe('Controller', () => {
           'VIN11',
           'VIN12',
         ]);
+
+        // Repeated resolution is served from the memo cache
+        const resolvedAgain =
+          await carSliceIdController.resolveBaseSliceIds(sliceId);
+        expect(resolvedAgain).toBe(resolvedBaseSliceIds);
+
+        // SliceIds without a content hash are resolved without caching
+        const sliceIdWithoutHash = rmhsh(sliceId as any) as SliceIds;
+        const resolvedUncached =
+          await carSliceIdController.resolveBaseSliceIds(sliceIdWithoutHash);
+        expect(resolvedUncached.add).toEqual(resolvedBaseSliceIds.add);
+        expect(resolvedUncached).not.toBe(resolvedBaseSliceIds);
       });
 
       it('Insert -> Invalid Command', async () => {
@@ -1561,6 +1596,19 @@ describe('Controller', () => {
         expect(childRefsWhere.length).toBeGreaterThan(0); // WHERE queries should expand children
         expect(childRefsWhere[0].tableKey).toBe('exampleTree');
         expect(childRefsWhere[0].ref).toBeDefined();
+      });
+
+      it('getChildRefsOfRow returns no children to prevent recursion', async () => {
+        //Create TreeController
+        const treeController = await createController(
+          'trees',
+          treeCore,
+          'exampleTree',
+        );
+
+        const rootRow = trees[trees.length - 1] as any;
+        const childRefs = await treeController.getChildRefsOfRow(rootRow);
+        expect(childRefs).toEqual([]);
       });
 
       it('Table', async () => {

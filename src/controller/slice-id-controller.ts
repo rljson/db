@@ -133,9 +133,23 @@ export class SliceIdController<N extends string, C extends SliceId[]>
     }
   }
 
+  /**
+   * Resolved sliceIds by content hash. SliceIds rows are immutable,
+   * so a resolved result stays valid for the controller's lifetime.
+   */
+  private readonly _resolvedSliceIds = new Map<string, { add: SliceId[] }>();
+
   async resolveBaseSliceIds(sliceIds: SliceIds): Promise<{
     add: SliceId[];
   }> {
+    const sliceIdsHash = (sliceIds as any)._hash as string | undefined;
+    if (sliceIdsHash) {
+      const cached = this._resolvedSliceIds.get(sliceIdsHash);
+      if (cached) {
+        return cached;
+      }
+    }
+
     const add = new Set<SliceId>();
     const remove = new Set<SliceId>();
 
@@ -179,11 +193,22 @@ export class SliceIdController<N extends string, C extends SliceId[]>
       }
     }
 
-    return { add: Array.from(add) };
+    const result = { add: Array.from(add) };
+
+    if (sliceIdsHash) {
+      this._resolvedSliceIds.set(sliceIdsHash, result);
+    }
+
+    return result;
   }
 
   /* v8 ignore next -- @preserve */
   async getChildRefs(): Promise<ControllerChildProperty[]> {
+    return [];
+  }
+
+  /* v8 ignore next -- @preserve */
+  async getChildRefsOfRow(): Promise<ControllerChildProperty[]> {
     return [];
   }
 

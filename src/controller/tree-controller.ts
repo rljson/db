@@ -140,16 +140,52 @@ export class TreeController<N extends string, C extends Tree>
       } as Rljson;
     }
 
-    // Expand children for route navigation
+    // Expand children for route navigation. Nodes of one level are
+    // fetched in parallel; per-node reads preserve the IoMulti cascade
+    // and are served by Core's content-addressed row cache on repeats.
+    //
+    // While the path still has segments, only the child matching the
+    // next segment id is expanded. Once the path is exhausted, the
+    // whole subtree is expanded — mirrors the previous sequential
+    // recursion.
     const children: any[] = [];
-    for (const childRef of tree.children ?? []) {
-      const child = await this.get(
-        childRef,
-        undefined,
-        treeRoute.deeper().flat,
+    const treeChildren = tree.children ?? [];
+    if (treeChildren.length > 0) {
+      const expand = async (
+        childHash: string,
+        childPath: string,
+      ): Promise<Tree[]> => {
+        const {
+          [this._tableKey]: { _data: childRows },
+        } = await this._core.readRow(this._tableKey, childHash);
+
+        const child = childRows[0] as Tree | undefined;
+        if (!child) return [];
+
+        const childRoute = Route.fromFlat(childPath || '');
+        /* v8 ignore next -- @preserve */
+        const childId =
+          childRoute.segments.length > 0 ? childRoute.top.tableKey : null;
+
+        /* v8 ignore next -- @preserve */
+        if (childId && childId !== child.id) {
+          return [];
+        }
+
+        const deeperPath = childRoute.deeper().flat;
+        const grandResults = await Promise.all(
+          (child.children ?? []).map((grandChildHash) =>
+            expand(grandChildHash as string, deeperPath),
+          ),
+        );
+        return [...grandResults.flat(), child];
+      };
+
+      const childPath = treeRoute.deeper().flat;
+      const childResults = await Promise.all(
+        treeChildren.map((childRef) => expand(childRef as string, childPath)),
       );
-      const childData = child[this._tableKey]._data;
-      children.push(...childData);
+      children.push(...childResults.flat());
     }
     return {
       [this._tableKey]: {
@@ -356,6 +392,15 @@ export class TreeController<N extends string, C extends Tree>
     }
 
     return cells;
+  }
+
+  /**
+   * Mirrors the hash-query behavior of getChildRefs: children of an
+   * already fetched tree row are not expanded to prevent infinite
+   * recursion in db._get().
+   */
+  async getChildRefsOfRow(): Promise<ControllerChildProperty[]> {
+    return [];
   }
 
   async getChildRefs(

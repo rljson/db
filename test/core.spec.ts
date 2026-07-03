@@ -204,6 +204,56 @@ describe('Core', () => {
       const result = await core.readRow('table', rowHash);
       expect((result.table as any)._data[0]).toEqual(rowExpected);
     });
+
+    it('serves repeated reads of the same row from the row cache', async () => {
+      const dump = await core.dumpTable('table');
+      const rowExpected = (dump.table as TableType)._data[0];
+      const rowHash = rowExpected._hash as string;
+
+      const first = await core.readRow('table', rowHash);
+      const second = await core.readRow('table', rowHash);
+      expect(second).toBe(first);
+    });
+
+    it('coalesces concurrent reads of the same row', async () => {
+      const dump = await core.dumpTable('table');
+      const rowExpected = (dump.table as TableType)._data[0];
+      const rowHash = rowExpected._hash as string;
+
+      const [first, second] = await Promise.all([
+        core.readRow('table', rowHash),
+        core.readRow('table', rowHash),
+      ]);
+      expect(second).toBe(first);
+    });
+
+    it('does not cache misses and evicts oldest rows when full', async () => {
+      // A missing row is not cached
+      const miss1 = await core.readRow('table', 'MISSING-HASH');
+      const miss2 = await core.readRow('table', 'MISSING-HASH');
+      expect((miss1.table as TableType)._data.length).toBe(0);
+      expect(miss2).not.toBe(miss1);
+
+      // Eviction keeps the cache bounded
+      await core.import({
+        table: {
+          _type: 'components',
+          _data: [{ int: 42, string: 'evictionRow', _hash: '' }],
+        },
+      } as unknown as Rljson);
+      const dump = await core.dumpTable('table');
+      const rows = (dump.table as TableType)._data;
+      expect(rows.length).toBeGreaterThan(1);
+
+      (core as any)._maxRowCacheEntries = 1;
+      (core as any)._rowCache.clear();
+
+      await core.readRow('table', rows[0]._hash as string);
+      await core.readRow('table', rows[1]._hash as string);
+      expect((core as any)._rowCache.size).toBe(1);
+
+      (core as any)._maxRowCacheEntries = 10000;
+    });
   });
 
   describe('readRows(table, where)', () => {

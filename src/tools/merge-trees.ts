@@ -51,21 +51,25 @@ export const mergeTrees = (
     }
   }
 
-  // Group values by their paths
-  const pathGroups = new Map<string, Json[]>();
+  // Group values by their paths. The original path array is kept in the
+  // group to avoid re-parsing the key.
+  const pathGroups = new Map<
+    string,
+    { path: Array<string | number>; values: Json[] }
+  >();
 
   for (const { path, value } of pathValues) {
     const pathKey = JSON.stringify(path);
-    if (!pathGroups.has(pathKey)) {
-      pathGroups.set(pathKey, []);
+    let group = pathGroups.get(pathKey);
+    if (!group) {
+      group = { path, values: [] };
+      pathGroups.set(pathKey, group);
     }
-    pathGroups.get(pathKey)!.push(value);
+    group.values.push(value);
   }
 
   // Merge values for each unique path and set them in the result
-  for (const [pathKey, values] of pathGroups) {
-    const path = JSON.parse(pathKey) as Array<string | number>;
-
+  for (const { path, values } of pathGroups.values()) {
     // Merge all values at this path
     let mergedValue: Json | undefined = undefined;
     for (const value of values) {

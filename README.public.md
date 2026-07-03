@@ -86,7 +86,7 @@ Data is **never modified in place**. All mutations create new versions:
 
 Routes define paths through related data. They use a flat string syntax:
 
-```
+```text
 /tableName                          # Root table
 /tableName@hash                     # Specific row by hash
 /tableName@timeId                   # Historic version
@@ -569,13 +569,17 @@ The database automatically caches query results based on query signatures:
 console.log(`Cache size: ${db.cache.size}`);
 
 // Clear cache manually
-db.clearCache();
+db.setCache(new Map());
 
 // Caching is automatic when:
 // - Route contains hash references (@hash)
 // - Filters are applied
-// - SliceIds are specified
 ```
+
+Cached entries are invalidated automatically when their tables receive
+data through `db.insert`/`db.insertTrees`, and the cache is bounded by
+LRU eviction. Immutable rows fetched by content hash are additionally
+served from a row-level cache in `db.core`.
 
 ## Best Practices
 
@@ -719,12 +723,13 @@ await db.get(Route.fromFlat(`tree@${nodeHash}`));
 
 **Problem:** Stale data persists after modifications.
 
-**Solution:** Register notify callbacks to clear cache automatically:
+**Solution:** Query-cache entries are invalidated automatically when
+their tables receive data through `db.insert`/`db.insertTrees`. If data
+is written through other channels (e.g. `db.core.import` or a second
+Db instance sharing the same Io), reset the cache manually:
 
 ```typescript
-db.notify.register(route, async () => {
-  db.clearCache();
-});
+db.setCache(new Map());
 ```
 
 ## API Reference

@@ -4,7 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { rmhsh } from '@rljson/hash';
+import { hip, rmhsh } from '@rljson/hash';
 import { Io, IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import {
@@ -602,22 +602,58 @@ describe('Db', () => {
 
         const { rljson: firstGet } = await db.get(Route.fromFlat(route), where);
 
+        // 6 cacheable sub-queries are stored; non-cacheable calls (like the
+        // outermost one) are no longer written to the cache under an empty
+        // key.
         const cache = db.cache;
-        expect(cache.size).toBe(7);
-        expect(firstGet).toBe(
-          Array.from(cache.values()).map((v) => v.rljson)[6],
-        );
+        expect(cache.size).toBe(6);
 
         const { rljson: secondGet } = await db.get(
           Route.fromFlat(route),
           where,
         );
         expect(secondGet).toEqual(firstGet);
-        expect(cache.size).toBe(7);
+        expect(cache.size).toBe(6);
 
         //Reset cache
         db.setCache(new Map());
         expect(db.cache.size).toBe(0);
+      });
+      it('caches ref routes queried with a string where and skip options', async () => {
+        const all = await db.get(Route.fromFlat('carGeneral'), {});
+        const hash = (all.rljson.carGeneral._data[0] as any)._hash as string;
+
+        db.setCache(new Map());
+        const route = Route.fromFlat(`carGeneral@${hash}`);
+        const result = await db.get(route, hash, undefined, undefined, {
+          skipTree: true,
+        });
+
+        expect(result.rljson.carGeneral._data.length).toBe(1);
+        expect(result.tree).toEqual({});
+        expect(db.cache.size).toBe(1);
+
+        db.setCache(new Map());
+      });
+      it('evicts least recently used cache entries when the cache is full', async () => {
+        const route = '/carCake/carGeneralLayer/carGeneral';
+        const where = {
+          carGeneralLayer: {
+            carGeneral: { brand: 'Volkswagen' } as Partial<CarGeneral>,
+          },
+        };
+
+        // Shrink the cache to force eviction
+        (db as any)._maxCacheEntries = 2;
+
+        await db.get(Route.fromFlat(route), where);
+
+        // More than 2 cacheable sub-queries ran, but the bound holds
+        expect(db.cache.size).toBe(2);
+
+        // Reset
+        (db as any)._maxCacheEntries = 500;
+        db.setCache(new Map());
       });
       it('get component property by ref', async () => {
         const componentKey = 'carGeneral';
@@ -1637,6 +1673,72 @@ describe('Db', () => {
         expect(nodes).toHaveLength(1);
         expect(nodes[0]._hash).toBe(largeRootHash);
       });
+
+      it('expands a childless root node to itself', async () => {
+        const soloTreeKey = 'soloTree';
+        await treeDb.core.createTableWithInsertHistory(
+          createTreesTableCfg(soloTreeKey),
+        );
+
+        // Node without a children property
+        const solo = hip({
+          id: 'root',
+          meta: {},
+          isParent: false,
+          _hash: '',
+        });
+
+        await treeDb.core.import(
+          {
+            [soloTreeKey]: { _type: 'trees', _data: [solo] },
+          },
+          { validate: false },
+        );
+
+        const route = `/${soloTreeKey}@${solo._hash}/root`;
+        const { rljson } = await treeDb.get(Route.fromFlat(route), {});
+
+        const hashes = rljson[soloTreeKey]._data.map((r: any) => r._hash);
+        expect(hashes).toEqual([solo._hash]);
+      });
+
+      it('skips children that cannot be resolved during expansion', async () => {
+        const brokenTreeKey = 'brokenTree';
+        await treeDb.core.createTableWithInsertHistory(
+          createTreesTableCfg(brokenTreeKey),
+        );
+
+        const leaf = hip({
+          id: 'leaf',
+          children: [],
+          meta: {},
+          isParent: false,
+          _hash: '',
+        });
+        const root = hip({
+          id: 'root',
+          children: ['MISSING-CHILD-HASH', leaf._hash],
+          meta: {},
+          isParent: true,
+          _hash: '',
+        });
+
+        // validate:false — the validator would (rightly) reject the
+        // missing child node; expansion robustness is tested here
+        await treeDb.core.import(
+          {
+            [brokenTreeKey]: { _type: 'trees', _data: [leaf, root] },
+          },
+          { validate: false },
+        );
+
+        const route = `/${brokenTreeKey}@${root._hash}/root`;
+        const { rljson } = await treeDb.get(Route.fromFlat(route), {});
+
+        // The missing child is skipped; leaf + root remain
+        const hashes = rljson[brokenTreeKey]._data.map((r: any) => r._hash);
+        expect(hashes).toEqual([leaf._hash, root._hash]);
+      });
     });
   });
   describe('insert', () => {
@@ -2492,6 +2594,33 @@ describe('Db', () => {
       expect(result[`${treeKey}Ref`]).toBe(rootHash);
       expect(result.route).toBe(`/${treeKey}`);
       expect(result.timeId).toBeDefined();
+    });
+
+    it('maintains DAG tips incrementally across inserts', async () => {
+      // First insert cold-starts the tip tracking
+      const firstTrees: Array<Tree> = treeFromObject({ first: 'value' });
+      const [first] = await treeDb.insertTrees(treeKey, firstTrees);
+
+      expect(await treeDb.detectDagBranch(treeKey)).toBeNull();
+
+      // Second insert without predecessors hits the warm tip set and
+      // creates a second tip -> conflict
+      const secondTrees: Array<Tree> = treeFromObject({ second: 'value' });
+      const [second] = await treeDb.insertTrees(treeKey, secondTrees);
+
+      const conflict = await treeDb.detectDagBranch(treeKey);
+      expect(conflict).not.toBeNull();
+      expect(conflict!.branches.sort()).toEqual(
+        [first.timeId, second.timeId].sort(),
+      );
+
+      // A merge revision referencing both tips collapses the fork
+      const mergeTreesData: Array<Tree> = treeFromObject({ merged: 'value' });
+      await treeDb.insertTrees(treeKey, mergeTreesData, {
+        previous: [first.timeId, second.timeId],
+      });
+
+      expect(await treeDb.detectDagBranch(treeKey)).toBeNull();
     });
 
     it('should write InsertHistory to the history table', async () => {

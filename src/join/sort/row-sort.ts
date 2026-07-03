@@ -105,56 +105,53 @@ export class RowSort {
     sortIndices: number[],
     sortOrders: Array<'asc' | 'desc'>,
   ): SliceId[] {
-    const result = [...join.rowIndices];
+    const rowIndices = join.rowIndices;
+
+    // Precompute the sort key of every row once (one pass) instead of
+    // re-deriving the values inside the O(n log n) comparator
+    //TODO: Make cells holding several values sortable
+    const sortKeys = new Map<SliceId, Array<unknown>>();
+    for (const sliceId of rowIndices) {
+      const row = join.row(sliceId);
+      const keys: Array<unknown> = [];
+      for (const index of sortIndices) {
+        const col = row[index];
+
+        /* v8 ignore next -- @preserve */
+        const insertValues = col.inserts
+          ? Array.isArray(col.inserts[0].cell[0].value)
+            ? col.inserts[0].cell[0].value!
+            : [col.inserts[0].cell[0].value!]
+          : null;
+        /* v8 ignore next -- @preserve */
+        const baseValues = col.value.cell[0].value
+          ? Array.isArray(col.value?.cell[0].value)
+            ? col.value.cell[0].value!
+            : [col.value.cell[0].value!]
+          : null;
+        /* v8 ignore next -- @preserve */
+        keys.push(
+          insertValues && insertValues[0]
+            ? insertValues[0]
+            : baseValues
+              ? baseValues[0]
+              : null,
+        );
+      }
+      sortKeys.set(sliceId, keys);
+    }
+
+    const result = [...rowIndices];
 
     // Sort
     return result.sort((a, b) => {
-      const rowA = join.row(a);
-      const rowB = join.row(b);
+      const keysA = sortKeys.get(a)!;
+      const keysB = sortKeys.get(b)!;
 
-      let i = 0;
-      for (const index of sortIndices) {
-        const sort = sortOrders[i++];
-        //TODO: Make cells holding several values sortable
-
-        /* v8 ignore next -- @preserve */
-        const rowAInsertValues = rowA[index].inserts
-          ? Array.isArray(rowA[index].inserts![0].cell[0].value)
-            ? rowA[index].inserts![0].cell[0].value!
-            : [rowA[index].inserts![0].cell[0].value!]
-          : null;
-        /* v8 ignore next -- @preserve */
-        const rowAValue = rowA[index].value.cell[0].value
-          ? Array.isArray(rowA[index].value?.cell[0].value)
-            ? rowA[index].value.cell[0].value!
-            : [rowA[index].value.cell[0].value!]
-          : null;
-        /* v8 ignore next -- @preserve */
-        const rowBInsertValues = rowB[index].inserts
-          ? Array.isArray(rowB[index].inserts![0].cell[0].value)
-            ? rowB[index].inserts![0].cell[0].value!
-            : [rowB[index].inserts![0].cell[0].value!]
-          : null;
-        /* v8 ignore next -- @preserve */
-        const rowBValue = rowB[index].value.cell[0].value
-          ? Array.isArray(rowB[index].value?.cell[0].value)
-            ? rowB[index].value.cell[0].value!
-            : [rowB[index].value.cell[0].value!]
-          : null;
-        /* v8 ignore next -- @preserve */
-        const vA =
-          rowAInsertValues && rowAInsertValues[0]
-            ? rowAInsertValues[0]
-            : rowAValue
-            ? rowAValue[0]
-            : null;
-        /* v8 ignore next -- @preserve */
-        const vB =
-          rowBInsertValues && rowBInsertValues[0]
-            ? rowBInsertValues[0]
-            : rowBValue
-            ? rowBValue[0]
-            : null;
+      for (let i = 0; i < sortIndices.length; i++) {
+        const sort = sortOrders[i];
+        const vA = keysA[i];
+        const vB = keysB[i];
 
         if (vA === vB) {
           continue;
