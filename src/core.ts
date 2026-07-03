@@ -24,6 +24,18 @@ export class Core {
     return new Core(await IoMem.example());
   };
 
+  /**
+   * Cache of raw table configurations.
+   * Invalidated whenever a table is created or extended.
+   */
+  private _tableCfgsCache: TableCfg[] | null = null;
+
+  /**
+   * Positive-only cache of existing tables. Tables can never be dropped
+   * through the Io interface, so a `true` result stays valid forever.
+   */
+  private readonly _existingTables = new Set<string>();
+
   // ...........................................................................
   /**
    * Creates a table and an insertHistory for the table
@@ -39,6 +51,7 @@ export class Core {
    * @param tableCfg TableCfg of table to create
    */
   async createTable(tableCfg: TableCfg): Promise<void> {
+    this._tableCfgsCache = null;
     return this._io.createOrExtendTable({ tableCfg });
   }
   /**
@@ -71,26 +84,30 @@ export class Core {
   /**
    * Imports data into the memory.
    * @param data - The rljson data to import.
+   * @param options - Set `validate: false` to skip validation for
+   *   internally constructed payloads whose shape is fixed by the caller.
    * @throws {Error} If the data is invalid.
    */
-  async import(data: Rljson): Promise<void> {
-    // Throw an error if the data is invalid
-    const validate = new Validate();
-    validate.addValidator(new BaseValidator());
+  async import(data: Rljson, options?: { validate?: boolean }): Promise<void> {
+    if (options?.validate !== false) {
+      // Throw an error if the data is invalid
+      const validate = new Validate();
+      validate.addValidator(new BaseValidator());
 
-    const result = await validate.run(data);
-    // If there are errors and they are not refsNotFound, throw an error
-    // refsNotFound can be ignored because we dont check against existing data
-    // when importing new data
-    if (
-      (result.hasErrors || (result.base && result.base.hasErrors)) &&
-      !result.base.refsNotFound &&
-      !result.base.layerBasesNotFound
-    ) {
-      throw new Error(
-        'The imported rljson data is not valid:\n' +
-          JSON.stringify(result, null, 2),
-      );
+      const result = await validate.run(data);
+      // If there are errors and they are not refsNotFound, throw an error
+      // refsNotFound can be ignored because we dont check against existing data
+      // when importing new data
+      if (
+        (result.hasErrors || (result.base && result.base.hasErrors)) &&
+        !result.base.refsNotFound &&
+        !result.base.layerBasesNotFound
+      ) {
+        throw new Error(
+          'The imported rljson data is not valid:\n' +
+            JSON.stringify(result, null, 2),
+        );
+      }
     }
 
     // Write data
@@ -104,7 +121,14 @@ export class Core {
 
   // ...........................................................................
   async hasTable(table: string): Promise<boolean> {
-    return await this._io.tableExists(table);
+    if (this._existingTables.has(table)) {
+      return true;
+    }
+    const exists = await this._io.tableExists(table);
+    if (exists) {
+      this._existingTables.add(table);
+    }
+    return exists;
   }
 
   // ...........................................................................
@@ -115,8 +139,10 @@ export class Core {
 
   // ...........................................................................
   async tableCfg(table: string): Promise<TableCfg> {
-    const tableCfgs = await this._io.rawTableCfgs();
-    const tableCfg = tableCfgs.find((tc) => tc.key === table) as TableCfg;
+    this._tableCfgsCache ??= await this._io.rawTableCfgs();
+    const tableCfg = this._tableCfgsCache.find(
+      (tc) => tc.key === table,
+    ) as TableCfg;
     return tableCfg;
   }
 

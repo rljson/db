@@ -602,22 +602,58 @@ describe('Db', () => {
 
         const { rljson: firstGet } = await db.get(Route.fromFlat(route), where);
 
+        // 6 cacheable sub-queries are stored; non-cacheable calls (like the
+        // outermost one) are no longer written to the cache under an empty
+        // key.
         const cache = db.cache;
-        expect(cache.size).toBe(7);
-        expect(firstGet).toBe(
-          Array.from(cache.values()).map((v) => v.rljson)[6],
-        );
+        expect(cache.size).toBe(6);
 
         const { rljson: secondGet } = await db.get(
           Route.fromFlat(route),
           where,
         );
         expect(secondGet).toEqual(firstGet);
-        expect(cache.size).toBe(7);
+        expect(cache.size).toBe(6);
 
         //Reset cache
         db.setCache(new Map());
         expect(db.cache.size).toBe(0);
+      });
+      it('caches ref routes queried with a string where and skip options', async () => {
+        const all = await db.get(Route.fromFlat('carGeneral'), {});
+        const hash = (all.rljson.carGeneral._data[0] as any)._hash as string;
+
+        db.setCache(new Map());
+        const route = Route.fromFlat(`carGeneral@${hash}`);
+        const result = await db.get(route, hash, undefined, undefined, {
+          skipTree: true,
+        });
+
+        expect(result.rljson.carGeneral._data.length).toBe(1);
+        expect(result.tree).toEqual({});
+        expect(db.cache.size).toBe(1);
+
+        db.setCache(new Map());
+      });
+      it('evicts least recently used cache entries when the cache is full', async () => {
+        const route = '/carCake/carGeneralLayer/carGeneral';
+        const where = {
+          carGeneralLayer: {
+            carGeneral: { brand: 'Volkswagen' } as Partial<CarGeneral>,
+          },
+        };
+
+        // Shrink the cache to force eviction
+        (db as any)._maxCacheEntries = 2;
+
+        await db.get(Route.fromFlat(route), where);
+
+        // More than 2 cacheable sub-queries ran, but the bound holds
+        expect(db.cache.size).toBe(2);
+
+        // Reset
+        (db as any)._maxCacheEntries = 500;
+        db.setCache(new Map());
       });
       it('get component property by ref', async () => {
         const componentKey = 'carGeneral';

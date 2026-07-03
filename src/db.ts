@@ -4,7 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { hsh, rmhsh } from '@rljson/hash';
+import { rmhsh } from '@rljson/hash';
 import { Io } from '@rljson/io';
 import { Json, JsonValue, merge } from '@rljson/json';
 import {
@@ -194,20 +194,29 @@ export class Db {
     let cacheHash = '';
 
     if (cacheable) {
-      //Activate Cache
-      const params = {
-        route: route.flat,
-        where,
-        filter,
-        sliceIds,
-        routeAccumulator: routeAccumulator ? routeAccumulator.flat : '',
-        options: opts,
-      };
-      cacheHash = (hsh(rmhsh(params)) as any)._hash as string;
+      //Activate Cache. A plain string key is an order of magnitude cheaper
+      //than hashing a deep clone of the parameters.
+      cacheHash =
+        route.flat +
+        '|' +
+        (typeof where === 'string' ? where : JSON.stringify(where)) +
+        '|' +
+        (filter ? JSON.stringify(filter) : '') +
+        '|' +
+        (sliceIds ? sliceIds.join(',') : '') +
+        '|' +
+        (routeAccumulator ? routeAccumulator.flat : '') +
+        '|' +
+        (opts.skipRljson ? '1' : '0') +
+        (opts.skipTree ? '1' : '0') +
+        (opts.skipCell ? '1' : '0');
 
-      const isCached = this._cache.has(cacheHash);
-      if (isCached) {
-        return this._cache.get(cacheHash)!;
+      const cached = this._cache.get(cacheHash);
+      if (cached) {
+        // Refresh LRU recency
+        this._cache.delete(cacheHash);
+        this._cache.set(cacheHash, cached);
+        return cached;
       }
     }
 
@@ -468,7 +477,9 @@ export class Db {
         }
 
         //Set Cache
-        this._cache.set(cacheHash, result);
+        if (cacheable) {
+          this._cacheSet(cacheHash, result);
+        }
 
         return result;
       }
@@ -502,7 +513,7 @@ export class Db {
 
       if (cacheable) {
         //Set Cache
-        this._cache.set(cacheHash, result);
+        this._cacheSet(cacheHash, result);
       }
 
       return result;
@@ -937,9 +948,31 @@ export class Db {
     };
 
     //Set Cache
-    this._cache.set(cacheHash, result);
+    if (cacheable) {
+      this._cacheSet(cacheHash, result);
+    }
 
     return result;
+  }
+
+  // ...........................................................................
+  /**
+   * Maximum number of entries kept in the query cache (LRU eviction)
+   */
+  private _maxCacheEntries = 500;
+
+  /**
+   * Stores a query result in the cache, evicting the least recently used
+   * entry when the cache is full
+   * @param key - The cache key
+   * @param value - The container to cache
+   */
+  private _cacheSet(key: string, value: Container): void {
+    if (this._cache.size >= this._maxCacheEntries) {
+      const oldest = this._cache.keys().next().value as string;
+      this._cache.delete(oldest);
+    }
+    this._cache.set(key, value);
   }
 
   // ...........................................................................
@@ -1679,13 +1712,17 @@ export class Db {
   ): Promise<void> {
     const insertHistoryTable = table + 'InsertHistory';
 
-    //Write InsertHistory row to io
-    await this.core.import({
-      [insertHistoryTable]: {
-        _data: [insertHistoryRow],
-        _type: 'insertHistory',
+    //Write InsertHistory row to io. The row is constructed internally,
+    //so validation can be skipped.
+    await this.core.import(
+      {
+        [insertHistoryTable]: {
+          _data: [insertHistoryRow],
+          _type: 'insertHistory',
+        },
       },
-    });
+      { validate: false },
+    );
 
     // Detect DAG branches after writing
     const conflict = await this.detectDagBranch(table);
@@ -1940,16 +1977,19 @@ export class Db {
    * @returns A route with extracted property key
    */
   async isolatePropertyKeyFromRoute(route: Route): Promise<Route> {
-    const segmentLength = route.segments.length;
+    const segments = route.segments;
+    // Probe all segments in parallel (results are independent)
+    const tablesExist = await Promise.all(
+      segments.map((segment) => this.core.hasTable(segment.tableKey)),
+    );
+
     let propertyKey = '';
     let result: Route = route;
-    for (let i = segmentLength; i > 0; i--) {
-      const segment = route.segments[i - 1];
-      const tableKey = segment.tableKey;
-      const tableExists = await this._io.tableExists(tableKey);
+    for (let i = segments.length; i > 0; i--) {
+      const segment = segments[i - 1];
 
       /* v8 ignore next -- @preserve */
-      if (!tableExists) {
+      if (!tablesExist[i - 1]) {
         propertyKey =
           propertyKey.length > 0
             ? segment.tableKey + '/' + propertyKey
