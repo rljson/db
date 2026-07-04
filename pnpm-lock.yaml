@@ -12,8 +12,8 @@ importers:
         specifier: ^0.0.18
         version: 0.0.18
       '@rljson/io':
-        specifier: ^0.0.66
-        version: 0.0.66
+        specifier: ^0.0.71
+        version: 0.0.71
       '@rljson/json':
         specifier: ^0.0.23
         version: 0.0.23
@@ -429,8 +429,8 @@ packages:
     resolution: {integrity: sha512-DT5+32hkDLTlwrgmmtsxcUzjdeS+jdPkeIQnyRdstCNKH4FsQD2zdl/ztr5LfDe/4oYxeH8VapfKdrbSj1jIgw==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/io@0.0.66':
-    resolution: {integrity: sha512-3bqp+h+ifMrc6ki6N39vdp7XC6b2bjKodR4Grbv++7+s0RczaMZCPV81ylAIqWL/XBy63o3rTRqaFkGND/SrbA==}
+  '@rljson/io@0.0.71':
+    resolution: {integrity: sha512-e+GUwKtBfkuBJdXiuqjmdrVJiNNANgpxbs9Qjo/WkzrqtvKNELUWDAxRxtoBmy5w9lPD2YWlD6SaX5MfQidXWg==}
     engines: {node: '>=22.14.0'}
 
   '@rljson/is-ready@0.0.17':
@@ -1422,6 +1422,11 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  nanoid@5.1.16:
+    resolution: {integrity: sha512-kVrnsrJqMR8+oLJnGEmSWw9BivK5mt7H3FZatVRjrc5wGqFYuBxX1yG7+A7Gi5AefkX6t/oCkizcQgpu0cY1dQ==}
+    engines: {node: ^18 || >=20}
+    hasBin: true
+
   nanoid@5.1.6:
     resolution: {integrity: sha512-c7+7RQ+dMB5dPwwCp4ee1/iV/q2P6aK1mTZcfr1BTuVlyW9hJYiMPybJCcnBlQtuSmTIWNeazm/zqNoZSSElBg==}
     engines: {node: ^18 || >=20}
@@ -2178,7 +2183,7 @@ snapshots:
       '@rljson/json': 0.0.23
       js-base64: 3.7.8
 
-  '@rljson/io@0.0.66':
+  '@rljson/io@0.0.71':
     dependencies:
       '@rljson/hash': 0.0.18
       '@rljson/is-ready': 0.0.17
@@ -2207,7 +2212,7 @@ snapshots:
     dependencies:
       '@rljson/hash': 0.0.18
       '@rljson/json': 0.0.23
-      nanoid: 5.1.6
+      nanoid: 5.1.16
 
   '@rljson/rljson@0.0.77':
     dependencies:
@@ -3220,6 +3225,8 @@ snapshots:
   muggle-string@0.4.1: {}
 
   nanoid@3.3.11: {}
+
+  nanoid@5.1.16: {}
 
   nanoid@5.1.6: {}
 
