@@ -52,7 +52,7 @@
   },
   "dependencies": {
     "@rljson/hash": "^0.0.18",
-    "@rljson/io": "^0.0.66",
+    "@rljson/io": "^0.0.71",
     "@rljson/json": "^0.0.23",
     "@rljson/rljson": "^0.0.77",
     "@rljson/validate": "^0.0.11",

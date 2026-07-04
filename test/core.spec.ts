@@ -290,6 +290,65 @@ describe('Core', () => {
     });
   });
 
+  describe('readRowsByHashes(table, hashes)', () => {
+    it('reads rows in one batch, caches them and skips missing/duplicates', async () => {
+      const dump = await core.dumpTable('table');
+      const row = (dump.table as TableType)._data[0];
+      const hash = row._hash as string;
+
+      const result = await core.readRowsByHashes('table', [
+        hash,
+        hash,
+        'MISSING',
+      ]);
+      expect(result.size).toBe(1);
+      expect(result.get(hash)).toEqual(row);
+
+      // Second call is served from the batch row cache
+      const again = await core.readRowsByHashes('table', [hash]);
+      expect(again.get(hash)).toBe(result.get(hash));
+    });
+
+    it('falls back to per-hash reads when the io lacks batch support', async () => {
+      const ioWithoutBatch = Object.create(io);
+      ioWithoutBatch.readRowsByHashes = undefined;
+      const coreNoBatch = new Core(ioWithoutBatch);
+
+      const dump = await coreNoBatch.dumpTable('table');
+      const row = (dump.table as TableType)._data[0];
+      const hash = row._hash as string;
+
+      const result = await coreNoBatch.readRowsByHashes('table', [
+        hash,
+        'MISSING',
+      ]);
+      expect(result.size).toBe(1);
+      expect(result.get(hash)).toEqual(row);
+    });
+
+    it('evicts oldest batch rows when the cache is full', async () => {
+      await core.import({
+        table: {
+          _type: 'components',
+          _data: [{ int: 77, string: 'batchEvictionRow', _hash: '' }],
+        },
+      } as unknown as Rljson);
+
+      const dump = await core.dumpTable('table');
+      const rows = (dump.table as TableType)._data;
+      expect(rows.length).toBeGreaterThan(1);
+
+      (core as any)._maxBatchRowCacheEntries = 1;
+      (core as any)._batchRowCache.clear();
+
+      await core.readRowsByHashes('table', [rows[0]._hash as string]);
+      await core.readRowsByHashes('table', [rows[1]._hash as string]);
+      expect((core as any)._batchRowCache.size).toBe(1);
+
+      (core as any)._maxBatchRowCacheEntries = 10000;
+    });
+  });
+
   describe('readRows(table, where)', () => {
     beforeEach(async () => {
       const binaryTableCfgs = hip<TablesCfgTable>({
