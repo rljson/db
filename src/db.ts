@@ -1129,27 +1129,70 @@ export class Db {
       (cake as Cake).sliceIdsRow,
     );
 
-    // Parse each column route once; all slices share them
-    const columnRoutes = columnSelection.columns.map((columnInfo) =>
-      Route.fromFlat(columnInfo.route).toRouteWithProperty(),
+    // Group columns by their route without the trailing property key —
+    // columns of the same component table share one query per slice
+    // instead of one query per column. Only routes whose remaining
+    // segments are all tables are groupable; others use the direct
+    // per-column path.
+    const columnMetas = await Promise.all(
+      columnSelection.columns.map(async (columnInfo) => {
+        const route = Route.fromFlat(columnInfo.route).toRouteWithProperty();
+        const groupRoute = Route.fromFlat(route.flatWithoutPropertyKey);
+        const isolated = await this.isolatePropertyKeyFromRoute(groupRoute);
+        const groupable = !isolated.hasPropertyKey;
+        return {
+          route,
+          propertyKey: route.propertyKey!,
+          groupKey: groupRoute.flat,
+          groupRoute,
+          groupable,
+        };
+      }),
     );
 
-    // Fetch all slice/column containers in parallel. Results are
-    // assembled in the original slice and column order afterwards.
+    const groups = new Map<string, Route>();
+    for (const meta of columnMetas) {
+      if (meta.groupable && !groups.has(meta.groupKey)) {
+        groups.set(meta.groupKey, meta.groupRoute);
+      }
+    }
+
+    // Fetch the per-slice containers of every route group
+    const groupContainers = new Map<
+      string,
+      Map<SliceId, ContainerWithControllers>
+    >();
+    await Promise.all(
+      Array.from(groups.entries()).map(async ([groupKey, groupRoute]) => {
+        groupContainers.set(
+          groupKey,
+          await this._joinGroupContainers(
+            groupRoute,
+            cakeKey,
+            cakeRef,
+            sliceIds,
+          ),
+        );
+      }),
+    );
+
+    // Assemble the join rows in original slice and column order
     const sliceRows = await Promise.all(
       sliceIds.map((sliceId) =>
         Promise.all(
-          columnRoutes.map(async (columnRoute) => {
-            const columnContainer = await this.get(
-              columnRoute,
-              cakeRef,
-              undefined,
-              [sliceId],
-            );
+          columnMetas.map(async (meta) => {
+            /* v8 ignore next -- @preserve */
+            const value = meta.groupable
+              ? this._derivePropertyContainer(
+                  groupContainers.get(meta.groupKey)!.get(sliceId)!,
+                  meta.groupRoute,
+                  meta.propertyKey,
+                )
+              : await this.get(meta.route, cakeRef, undefined, [sliceId]);
 
             const column: JoinColumn = {
-              route: columnRoute,
-              value: columnContainer,
+              route: meta.route,
+              value,
               inserts: null,
             };
             return column;
@@ -1165,6 +1208,279 @@ export class Db {
 
     // Return Join
     return new Join(rows, columnSelection);
+  }
+
+  // ...........................................................................
+  /**
+   * Fetches the per-slice containers of one join route group.
+   *
+   * Fast path for the standard cake/layer/component shape: the group is
+   * fetched ONCE without slice filtering and sliced locally. Any shape
+   * deviation falls back to one slice-filtered query per slice — the
+   * previous behavior.
+   * @param groupRoute - The group route (no property key)
+   * @param cakeKey - The cake table key
+   * @param cakeRef - The cake row hash
+   * @param sliceIds - All slices of the join
+   */
+  private async _joinGroupContainers(
+    groupRoute: Route,
+    cakeKey: string,
+    cakeRef: Ref,
+    sliceIds: SliceId[],
+  ): Promise<Map<SliceId, ContainerWithControllers>> {
+    const result = new Map<SliceId, ContainerWithControllers>();
+
+    // Single-fetch fast path for cake/layer/component... groups
+    let derived: Map<SliceId, ContainerWithControllers> | null = null;
+    if (
+      groupRoute.segments.length >= 3 &&
+      groupRoute.segments[0].tableKey === cakeKey
+    ) {
+      const base = await this.get(groupRoute, cakeRef);
+      derived = this._sliceGroupContainers(
+        base,
+        groupRoute,
+        cakeKey,
+        sliceIds,
+      );
+    }
+
+    await Promise.all(
+      sliceIds.map(async (sliceId) => {
+        const container =
+          derived?.get(sliceId) ??
+          (await this.get(groupRoute, cakeRef, undefined, [sliceId]));
+        result.set(sliceId, container);
+      }),
+    );
+
+    return result;
+  }
+
+  // ...........................................................................
+  /**
+   * Derives per-slice containers from one unfiltered cake/layer/component
+   * group container. Returns null when the container shape does not
+   * match the expected standard shape — the caller then falls back to
+   * slice-filtered queries.
+   *
+   * Path shape of group cells:
+   * [cake, '_data', 0, 'layers', layerTable, '_data', 0, 'add', sliceId, ...]
+   * @param base - The unfiltered group container
+   * @param groupRoute - The group route (cake/layer/component)
+   * @param cakeKey - The cake table key
+   * @param sliceIds - All slices of the join
+   */
+  private _sliceGroupContainers(
+    base: ContainerWithControllers,
+    groupRoute: Route,
+    cakeKey: string,
+    sliceIds: SliceId[],
+  ): Map<SliceId, ContainerWithControllers> | null {
+    const chain = groupRoute.segments.map((segment) => segment.tableKey);
+    const layerTable = chain[1];
+
+    // Self-referencing chains cannot be sliced per table
+    if (new Set(chain).size !== chain.length) return null;
+
+    // Shape guards — single cake row, single layer row
+    const cakeTableRl = base.rljson[cakeKey];
+    if (!cakeTableRl || cakeTableRl._data.length !== 1) return null;
+    const layerTableRl = base.rljson[layerTable];
+    if (!layerTableRl || layerTableRl._data.length !== 1) return null;
+    for (let i = 2; i < chain.length; i++) {
+      /* v8 ignore next -- @preserve */
+      if (!base.rljson[chain[i]]) return null;
+    }
+
+    const cakeTreeTable = base.tree[cakeKey] as TableType;
+    const cakeTreeObj = cakeTreeTable?._data?.[0] as Json | undefined;
+    const layersObj = (cakeTreeObj?.layers as Json | undefined)?.[
+      layerTable
+    ] as TableType | undefined;
+    const layerTreeObj = layersObj?._data?.[0] as Json | undefined;
+    const addResolved = layerTreeObj?.add as Json | undefined;
+    /* v8 ignore next -- @preserve */
+    if (!cakeTreeObj || !layersObj || !layerTreeObj || !addResolved) {
+      return null;
+    }
+
+    const rawAdd = (layerTableRl._data[0] as Layer).add;
+
+    // Bucket cells by slice; any unexpected path shape aborts the
+    // fast path
+    const cellsBySlice = new Map<string, Cell[]>();
+    for (const cell of base.cell) {
+      if (cell.path.length !== 1) return null;
+      const p = cell.path[0];
+      if (
+        p[3] !== 'layers' ||
+        p[4] !== layerTable ||
+        p[7] !== 'add' ||
+        typeof p[8] !== 'string'
+      ) {
+        return null;
+      }
+      let bucket = cellsBySlice.get(p[8]);
+      if (!bucket) {
+        bucket = [];
+        cellsBySlice.set(p[8], bucket);
+      }
+      bucket.push(cell);
+    }
+
+    const result = new Map<SliceId, ContainerWithControllers>();
+    for (const sliceId of sliceIds) {
+      const resolvedTree = (addResolved as any)[sliceId] as Json | undefined;
+      if (!resolvedTree) continue; // slice not covered — caller falls back
+
+      const cellsOfSlice = cellsBySlice.get(sliceId);
+      if (!cellsOfSlice || cellsOfSlice.length === 0) continue;
+
+      // Collect the row hashes of every table below the layer from the
+      // resolved slice subtree, level by level
+      const hashesPerTable = new Map<string, Set<string>>();
+      let levelObjs = (resolvedTree as any)?.[chain[2]]?._data as
+        | Json[]
+        | undefined;
+      if (!Array.isArray(levelObjs)) return null;
+      hashesPerTable.set(
+        chain[2],
+        new Set(levelObjs.map((o) => (o as any)._hash as string)),
+      );
+
+      for (let i = 3; i < chain.length; i++) {
+        const nextTable = chain[i];
+        const nextObjs: Json[] = [];
+        for (const obj of levelObjs) {
+          for (const value of Object.values(obj)) {
+            if (
+              value &&
+              typeof value === 'object' &&
+              (value as any)._tableKey === nextTable &&
+              Array.isArray((value as any)._data)
+            ) {
+              nextObjs.push(...((value as any)._data as Json[]));
+            }
+          }
+        }
+        /* v8 ignore next -- @preserve */
+        if (nextObjs.length === 0) return null;
+        hashesPerTable.set(
+          nextTable,
+          new Set(nextObjs.map((o) => (o as any)._hash as string)),
+        );
+        levelObjs = nextObjs;
+      }
+
+      // Rebuild the tree with only this slice resolved — mirrors the
+      // slice-filtered layer tree {...rawAdd, [sliceId]: resolved}
+      const layerTreeOfSlice = {
+        ...layerTreeObj,
+        add: { ...(rawAdd as Json), [sliceId]: resolvedTree },
+      };
+      const tree = {
+        [cakeKey]: {
+          ...cakeTreeTable,
+          _data: [
+            {
+              ...cakeTreeObj,
+              layers: {
+                ...(cakeTreeObj.layers as Json),
+                [layerTable]: { ...layersObj, _data: [layerTreeOfSlice] },
+              },
+            },
+          ],
+        },
+      } as Json;
+
+      // Per-slice rljson: tables below the layer keep only the slice's
+      // rows. The group table data is a sorted superset, so filtering it
+      // preserves the order a slice-filtered query produces.
+      const rljson = { ...base.rljson } as Rljson;
+      for (const [tableKey, hashes] of hashesPerTable) {
+        const groupTable = base.rljson[tableKey];
+        const rows = (groupTable._data as Json[]).filter((row) =>
+          hashes.has((row as any)._hash as string),
+        );
+        /* v8 ignore next -- @preserve */
+        if (rows.length !== hashes.size) return null;
+        rljson[tableKey] = { ...groupTable, _data: rows } as any;
+      }
+
+      result.set(sliceId, {
+        rljson,
+        tree,
+        cell: cellsOfSlice,
+        controllers: base.controllers,
+      });
+    }
+
+    return result;
+  }
+
+  // ...........................................................................
+  /**
+   * Derives a property column container from its group container —
+   * exactly what a get() with the property route would have returned:
+   * the leaf table rows are isolated to the property, cell values point
+   * at the property and cell paths/routes gain the property suffix.
+   * @param base - The group container of the column's route group
+   * @param groupRoute - The group route (no property key)
+   * @param propertyKey - The property to isolate
+   */
+  private _derivePropertyContainer(
+    base: ContainerWithControllers,
+    groupRoute: Route,
+    propertyKey: string,
+  ): ContainerWithControllers {
+    const leafTableKey =
+      groupRoute.segments[groupRoute.segments.length - 1].tableKey;
+
+    // rljson: isolate the property from the leaf table rows; the leaf
+    // table hash is dropped like isolatePropertyFromComponents does
+    const rljson = {} as Rljson;
+    for (const tableKey of Object.keys(base.rljson)) {
+      const table = base.rljson[tableKey];
+      if (tableKey === leafTableKey) {
+        rljson[tableKey] = {
+          _type: table._type,
+          _data: (table._data as Json[]).map((row) =>
+            Object.prototype.hasOwnProperty.call(row, propertyKey)
+              ? { [propertyKey]: (row as any)[propertyKey], _hash: (row as any)._hash }
+              : row,
+          ),
+        } as any;
+      } else {
+        rljson[tableKey] = table;
+      }
+    }
+
+    // cell: values point at the property, paths and routes gain the
+    // property suffix
+    const routeCache = new Map<string, Route>();
+    const cell = base.cell.map((c) => {
+      const flatWithProperty = c.route.flat + '/' + propertyKey;
+      let route = routeCache.get(flatWithProperty);
+      if (!route) {
+        route = Route.fromFlat(flatWithProperty).toRouteWithProperty();
+        routeCache.set(flatWithProperty, route);
+      }
+      return {
+        route,
+        value: (c.row as any)?.[propertyKey] ?? null,
+        row: c.row,
+        path: c.path.map((p) => [...p, propertyKey]),
+      } as Cell;
+    });
+
+    return {
+      rljson,
+      tree: base.tree,
+      cell,
+      controllers: base.controllers,
+    };
   }
 
   // ...........................................................................
