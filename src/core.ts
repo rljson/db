@@ -5,7 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import { Io, IoMem } from '@rljson/io';
-import { JsonValue } from '@rljson/json';
+import { Json, JsonValue } from '@rljson/json';
 import {
   BaseValidator,
   ContentType,
@@ -237,5 +237,84 @@ export class Core {
     where: { [column: string]: JsonValue },
   ): Promise<Rljson> {
     return await this._io.readRows({ table, where });
+  }
+
+  // ...........................................................................
+  /**
+   * Row cache of batch reads: 'table|hash' → row. Rows are immutable,
+   * so entries can never become stale (FIFO bounded).
+   */
+  private readonly _batchRowCache = new Map<string, Json>();
+
+  /** Maximum number of cached batch rows (FIFO eviction) */
+  private _maxBatchRowCacheEntries = 10000;
+
+  private _batchRowCacheSet(key: string, row: Json): void {
+    if (this._batchRowCache.size >= this._maxBatchRowCacheEntries) {
+      const oldest = this._batchRowCache.keys().next().value as string;
+      this._batchRowCache.delete(oldest);
+    }
+    this._batchRowCache.set(key, row);
+  }
+
+  /**
+   * Reads many rows by content hash in as few requests as possible.
+   * Uses the io's optional readRowsByHashes when available and falls
+   * back to per-hash reads (served by the row cache) otherwise. Hashes
+   * without a row are absent from the result.
+   * @param table - The table to read from
+   * @param hashes - The content hashes to read
+   * @returns A map of hash to row
+   */
+  async readRowsByHashes(
+    table: string,
+    hashes: string[],
+  ): Promise<Map<string, Json>> {
+    const result = new Map<string, Json>();
+    const missing: string[] = [];
+    const seen = new Set<string>();
+
+    for (const hash of hashes) {
+      if (seen.has(hash)) continue;
+      seen.add(hash);
+      const cached = this._batchRowCache.get(table + '|' + hash);
+      if (cached) {
+        result.set(hash, cached);
+      } else {
+        missing.push(hash);
+      }
+    }
+
+    if (missing.length === 0) {
+      return result;
+    }
+
+    if (this._io.readRowsByHashes) {
+      const fetched = await this._io.readRowsByHashes({
+        table,
+        hashes: missing,
+      });
+      for (const row of fetched[table]._data as Json[]) {
+        const hash = (row as any)._hash as string;
+        result.set(hash, row);
+        this._batchRowCacheSet(table + '|' + hash, row);
+      }
+    } else {
+      // Fallback: per-hash reads through the cached, coalescing readRow
+      await Promise.all(
+        missing.map(async (hash) => {
+          const {
+            [table]: { _data: rows },
+          } = await this.readRow(table, hash);
+          const row = (rows as Json[])[0];
+          if (row) {
+            result.set(hash, row);
+            this._batchRowCacheSet(table + '|' + hash, row);
+          }
+        }),
+      );
+    }
+
+    return result;
   }
 }

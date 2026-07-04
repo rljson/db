@@ -140,52 +140,81 @@ export class TreeController<N extends string, C extends Tree>
       } as Rljson;
     }
 
-    // Expand children for route navigation. Nodes of one level are
-    // fetched in parallel; per-node reads preserve the IoMulti cascade
-    // and are served by Core's content-addressed row cache on repeats.
+    // Expand children for route navigation. Each level of the tree is
+    // fetched with ONE batch read (one socket round trip on remote ios;
+    // IoMulti cascades per row) served by Core's batch row cache on
+    // repeats.
     //
     // While the path still has segments, only the child matching the
     // next segment id is expanded. Once the path is exhausted, the
-    // whole subtree is expanded — mirrors the previous sequential
-    // recursion.
+    // whole subtree is expanded — mirrors the previous per-node
+    // recursion including its post-order output.
     const children: any[] = [];
     const treeChildren = tree.children ?? [];
     if (treeChildren.length > 0) {
-      const expand = async (
-        childHash: string,
-        childPath: string,
-      ): Promise<Tree[]> => {
-        const {
-          [this._tableKey]: { _data: childRows },
-        } = await this._core.readRow(this._tableKey, childHash);
-
-        const child = childRows[0] as Tree | undefined;
-        if (!child) return [];
-
-        const childRoute = Route.fromFlat(childPath || '');
-        /* v8 ignore next -- @preserve */
-        const childId =
-          childRoute.segments.length > 0 ? childRoute.top.tableKey : null;
-
-        /* v8 ignore next -- @preserve */
-        if (childId && childId !== child.id) {
-          return [];
-        }
-
-        const deeperPath = childRoute.deeper().flat;
-        const grandResults = await Promise.all(
-          (child.children ?? []).map((grandChildHash) =>
-            expand(grandChildHash as string, deeperPath),
-          ),
-        );
-        return [...grandResults.flat(), child];
+      type ExpandNode = {
+        hash: string;
+        path: string;
+        row?: Tree;
+        children: ExpandNode[];
       };
 
-      const childPath = treeRoute.deeper().flat;
-      const childResults = await Promise.all(
-        treeChildren.map((childRef) => expand(childRef as string, childPath)),
-      );
-      children.push(...childResults.flat());
+      const rootPath = treeRoute.deeper().flat;
+      const roots: ExpandNode[] = treeChildren.map((childRef) => ({
+        hash: childRef as string,
+        path: rootPath,
+        children: [],
+      }));
+
+      // Fetch level by level
+      let frontier = roots;
+      while (frontier.length > 0) {
+        const rowsByHash = await this._core.readRowsByHashes(
+          this._tableKey,
+          frontier.map((node) => node.hash),
+        );
+
+        const next: ExpandNode[] = [];
+        for (const node of frontier) {
+          const row = rowsByHash.get(node.hash) as Tree | undefined;
+          if (!row) continue;
+
+          const childRoute = Route.fromFlat(node.path || '');
+          /* v8 ignore next -- @preserve */
+          const childId =
+            childRoute.segments.length > 0 ? childRoute.top.tableKey : null;
+
+          /* v8 ignore next -- @preserve */
+          if (childId && childId !== row.id) {
+            continue;
+          }
+
+          node.row = row;
+          const deeperPath = childRoute.deeper().flat;
+          for (const grandChildHash of row.children ?? []) {
+            const grandChild: ExpandNode = {
+              hash: grandChildHash as string,
+              path: deeperPath,
+              children: [],
+            };
+            node.children.push(grandChild);
+            next.push(grandChild);
+          }
+        }
+        frontier = next;
+      }
+
+      // Emit post-order: descendants first, then the node itself
+      const emit = (node: ExpandNode): void => {
+        if (!node.row) return;
+        for (const child of node.children) {
+          emit(child);
+        }
+        children.push(node.row);
+      };
+      for (const root of roots) {
+        emit(root);
+      }
     }
     return {
       [this._tableKey]: {
