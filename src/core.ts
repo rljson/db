@@ -5,7 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import { Io, IoMem } from '@rljson/io';
-import { JsonValue } from '@rljson/json';
+import { Json, JsonValue } from '@rljson/json';
 import {
   BaseValidator,
   ContentType,
