@@ -24,6 +24,9 @@
     /** Json modules **/
     "resolveJsonModule": true,
 
+    /* Types */
+    "types": ["node"],
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,
