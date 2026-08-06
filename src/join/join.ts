@@ -6,7 +6,14 @@
 
 import { Hash } from '@rljson/hash';
 import { Json, JsonValue, JsonValueType } from '@rljson/json';
-import { Ref, Route, SliceId } from '@rljson/rljson';
+import {
+  Layer,
+  LayersTable,
+  Ref,
+  Route,
+  SliceId,
+  TableKey,
+} from '@rljson/rljson';
 
 import { traverse } from 'object-traversal';
 
@@ -17,6 +24,7 @@ import { mergeTrees } from '../tools/merge-trees.ts';
 
 import { RowFilterProcessor } from './filter/row-filter-processor.ts';
 import { RowFilter } from './filter/row-filter.ts';
+import { PutComponent } from './put-component/put-component.ts';
 import { ColumnSelection } from './selection/column-selection.ts';
 import { SetValue } from './set-value/set-value.ts';
 import { RowSort } from './sort/row-sort.ts';
@@ -30,7 +38,12 @@ export const joinPreserveKeys = [
   'componentsTable',
 ];
 
-export type JoinProcessType = 'filter' | 'setValue' | 'selection' | 'sort';
+export type JoinProcessType =
+  | 'filter'
+  | 'setValue'
+  | 'selection'
+  | 'sort'
+  | 'putComponent';
 
 export type JoinProcess = {
   type: JoinProcessType;
@@ -59,6 +72,14 @@ export class Join {
   private _baseColumnSelection: ColumnSelection;
 
   private _processes: JoinProcess[] = [];
+
+  /**
+   * Set by putComponent(). When present, insert() returns this single
+   * pre-built {route, tree} instead of merging the column-oriented
+   * `_processes` inserts -- putComponent replaces a whole component in
+   * one shot and never goes through the per-column insert path.
+   */
+  private _directInsert?: { route: Route; tree: Json };
 
   /**
    * Materialized row matrices per data object. Data objects are created
@@ -243,6 +264,124 @@ export class Join {
 
   // ...........................................................................
   /**
+   * Sets a whole content-addressed Component for a sliceId in a Layer.
+   *
+   * Unlike filter/setValue/sort/select, which reshape the column-oriented
+   * row model, putComponent replaces one whole component of one Layer in
+   * one shot and does not need any other slice's data. It therefore
+   * bypasses the row/column model entirely and records the resulting
+   * insert directly (picked up by insert(), see below), keeping the
+   * operation O(1) in the number of already-existing slices instead of
+   * paying for a full db.join() across every slice of the cake.
+   *
+   * This Join must already carry, on at least one of its columns, a
+   * Container that touched `data.layer` (MultiEditProcessor guarantees
+   * this: either by seeding a minimal single-column Join for the very
+   * first edit of a chain, or by reusing an already-built Join whose
+   * column selection passes through the layer for later edits in the
+   * same chain). From that Container the layer's envelope
+   * (sliceIdsTable/sliceIdsTableRow/componentsTable) and its current ref
+   * are read; the current ref becomes the new layer row's `base`, so the
+   * write is an append-only extension of the existing layer chain (see
+   * `LayerController.resolveBaseLayer`) -- all other slices already in
+   * the layer keep resolving exactly as before.
+   *
+   * @param data - The layer, sliceId and whole component to set
+   * @returns This Join, with the pending direct insert recorded
+   */
+  putComponent(data: PutComponent): Join {
+    const found = this._findLayerContainer(data.layer);
+
+    if (!found) {
+      throw new Error(
+        `Join: Error while applying PutComponent: ` +
+          `No column found referencing layer "${data.layer}". ` +
+          `putComponent requires a Join that already touched the target ` +
+          `layer.`,
+      );
+    }
+
+    const { cakeKey, container } = found;
+    const layerRow = (container.rljson[data.layer] as LayersTable)
+      ._data[0] as Layer;
+    const componentsTable = layerRow.componentsTable;
+
+    // The delta layer: same envelope as the current layer, `base` set to
+    // the current layer's own ref (append-only chaining), `add` holding
+    // ONLY the one new/changed sliceId as a whole component tree -- this
+    // is the shape Db._insert's `layers` branch resolves by writing the
+    // component, taking its ref, and rebuilding `add[sliceId] = ref`.
+    const newLayerRow: Json = {
+      sliceIdsTable: layerRow.sliceIdsTable,
+      sliceIdsTableRow: layerRow.sliceIdsTableRow,
+      componentsTable,
+      base: layerRow._hash,
+      add: {
+        [data.sliceId]: {
+          [componentsTable]: {
+            _type: 'components',
+            _data: [data.component],
+          },
+        },
+      },
+    };
+
+    // Graft the delta layer into the already-fetched cake tree. Other
+    // layers of the cake stay exactly as fetched (usually plain refs).
+    const cakeTreeTable = container.tree[cakeKey] as any;
+    const cakeRow = cakeTreeTable._data[0];
+
+    const tree: Json = {
+      [cakeKey]: {
+        _type: 'cakes',
+        _data: [
+          {
+            ...cakeRow,
+            layers: {
+              ...cakeRow.layers,
+              [data.layer]: {
+                _type: 'layers',
+                _data: [newLayerRow],
+              },
+            },
+          },
+        ],
+      },
+    };
+
+    this._directInsert = {
+      route: Route.fromFlat(`/${cakeKey}/${data.layer}/${componentsTable}`),
+      tree,
+    };
+
+    return this;
+  }
+
+  // ...........................................................................
+  /**
+   * Finds the Container of a column whose route passes through the given
+   * layer table key. A layer's envelope is identical for every column
+   * and every slice fetched under it, so the first match is enough.
+   *
+   * @param layerKey - The layer table key to search for
+   * @returns The owning cake key and the matching Container, or null
+   */
+  private _findLayerContainer(
+    layerKey: TableKey,
+  ): { cakeKey: TableKey; container: Container } | null {
+    for (const row of Object.values(this.data)) {
+      for (const col of row.columns) {
+        const segments = col.route.segments;
+        if (segments.length >= 2 && segments[1].tableKey === layerKey) {
+          return { cakeKey: segments[0].tableKey, container: col.value };
+        }
+      }
+    }
+    return null;
+  }
+
+  // ...........................................................................
+  /**
    * Selects columns from the join and returns the resulting join
    *
    * @param columnSelection The column selection to apply
@@ -326,6 +465,12 @@ export class Join {
     route: Route;
     tree: Json;
   }[] {
+    // putComponent() already produced the exact single insert this Join
+    // represents -- skip the column-oriented merge below entirely.
+    if (this._directInsert) {
+      return [this._directInsert];
+    }
+
     const inserts: {
       route: Route;
       tree: Json;
