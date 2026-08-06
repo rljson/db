@@ -40,10 +40,15 @@ export interface PutComponent extends Json {
 // .............................................................................
 /**
  * An example PutComponent for test purposes.
+ *
+ * Uses a brand-new sliceId ('VIN99') to reflect the dominant use case:
+ * inserting a whole new document (an upsert of a doc that does not yet
+ * exist). putComponent both sets `Layer.add[VIN99]` and extends the
+ * slice set, so the new document is fully readable afterwards.
  */
 export const examplePutComponent = (): PutComponent => ({
   layer: 'carGeneralLayer',
-  sliceId: 'VIN1',
+  sliceId: 'VIN99',
   component: {
     brand: 'Rljson Motors',
     type: 'Prototype X',

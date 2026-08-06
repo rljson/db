@@ -463,6 +463,7 @@ export class MultiEditProcessor {
             },
             new ColumnSelection([putComponentColumnInfo]),
           ).putComponent(editPutComponent);
+          await this._persistPendingSliceIds(this._join.pendingSliceIdsInsert!);
           break;
         /* v8 ignore next -- @preserve */
         default:
@@ -499,6 +500,7 @@ export class MultiEditProcessor {
             (edit as EditPutComponent).action.data,
           ) as PutComponent;
           this._join = this._join.putComponent(editPutComponent);
+          await this._persistPendingSliceIds(this._join.pendingSliceIdsInsert!);
           break;
         /* v8 ignore next -- @preserve */
         default:
@@ -507,6 +509,33 @@ export class MultiEditProcessor {
     }
 
     return this._join!;
+  }
+
+  //...........................................................................
+  /**
+   * Persists the SliceIds row(s) a putComponent produced. The
+   * cake/layer/component insert route never writes the sliceIds table,
+   * so the extended slice set must be written separately for the put
+   * sliceId to resolve (via db.get filters and, crucially, via the
+   * db.join used to rebuild the join on reconstruction). Content-
+   * addressed and idempotent: replaying the same edit re-imports the
+   * same rows. Always called immediately after `Join.putComponent`,
+   * which always sets `pendingSliceIdsInsert`.
+   * @param pending - The pending sliceIds insert to persist
+   */
+  private async _persistPendingSliceIds(pending: {
+    table: string;
+    rows: any[];
+  }): Promise<void> {
+    await this._db.core.import(
+      {
+        [pending.table]: {
+          _type: 'sliceIds',
+          _data: pending.rows,
+        },
+      } as any,
+      { validate: false },
+    );
   }
 
   //...........................................................................

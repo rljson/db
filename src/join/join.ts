@@ -4,7 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { Hash } from '@rljson/hash';
+import { Hash, hip } from '@rljson/hash';
 import { Json, JsonValue, JsonValueType } from '@rljson/json';
 import {
   Layer,
@@ -80,6 +80,16 @@ export class Join {
    * one shot and never goes through the per-column insert path.
    */
   private _directInsert?: { route: Route; tree: Json };
+
+  /**
+   * Set by putComponent(). The new SliceIds row(s) that extend the
+   * layer's/cake's slice set with the put sliceId. These are NOT written
+   * by the cake/layer/component insert route (`Db._insert` never touches
+   * the sliceIds table), so the caller (MultiEditProcessor) persists them
+   * separately via `core.import` before/around publishing. Exposed via
+   * `pendingSliceIdsInsert`.
+   */
+  private _pendingSliceIdsInsert?: { table: TableKey; rows: Json[] };
 
   /**
    * Materialized row matrices per data object. Data objects are created
@@ -286,6 +296,20 @@ export class Join {
    * `LayerController.resolveBaseLayer`) -- all other slices already in
    * the layer keep resolving exactly as before.
    *
+   * The sliceId is ALSO appended to the slice set, so a brand-new
+   * document is fully readable after publish -- not just via a
+   * layer-level sliceId-filtered `db.get`, but via the sliceId-driven
+   * `db.join` used to rebuild the join during reconstruction
+   * (`MultiEditProcessor.applyEditHistory`). Because `db.join` resolves
+   * the slice set from the CAKE's `sliceIdsRow` while a layer-filtered
+   * `db.get` resolves it from the LAYER's `sliceIdsTableRow`, BOTH are
+   * chain-extended with a new `{ base: <current tip>, add: [sliceId] }`
+   * SliceIds row (see spike). The append is unconditional: the slice-id
+   * resolver de-duplicates, so re-putting an existing document stays
+   * correct (it just adds a redundant, GC-able chain link). The new
+   * SliceIds rows are not written by the cake insert route, so they are
+   * surfaced via `pendingSliceIdsInsert` for the caller to persist.
+   *
    * @param data - The layer, sliceId and whole component to set
    * @returns This Join, with the pending direct insert recorded
    */
@@ -306,14 +330,42 @@ export class Join {
       ._data[0] as Layer;
     const componentsTable = layerRow.componentsTable;
 
+    const cakeTreeTable = container.tree[cakeKey] as any;
+    const cakeRow = cakeTreeTable._data[0];
+
+    // Extend the slice set with the put sliceId. The layer's
+    // sliceIdsTableRow (drives layer-level db.get) and the cake's
+    // sliceIdsRow (drives db.join) are chained independently onto their
+    // own current tips; when they share a tip (the usual case) the two
+    // new rows are identical and de-duplicate to one.
+    const sliceIdsTable = layerRow.sliceIdsTable;
+    const newLayerSliceIds = hip<Json>({
+      base: layerRow.sliceIdsTableRow,
+      add: [data.sliceId],
+      _hash: '',
+    });
+    const newCakeSliceIds = hip<Json>({
+      base: cakeRow.sliceIdsRow,
+      add: [data.sliceId],
+      _hash: '',
+    });
+    const sliceIdsRowsByHash = new Map<string, Json>();
+    sliceIdsRowsByHash.set(newLayerSliceIds._hash as string, newLayerSliceIds);
+    sliceIdsRowsByHash.set(newCakeSliceIds._hash as string, newCakeSliceIds);
+    this._pendingSliceIdsInsert = {
+      table: sliceIdsTable,
+      rows: Array.from(sliceIdsRowsByHash.values()),
+    };
+
     // The delta layer: same envelope as the current layer, `base` set to
-    // the current layer's own ref (append-only chaining), `add` holding
-    // ONLY the one new/changed sliceId as a whole component tree -- this
-    // is the shape Db._insert's `layers` branch resolves by writing the
-    // component, taking its ref, and rebuilding `add[sliceId] = ref`.
+    // the current layer's own ref (append-only chaining), the extended
+    // sliceIdsTableRow, and `add` holding ONLY the one new/changed
+    // sliceId as a whole component tree -- this is the shape
+    // Db._insert's `layers` branch resolves by writing the component,
+    // taking its ref, and rebuilding `add[sliceId] = ref`.
     const newLayerRow: Json = {
-      sliceIdsTable: layerRow.sliceIdsTable,
-      sliceIdsTableRow: layerRow.sliceIdsTableRow,
+      sliceIdsTable,
+      sliceIdsTableRow: newLayerSliceIds._hash,
       componentsTable,
       base: layerRow._hash,
       add: {
@@ -326,17 +378,16 @@ export class Join {
       },
     };
 
-    // Graft the delta layer into the already-fetched cake tree. Other
+    // Graft the delta layer into the already-fetched cake tree, and
+    // point the cake's own sliceIdsRow at the extended slice set. Other
     // layers of the cake stay exactly as fetched (usually plain refs).
-    const cakeTreeTable = container.tree[cakeKey] as any;
-    const cakeRow = cakeTreeTable._data[0];
-
     const tree: Json = {
       [cakeKey]: {
         _type: 'cakes',
         _data: [
           {
             ...cakeRow,
+            sliceIdsRow: newCakeSliceIds._hash,
             layers: {
               ...cakeRow.layers,
               [data.layer]: {
@@ -355,6 +406,18 @@ export class Join {
     };
 
     return this;
+  }
+
+  // ...........................................................................
+  /**
+   * The SliceIds row(s) a preceding `putComponent()` produced to extend
+   * the slice set, plus the table they belong in. `Db._insert` for a
+   * cake/layer/component route never writes the sliceIds table, so the
+   * caller must persist these (e.g. via `core.import`) so the put sliceId
+   * resolves. `undefined` when no putComponent has been applied.
+   */
+  get pendingSliceIdsInsert(): { table: TableKey; rows: Json[] } | undefined {
+    return this._pendingSliceIdsInsert;
   }
 
   // ...........................................................................

@@ -38,6 +38,7 @@ import {
 import { MultiEditManager } from '../../src/edit/multi-edit-manager';
 import { MultiEditProcessor } from '../../src/edit/multi-edit-processor';
 import { staticExample } from '../../src/example-static/example-static';
+import { ColumnSelection } from '../../src/join/selection/column-selection';
 
 describe('MultiEditProcessor', () => {
   let db: Db;
@@ -186,9 +187,10 @@ describe('MultiEditProcessor', () => {
       // multi-edit-processor.ts's Switch B (`this._join.putComponent()`)
       // requires.
       const editActionPutComponent = exampleEditActionPutComponent();
+      const putSliceId = editActionPutComponent.data.sliceId; // VIN99 (new)
 
       const edit: Edit = hip<Edit>({
-        name: 'Put: carGeneral component for VIN1',
+        name: 'Put: carGeneral component for a new document',
         action: editActionPutComponent,
         _hash: '',
       }) as Edit;
@@ -207,9 +209,12 @@ describe('MultiEditProcessor', () => {
       // fresh hashing on actual insert) does not preserve the '' hash
       // placeholders from the fixture.
       expect(
-        rmhsh(layerRow.add[editActionPutComponent.data.sliceId].carGeneral
-          ._data[0]),
+        rmhsh(layerRow.add[putSliceId].carGeneral._data[0]),
       ).toEqual(rmhsh(editActionPutComponent.data.component));
+
+      // Switch B persisted the extended slice set, and the tree re-points
+      // both the layer's and the cake's slice-set refs at it.
+      expect(layerRow.sliceIdsTableRow).toBe(cakeRow.sliceIdsRow);
 
       //Check MultiEdit updated
       expect(multiEditProc.multiEdit.previous).toBe(multiEdit._hash);
@@ -587,15 +592,17 @@ describe('MultiEditProcessor', () => {
         ).toBe(true);
       });
 
-      it('PutComponent', async () => {
+      it('PutComponent (new document, Switch A)', async () => {
         // No prior edit -> _join is still null -> exercises Switch A,
         // which seeds a minimal one-column Join via a single targeted
         // db.get() (not db.join(), which would be O(every slice)) and
-        // then calls Join.putComponent() on it.
+        // then calls Join.putComponent() on it. The example puts a
+        // brand-new sliceId (VIN99), so this proves INSERT, not update.
         const editActionPutComponent = exampleEditActionPutComponent();
+        const putSliceId = editActionPutComponent.data.sliceId; // VIN99
 
         const edit: Edit = {
-          name: 'Put: carGeneral component for VIN1',
+          name: 'Put: carGeneral component for a new document',
           action: editActionPutComponent,
           _hash: '',
         } as Edit;
@@ -637,31 +644,50 @@ describe('MultiEditProcessor', () => {
         // Compare content only -- inserting the Edit row itself already
         // computed real hashes for the (previously '') placeholders.
         expect(
-          rmhsh(layerRow.add[editActionPutComponent.data.sliceId].carGeneral
-            ._data[0]),
+          rmhsh(layerRow.add[putSliceId].carGeneral._data[0]),
         ).toEqual(rmhsh(editActionPutComponent.data.component));
 
-        // Publish and verify the whole component round-trips through
-        // db.insert(), exactly like the Join.putComponent() unit spec
-        // does at the Join level.
+        // Publish and verify the new document round-trips through
+        // db.insert(). Switch A already persisted the extended slice set
+        // during _process, so both read paths below resolve VIN99.
         const insertResults = await db.insert(route, tree);
-        const writtenCakeRef = insertResults[0][
-          `${cakeKey}Ref`
-        ] as string;
+        const writtenCakeRef = insertResults[0][`${cakeKey}Ref`] as string;
 
+        // (a) sliceId-filtered db.get returns the new component.
         const { cell: brandCells } = await db.get(
           Route.fromFlat(
             `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/brand`,
           ),
           {},
           undefined,
-          [editActionPutComponent.data.sliceId],
+          [putSliceId],
         );
-
         expect(brandCells.length).toBe(1);
         expect(brandCells[0].value).toBe(
           editActionPutComponent.data.component.brand,
         );
+
+        // (b) the sliceId-driven db.join (reconstruction engine) sees it.
+        const reconSelection = new ColumnSelection([
+          {
+            key: 'brand',
+            route: `${cakeKey}/carGeneralLayer/carGeneral/brand`,
+            alias: 'brand',
+            titleLong: '',
+            titleShort: '',
+            type: 'jsonValue',
+            _hash: '',
+          },
+        ]);
+        const reconJoin = await db.join(
+          reconSelection,
+          cakeKey,
+          writtenCakeRef,
+        );
+        expect(reconJoin.rowIndices).toContain(putSliceId);
+        // cakeRef here is carCake._data[0] (8 base slices VIN1..VIN8),
+        // so the new document brings the total to 9.
+        expect(reconJoin.rowIndices.length).toBe(9);
       });
     });
     describe('Multiple Edits', async () => {
@@ -937,18 +963,49 @@ describe('MultiEditProcessor', () => {
           editActionPutComponent.data.component.meta.pressText,
         );
 
-        // And it round-trips through the published cake at the put
-        // sliceId.
+        // And the NEW document is fully readable through BOTH consumer
+        // read paths on the published cake:
+        const putSliceId = editActionPutComponent.data.sliceId; // VIN99
+
+        // (a) sliceId-filtered db.get.
         const { cell: brandCells } = await db.get(
           Route.fromFlat(
             `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/brand`,
           ),
           {},
           undefined,
-          [editActionPutComponent.data.sliceId],
+          [putSliceId],
         );
         expect(brandCells.length).toBe(1);
         expect(brandCells[0].value).toBe(
+          editActionPutComponent.data.component.brand,
+        );
+
+        // (b) the sliceId-driven db.join -- the exact engine
+        // applyEditHistory rebuilds joins with. Without the sliceIds
+        // maintenance this MISSES the new document entirely; with it,
+        // VIN99 is present (10 existing + 1 new) carrying its component.
+        const reconSelection = new ColumnSelection([
+          {
+            key: 'brand',
+            route: `${cakeKey}/carGeneralLayer/carGeneral/brand`,
+            alias: 'brand',
+            titleLong: '',
+            titleShort: '',
+            type: 'jsonValue',
+            _hash: '',
+          },
+        ]);
+        const publishedJoin = await db.join(
+          reconSelection,
+          cakeKey,
+          writtenCakeRef,
+        );
+        expect(publishedJoin.rowIndices).toContain(putSliceId);
+        // cakeRef here is carCake._data[0] (8 base slices VIN1..VIN8),
+        // so the new document brings the total to 9.
+        expect(publishedJoin.rowIndices.length).toBe(9);
+        expect(publishedJoin.row(putSliceId)[0].value.cell[0].value).toBe(
           editActionPutComponent.data.component.brand,
         );
       },

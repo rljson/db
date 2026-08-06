@@ -75,9 +75,42 @@ describe('Join.putComponent()', () => {
     return new Join(rows, new ColumnSelection([columnInfo]));
   };
 
-  it('sets the add entry so insert() returns exactly one {route, tree}', async () => {
+  /**
+   * Persists the pending sliceIds insert (as MultiEditProcessor does),
+   * then runs the direct insert. Returns the written cake ref.
+   */
+  const publishJoin = async (join: Join): Promise<string> => {
+    const pending = join.pendingSliceIdsInsert!;
+    await db.core.import(
+      {
+        [pending.table]: { _type: 'sliceIds', _data: pending.rows },
+      } as any,
+      { validate: false },
+    );
+    const [{ route, tree }] = join.insert();
+    const results = await db.insert(route, tree);
+    return (results[0] as any)[`${cakeKey}Ref`] as string;
+  };
+
+  /**
+   * Column selection over the layer's brand, used to assert the
+   * sliceId-driven db.join (the reconstruction engine) sees a slice.
+   */
+  const brandSelection = new ColumnSelection([
+    {
+      key: 'brand',
+      route: `${cakeKey}/${layerKey}/${componentsTable}/brand`,
+      alias: 'brand',
+      titleLong: '',
+      titleShort: '',
+      type: 'jsonValue' as const,
+    },
+  ]);
+
+  it('sets add[sliceId], chains base, and extends both slice sets', async () => {
     const data = examplePutComponent();
     expect(data.layer).toBe(layerKey);
+    expect(data.sliceId).toBe('VIN99'); // a brand-new document
 
     const join = (await seedJoin(data.sliceId)).putComponent(data);
     const inserts = join.insert();
@@ -96,25 +129,32 @@ describe('Join.putComponent()', () => {
       data.component,
     );
 
-    // Append-only: base points at the layer's CURRENT ref, other layers
-    // of the cake are carried through untouched (still plain refs).
+    // Append-only: layer base points at the layer's CURRENT ref, other
+    // layers of the cake are carried through untouched (still plain refs).
     expect(typeof layerRow.base).toBe('string');
     expect(layerRow.base.length).toBeGreaterThan(0);
     expect(typeof cakeRow.layers.carTechnicalLayer).toBe('string');
     expect(typeof cakeRow.layers.carColorLayer).toBe('string');
+
+    // Both slice sets were re-pointed at the new (extended) sliceIds row.
+    const pending = join.pendingSliceIdsInsert!;
+    expect(pending.table).toBe('carSliceId');
+    // cake.sliceIdsRow == layer.sliceIdsTableRow here, so one deduped row.
+    expect(pending.rows.length).toBe(1);
+    const newSliceIdsRef = pending.rows[0]._hash as string;
+    expect(layerRow.sliceIdsTableRow).toBe(newSliceIdsRef);
+    expect(cakeRow.sliceIdsRow).toBe(newSliceIdsRef);
+    expect(pending.rows[0].add).toEqual([data.sliceId]);
   });
 
-  it('publishes through db.insert(): component deduped, add[sliceId] resolves, other slices preserved', async () => {
-    const data = examplePutComponent();
+  it('INSERT: a brand-new sliceId is readable via db.get AND db.join', async () => {
+    const data = examplePutComponent(); // sliceId VIN99 (new)
 
     const join = (await seedJoin(data.sliceId)).putComponent(data);
-    const [{ route, tree }] = join.insert();
-
-    const results = await db.insert(route, tree);
-    const writtenCakeRef = (results[0] as any)[`${cakeKey}Ref`] as string;
+    const writtenCakeRef = await publishJoin(join);
     expect(writtenCakeRef).toBeDefined();
 
-    // New/overwritten slice reads back the just-put component.
+    // (a) sliceId-filtered db.get returns the new component.
     const newRead = await db.get(
       Route.fromFlat(
         `${cakeKey}@${writtenCakeRef}/${layerKey}/${componentsTable}/brand`,
@@ -126,29 +166,26 @@ describe('Join.putComponent()', () => {
     expect(newRead.cell.length).toBe(1);
     expect(newRead.cell[0].value).toBe(data.component.brand);
 
-    // A slice inherited through the layer's OWN base chain (VIN1 lives
-    // in layer[0], layer[1]'s base) still resolves.
-    const inheritedRead = await db.get(
-      Route.fromFlat(
-        `${cakeKey}@${writtenCakeRef}/${layerKey}/${componentsTable}/brand`,
-      ),
-      {},
-      undefined,
-      ['VIN1'],
-    );
-    expect(inheritedRead.cell.length).toBe(1);
+    // (b) the sliceId-driven db.join (used to rebuild the join on
+    // reconstruction) now includes VIN99 -- 10 existing + 1 new.
+    const join2 = await db.join(brandSelection, cakeKey, writtenCakeRef);
+    expect(join2.rowIndices).toContain(data.sliceId);
+    expect(join2.rowIndices.length).toBe(11);
+    const vin99Row = join2.row(data.sliceId);
+    expect(vin99Row[0].value.cell[0].value).toBe(data.component.brand);
 
-    // A slice that was already directly on layer[1] (not via base) also
-    // still resolves.
-    const ownRead = await db.get(
-      Route.fromFlat(
-        `${cakeKey}@${writtenCakeRef}/${layerKey}/${componentsTable}/brand`,
-      ),
-      {},
-      undefined,
-      ['VIN9'],
-    );
-    expect(ownRead.cell.length).toBe(1);
+    // Existing slices (own + base-inherited) still resolve.
+    for (const existing of ['VIN1', 'VIN9']) {
+      const read = await db.get(
+        Route.fromFlat(
+          `${cakeKey}@${writtenCakeRef}/${layerKey}/${componentsTable}/brand`,
+        ),
+        {},
+        undefined,
+        [existing],
+      );
+      expect(read.cell.length).toBe(1);
+    }
 
     // Other layers of the cake are untouched.
     const technicalRead = await db.get(
@@ -161,9 +198,10 @@ describe('Join.putComponent()', () => {
     );
     expect(technicalRead.cell.length).toBe(1);
 
-    // Dedup: re-inserting the identical tree does not create a second
-    // row in the components table.
-    await db.insert(route, tree);
+    // Dedup: re-publishing the identical put does not create a second
+    // component row.
+    const join3 = (await seedJoin(data.sliceId)).putComponent(data);
+    await publishJoin(join3);
     const dump = await db.core.dumpTable(componentsTable);
     const matches = (dump[componentsTable]._data as any[]).filter(
       (c) => c.brand === data.component.brand && c.type === data.component.type,
@@ -171,26 +209,36 @@ describe('Join.putComponent()', () => {
     expect(matches.length).toBe(1);
   });
 
-  it('accepts a sliceId not previously present in the layer, in addition to existing ones', async () => {
+  it('UPDATE: an existing sliceId is overwritten and stays readable, slice count unchanged', async () => {
     const data: PutComponent = {
       ...examplePutComponent(),
-      sliceId: 'VIN9', // already on layer[1] directly (not via base)
+      sliceId: 'VIN1', // already present (via the layer's base chain)
+      component: {
+        ...examplePutComponent().component,
+        brand: 'UpdatedBrand',
+      },
     };
 
     const join = (await seedJoin(data.sliceId)).putComponent(data);
-    const [{ route, tree }] = join.insert();
-    const results = await db.insert(route, tree);
-    const writtenCakeRef = (results[0] as any)[`${cakeKey}Ref`] as string;
+    const writtenCakeRef = await publishJoin(join);
 
+    // VIN1 now reads the updated component.
     const read = await db.get(
       Route.fromFlat(
         `${cakeKey}@${writtenCakeRef}/${layerKey}/${componentsTable}/brand`,
       ),
       {},
       undefined,
-      ['VIN10'], // sibling of VIN9 on layer[1], never touched
+      ['VIN1'],
     );
     expect(read.cell.length).toBe(1);
+    expect(read.cell[0].value).toBe('UpdatedBrand');
+
+    // Updating an existing doc does not grow the slice set (resolver
+    // de-duplicates the redundant chain link).
+    const join2 = await db.join(brandSelection, cakeKey, writtenCakeRef);
+    expect(join2.rowIndices.length).toBe(10);
+    expect(join2.row('VIN1')[0].value.cell[0].value).toBe('UpdatedBrand');
   });
 
   describe('throws', () => {
@@ -251,7 +299,7 @@ describe('Join.putComponent()', () => {
   it('examplePutComponent() returns a well-formed PutComponent', () => {
     const example = examplePutComponent();
     expect(example.layer).toBe('carGeneralLayer');
-    expect(example.sliceId).toBe('VIN1');
+    expect(example.sliceId).toBe('VIN99');
     expect(example.component).toBeDefined();
     expect(example.component.brand).toBeDefined();
     expect(example._hash).toBe('');
