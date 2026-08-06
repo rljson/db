@@ -516,6 +516,9 @@ class Join {
   // Value mutation
   setValue(setValue: SetValue): void
 
+  // Whole-component replacement (see "Put Component" below)
+  putComponent(data: PutComponent): void
+
   // Result access
   async rows(): Promise<JoinRows>
   async columns(): Promise<JoinColumn[]>
@@ -608,10 +611,60 @@ MultiEditProcessor
 
 ```typescript
 type EditAction = {
-  type: 'columnSelection' | 'rowFilter' | 'rowSort' | 'setValue';
+  type: 'columnSelection' | 'rowFilter' | 'rowSort' | 'setValue' | 'putComponent';
   params: {...};
 };
 ```
+
+### Put Component (whole-document upsert)
+
+`putComponent` is a document-native EditAction: instead of describing a
+change as a column selection + a value, it carries the **whole**
+content-addressed component object and where it goes:
+
+```typescript
+interface PutComponent {
+  layer: TableKey; // the layer (collection) to write into
+  sliceId: SliceId; // the slice (document id) to set
+  component: Json; // the whole component object, e.g. {_hash, ...fields}
+}
+```
+
+This lets one edit express a whole-document upsert (e.g. a Mongo
+document write) instead of one edit per changed field.
+
+Applying it appends the component to the layer's `add` map, i.e.
+**`Layer.add[sliceId] = <ref of component>`**, append-only:
+
+- The new layer row's `base` is set to the layer's *current* ref, so the
+  write chains onto the existing layer history (see
+  `LayerController.resolveBaseLayer`) instead of rewriting it. Every
+  slice already reachable through that history — both the layer's own
+  prior `add` entries and anything inherited through its own `base` —
+  keeps resolving exactly as before.
+- Only the one changed slice is touched. Unlike `setValue` (which joins
+  and re-emits every slice of the selected columns), `putComponent`
+  never reads or rewrites any other slice, so the cost does not grow
+  with the size of the layer.
+- The component is content-addressed like any other row: re-applying
+  the same `PutComponent` twice yields the same ref, so publishing is
+  idempotent.
+
+`Db.insert()` needs no changes for this: `putComponent` produces a
+regular cake tree whose target layer's `add` map has one entry shaped
+as a nested component tree — exactly the shape the existing `layers`
+branch of `Db._insert` already resolves (write the component, take its
+ref, rebuild `add[sliceId] = ref`).
+
+Because a single whole-component replacement does not fit the
+column-oriented `Join.insert()` model (one `{route, tree}` per
+selected column), `Join.putComponent()` bypasses it: it records the
+resulting `{route, tree}` directly on the Join, and `Join.insert()`
+returns that single pre-built insert instead of merging column inserts
+when present.
+
+Deleting/removing a slice from a layer (a tombstone) is intentionally
+out of scope for `putComponent` — a separate future EditAction.
 
 ### Transaction Flow
 
