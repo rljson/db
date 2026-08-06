@@ -9,6 +9,10 @@ import { EditAction } from '@rljson/rljson';
 import { ColumnFilter } from '../join/filter/column-filter.ts';
 import { RowFilter } from '../join/filter/row-filter.ts';
 import {
+  examplePutComponent,
+  PutComponent,
+} from '../join/put-component/put-component.ts';
+import {
   ColumnInfo,
   ColumnSelection,
 } from '../join/selection/column-selection.ts';
@@ -35,6 +39,11 @@ export interface EditActionSetValue extends EditAction {
 export interface EditActionRowSort extends EditAction {
   type: 'sort';
   data: RowSortType;
+}
+
+export interface EditActionPutComponent extends EditAction {
+  type: 'putComponent';
+  data: PutComponent;
 }
 
 //..................................................................................
@@ -144,5 +153,18 @@ export const exampleEditActionRowSort = (): EditActionRowSort => ({
   data: {
     ['carCake/carGeneralLayer/carGeneral/brand']: 'asc',
   },
+  _hash: '',
+});
+
+//..................................................................................
+
+/**
+ * Example EditAction of type 'putComponent'
+ * @returns An example EditAction representing a whole-component put
+ */
+export const exampleEditActionPutComponent = (): EditActionPutComponent => ({
+  name: 'Put: carGeneral component for VIN1',
+  type: 'putComponent',
+  data: examplePutComponent(),
   _hash: '',
 });

@@ -8,6 +8,7 @@ import { Edit } from '@rljson/rljson';
 
 import {
   EditActionColumnSelection,
+  EditActionPutComponent,
   EditActionRowFilter,
   EditActionRowSort,
   EditActionSetValue,
@@ -35,6 +36,12 @@ export interface EditSetValue extends Edit {
 export interface EditRowSort extends Edit {
   name: string;
   action: EditActionRowSort;
+  _hash: string;
+}
+
+export interface EditPutComponent extends Edit {
+  name: string;
+  action: EditActionPutComponent;
   _hash: string;
 }
 

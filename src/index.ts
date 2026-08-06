@@ -23,6 +23,7 @@ export { Db } from './db.ts';
 export {
   exampleEditActionColumnSelection,
   exampleEditActionColumnSelectionOnlySomeColumns,
+  exampleEditActionPutComponent,
   exampleEditActionRowFilter,
   exampleEditActionRowSort,
   exampleEditActionSetValue,

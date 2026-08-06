@@ -10,6 +10,7 @@ import { Edit, EditHistory, MultiEdit, Route } from '@rljson/rljson';
 import { Db } from '../db.ts';
 import { RowFilter } from '../join/filter/row-filter.ts';
 import { Join, JoinRowsHashed } from '../join/join.ts';
+import { PutComponent } from '../join/put-component/put-component.ts';
 import {
   ColumnInfo,
   ColumnSelection,
@@ -19,6 +20,7 @@ import { RowSort, RowSortType } from '../join/sort/row-sort.ts';
 
 import {
   EditColumnSelection,
+  EditPutComponent,
   EditRowFilter,
   EditRowSort,
   EditSetValue,
@@ -420,6 +422,49 @@ export class MultiEditProcessor {
             )
           ).filter(editRowFilter);
           break;
+        case 'putComponent':
+          const editPutComponent = (edit as EditPutComponent).action
+            .data as PutComponent;
+          // putComponent() needs the target layer's envelope
+          // (sliceIdsTable/sliceIdsTableRow/componentsTable and current
+          // ref). db.join() is O(every slice of the cake) and thus the
+          // wrong tool for an operation meant to touch exactly one slice
+          // -- so a single targeted db.get() seeds a minimal one-column
+          // Join instead, exactly like db.join() would shape one, just
+          // without enumerating every other slice.
+          const putComponentLayerRouteFlat = `${this._cakeKey}/${editPutComponent.layer}`;
+          const putComponentLayerRoute = Route.fromFlat(
+            putComponentLayerRouteFlat,
+          );
+          const putComponentContainer = await this._db.get(
+            Route.fromFlat(
+              `${this._cakeKey}@${this._cakeRef}/${editPutComponent.layer}`,
+            ),
+            {},
+          );
+          const putComponentColumnInfo: ColumnInfo = {
+            key: editPutComponent.layer,
+            route: putComponentLayerRouteFlat,
+            alias: editPutComponent.layer,
+            titleLong: '',
+            titleShort: '',
+            type: 'jsonValue',
+            _hash: '',
+          };
+          this._join = new Join(
+            {
+              [editPutComponent.sliceId]: [
+                {
+                  route: putComponentLayerRoute,
+                  value: putComponentContainer,
+                  inserts: null,
+                },
+              ],
+            },
+            new ColumnSelection([putComponentColumnInfo]),
+          ).putComponent(editPutComponent);
+          await this._persistPendingSliceIds(this._join.pendingSliceIdsInsert!);
+          break;
         /* v8 ignore next -- @preserve */
         default:
           break;
@@ -450,6 +495,13 @@ export class MultiEditProcessor {
           ) as RowFilter;
           this._join = this._join.filter(editRowFilter);
           break;
+        case 'putComponent':
+          const editPutComponent = rmhsh(
+            (edit as EditPutComponent).action.data,
+          ) as PutComponent;
+          this._join = this._join.putComponent(editPutComponent);
+          await this._persistPendingSliceIds(this._join.pendingSliceIdsInsert!);
+          break;
         /* v8 ignore next -- @preserve */
         default:
           break;
@@ -457,6 +509,33 @@ export class MultiEditProcessor {
     }
 
     return this._join!;
+  }
+
+  //...........................................................................
+  /**
+   * Persists the SliceIds row(s) a putComponent produced. The
+   * cake/layer/component insert route never writes the sliceIds table,
+   * so the extended slice set must be written separately for the put
+   * sliceId to resolve (via db.get filters and, crucially, via the
+   * db.join used to rebuild the join on reconstruction). Content-
+   * addressed and idempotent: replaying the same edit re-imports the
+   * same rows. Always called immediately after `Join.putComponent`,
+   * which always sets `pendingSliceIdsInsert`.
+   * @param pending - The pending sliceIds insert to persist
+   */
+  private async _persistPendingSliceIds(pending: {
+    table: string;
+    rows: any[];
+  }): Promise<void> {
+    await this._db.core.import(
+      {
+        [pending.table]: {
+          _type: 'sliceIds',
+          _data: pending.rows,
+        },
+      } as any,
+      { validate: false },
+    );
   }
 
   //...........................................................................
