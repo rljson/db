@@ -4,7 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
-import { hip } from '@rljson/hash';
+import { hip, rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { equals } from '@rljson/json';
 import {
@@ -29,11 +29,13 @@ import { exampleEditColumnSelection } from '../../src/edit/edit';
 import {
   exampleEditActionColumnSelection,
   exampleEditActionColumnSelectionOnlySomeColumns,
+  exampleEditActionPutComponent,
   exampleEditActionRowFilter,
   exampleEditActionRowSort,
   exampleEditActionSetValue,
   exampleEditSetValueReferenced,
 } from '../../src/edit/edit-action';
+import { MultiEditManager } from '../../src/edit/multi-edit-manager';
 import { MultiEditProcessor } from '../../src/edit/multi-edit-processor';
 import { staticExample } from '../../src/example-static/example-static';
 
@@ -170,6 +172,44 @@ describe('MultiEditProcessor', () => {
       const lengths = multiEditProc.join.rows.flatMap((r) => r[6]);
 
       expect(lengths.every((length) => length > 4000)).toBe(true);
+
+      //Check MultiEdit updated
+      expect(multiEditProc.multiEdit.previous).toBe(multiEdit._hash);
+      expect(multiEditProc.multiEdit.edit).toBe(edit._hash);
+    });
+
+    it('should apply a PutComponent edit incrementally (Switch B)', async () => {
+      // multiEditProc already has a Join from the ColumnSelection edit
+      // applied in beforeEach, which selects columns under
+      // carGeneralLayer/carGeneral -- so the incoming putComponent finds
+      // an existing column touching its target layer, exactly as
+      // multi-edit-processor.ts's Switch B (`this._join.putComponent()`)
+      // requires.
+      const editActionPutComponent = exampleEditActionPutComponent();
+
+      const edit: Edit = hip<Edit>({
+        name: 'Put: carGeneral component for VIN1',
+        action: editActionPutComponent,
+        _hash: '',
+      }) as Edit;
+
+      await multiEditProc.edit(edit);
+
+      const inserts = multiEditProc.join.insert();
+      expect(inserts.length).toBe(1);
+
+      const { route, tree } = inserts[0];
+      expect(route.flat).toBe('/carCake/carGeneralLayer/carGeneral');
+
+      const cakeRow = (tree as any).carCake._data[0];
+      const layerRow = cakeRow.layers.carGeneralLayer._data[0];
+      // Compare content only: the pipeline (rmhsh in Switch B, then
+      // fresh hashing on actual insert) does not preserve the '' hash
+      // placeholders from the fixture.
+      expect(
+        rmhsh(layerRow.add[editActionPutComponent.data.sliceId].carGeneral
+          ._data[0]),
+      ).toEqual(rmhsh(editActionPutComponent.data.component));
 
       //Check MultiEdit updated
       expect(multiEditProc.multiEdit.previous).toBe(multiEdit._hash);
@@ -546,6 +586,83 @@ describe('MultiEditProcessor', () => {
           ),
         ).toBe(true);
       });
+
+      it('PutComponent', async () => {
+        // No prior edit -> _join is still null -> exercises Switch A,
+        // which seeds a minimal one-column Join via a single targeted
+        // db.get() (not db.join(), which would be O(every slice)) and
+        // then calls Join.putComponent() on it.
+        const editActionPutComponent = exampleEditActionPutComponent();
+
+        const edit: Edit = {
+          name: 'Put: carGeneral component for VIN1',
+          action: editActionPutComponent,
+          _hash: '',
+        } as Edit;
+
+        const editInsertTree = {
+          [`${cakeKey}Edits`]: {
+            _data: [edit],
+            _type: 'edits',
+          } as EditsTable,
+        };
+
+        const [{ [`${cakeKey}EditsRef`]: editRef }] = await db.insert(
+          Route.fromFlat(`/${cakeKey}Edits`),
+          editInsertTree,
+          { skipHistory: true },
+        );
+
+        const multiEdit: MultiEdit = {
+          previous: null,
+          edit: editRef!,
+          _hash: '',
+        } as MultiEdit;
+
+        const proc = await MultiEditProcessor.fromMultiEdit(
+          db,
+          cakeKey,
+          cakeRef,
+          multiEdit,
+        );
+
+        const inserts = proc.join.insert();
+        expect(inserts.length).toBe(1);
+
+        const { route, tree } = inserts[0];
+        expect(route.flat).toBe('/carCake/carGeneralLayer/carGeneral');
+
+        const cakeRow = (tree as any).carCake._data[0];
+        const layerRow = cakeRow.layers.carGeneralLayer._data[0];
+        // Compare content only -- inserting the Edit row itself already
+        // computed real hashes for the (previously '') placeholders.
+        expect(
+          rmhsh(layerRow.add[editActionPutComponent.data.sliceId].carGeneral
+            ._data[0]),
+        ).toEqual(rmhsh(editActionPutComponent.data.component));
+
+        // Publish and verify the whole component round-trips through
+        // db.insert(), exactly like the Join.putComponent() unit spec
+        // does at the Join level.
+        const insertResults = await db.insert(route, tree);
+        const writtenCakeRef = insertResults[0][
+          `${cakeKey}Ref`
+        ] as string;
+
+        const { cell: brandCells } = await db.get(
+          Route.fromFlat(
+            `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/brand`,
+          ),
+          {},
+          undefined,
+          [editActionPutComponent.data.sliceId],
+        );
+
+        expect(brandCells.length).toBe(1);
+        expect(brandCells[0].value).toBe(
+          editActionPutComponent.data.component.brand,
+        );
+      });
     });
     describe('Multiple Edits', async () => {
       let multiEditProc: MultiEditProcessor;
@@ -730,5 +847,111 @@ describe('MultiEditProcessor', () => {
         expect(writtenCarGeneral.length).toBe(5);
       });
     });
+  });
+
+  describe('PutComponent acceptance (round-trip)', () => {
+    it(
+      'publishes via MultiEditManager, reconstructs via ' +
+        'applyEditHistory, and the component round-trips with an ' +
+        'identical hash',
+      async () => {
+        const manager = new MultiEditManager(cakeKey, db);
+
+        // Edit #1: an ordinary selection edit, purely to give the
+        // second edit's EditHistory a `previous` to chain onto -- so
+        // resolving it exercises MultiEditProcessor.applyEditHistory()'s
+        // incremental ("has previous") path below, not just a
+        // from-scratch replay.
+        const selectionEdit: Edit = hip<Edit>({
+          name: 'Select some columns',
+          action: exampleEditActionColumnSelection(),
+          _hash: '',
+        });
+        await manager.edit(selectionEdit, cakeRef);
+        const firstEditHistoryRef = manager.head!.editHistoryRef;
+
+        // Edit #2: the putComponent edit -- a representative "document"
+        // (nested object + array fields), carried whole in one edit.
+        const editActionPutComponent = exampleEditActionPutComponent();
+        const putComponentEdit: Edit = hip<Edit>({
+          name: editActionPutComponent.name,
+          action: editActionPutComponent,
+          _hash: '',
+        });
+
+        await manager.edit(putComponentEdit);
+        const secondEditHistoryRef = manager.head!.editHistoryRef;
+        expect(secondEditHistoryRef).not.toBe(firstEditHistoryRef);
+
+        const published = await manager.publish();
+        const writtenCakeRef = published.cakeRef;
+
+        // Reconstruct from scratch: a FRESH manager (empty processor
+        // cache) rebuilds the head purely from persisted
+        // Edit/MultiEdit/EditHistory rows. secondEditHistoryRef.previous
+        // = [firstEditHistoryRef], so MultiEditManager.editHistoryRef()
+        // recurses through MultiEditProcessor.applyEditHistory().
+        const freshManager = new MultiEditManager(cakeKey, db);
+        const reconstructed = await freshManager.editHistoryRef(
+          secondEditHistoryRef,
+        );
+
+        const inserts = reconstructed.join.insert();
+        expect(inserts.length).toBe(1);
+
+        const { tree } = inserts[0];
+        const reconstructedLayerRow = (tree as any).carCake._data[0].layers
+          .carGeneralLayer._data[0];
+        // Compare content only, same reasoning as the other PutComponent
+        // cases: the Edit row's own insert already computed real hashes.
+        expect(
+          rmhsh(
+            reconstructedLayerRow.add[editActionPutComponent.data.sliceId]
+              .carGeneral._data[0],
+          ),
+        ).toEqual(rmhsh(editActionPutComponent.data.component));
+
+        // The published Db state carries the SAME content-addressed
+        // component: re-hashing an untouched copy of the original
+        // object client-side yields the same hash as the row that
+        // actually landed in carGeneral.
+        const expectedHash = hip(
+          JSON.parse(JSON.stringify(editActionPutComponent.data.component)),
+        )._hash as string;
+
+        const dump = await db.core.dumpTable('carGeneral');
+        const stored = (dump.carGeneral._data as any[]).find(
+          (c) => c._hash === expectedHash,
+        );
+
+        expect(stored).toBeDefined();
+        expect(stored._hash).toBe(expectedHash);
+        expect(stored.brand).toBe(editActionPutComponent.data.component.brand);
+        expect(stored.serviceIntervals).toEqual(
+          editActionPutComponent.data.component.serviceIntervals,
+        );
+        expect(stored.units.energy).toEqual(
+          editActionPutComponent.data.component.units.energy,
+        );
+        expect(stored.meta.pressText).toEqual(
+          editActionPutComponent.data.component.meta.pressText,
+        );
+
+        // And it round-trips through the published cake at the put
+        // sliceId.
+        const { cell: brandCells } = await db.get(
+          Route.fromFlat(
+            `/${cakeKey}@${writtenCakeRef}/carGeneralLayer/carGeneral/brand`,
+          ),
+          {},
+          undefined,
+          [editActionPutComponent.data.sliceId],
+        );
+        expect(brandCells.length).toBe(1);
+        expect(brandCells[0].value).toBe(
+          editActionPutComponent.data.component.brand,
+        );
+      },
+    );
   });
 });
