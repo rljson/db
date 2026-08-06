@@ -650,11 +650,33 @@ Applying it appends the component to the layer's `add` map, i.e.
   the same `PutComponent` twice yields the same ref, so publishing is
   idempotent.
 
+**SliceId maintenance (new documents are fully readable).** Slice
+membership is resolved *separately* from `add`, from the sliceIds base
+chain — and by two different anchors: a layer-level sliceId-filtered
+`db.get` resolves it from the layer's `sliceIdsTableRow`, while
+`db.join` (the engine `MultiEditProcessor.applyEditHistory` rebuilds
+joins with) resolves it from the *cake's* `sliceIdsRow`. So writing only
+`add[sliceId]` would leave a brand-new document invisible to those
+readers. `putComponent` therefore also extends the slice set: it emits a
+new `SliceIds` row `{ base: <current tip>, add: [sliceId] }` and points
+**both** the new layer's `sliceIdsTableRow` and the new cake's
+`sliceIdsRow` at it (when they share a tip — the usual case — the two
+rows are identical and de-duplicate to one). The append is
+unconditional; the slice-id resolver de-duplicates, so re-putting an
+existing document stays correct (it just adds a redundant, GC-able chain
+link). With this, a newly inserted document is fully readable after
+publish via **both** a `db.get([sliceId])` filter and the sliceId-driven
+`db.join` reconstruction path.
+
 `Db.insert()` needs no changes for this: `putComponent` produces a
 regular cake tree whose target layer's `add` map has one entry shaped
 as a nested component tree — exactly the shape the existing `layers`
 branch of `Db._insert` already resolves (write the component, take its
-ref, rebuild `add[sliceId] = ref`).
+ref, rebuild `add[sliceId] = ref`). The one thing that route does *not*
+write is the sliceIds table, so `Join.putComponent` surfaces the new
+`SliceIds` row(s) via `pendingSliceIdsInsert` and `MultiEditProcessor`
+persists them (via `core.import`, content-addressed and idempotent)
+when it applies the edit.
 
 Because a single whole-component replacement does not fit the
 column-oriented `Join.insert()` model (one `{route, tree}` per
