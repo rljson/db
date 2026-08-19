@@ -1753,6 +1753,30 @@ describe('Controller', () => {
         expect(rmhsh(treeObjectConvertedEmpty)).toEqual({});
       });
 
+      it('buildTreeFromTrees no longer throws for a moderately-large tree that exceeded the old 100k node cap', async () => {
+        //Create TreeController
+        const treeController = (await createController(
+          'trees',
+          treeCore,
+          'exampleTree',
+        )) as TreeController<'exampleTree', Tree>;
+
+        // A wide (not deep) tree: one auto-root with 100_000 leaf
+        // children -> 100_001 nodes total, one more than the old
+        // 100_000 cap that used to throw outright. Mirrors the shape of
+        // a real file-sync catalog (many siblings, shallow depth).
+        const bigObj: Json = {};
+        for (let i = 0; i < 100_000; i++) {
+          bigObj[`leaf${i}`] = i;
+        }
+        const bigTrees: TreeWithHash[] = treeFromObject(bigObj);
+        expect(bigTrees.length).toBe(100_001);
+
+        const built = await treeController.buildTreeFromTrees(bigTrees);
+        const rootObject = rmhsh(built).root as Json;
+        expect(Object.keys(rootObject).length).toBe(100_000);
+      }, 20000);
+
       it('buildCellsFromTree', async () => {
         //Create TreeController
         const treeController = (await createController(
@@ -1879,6 +1903,84 @@ describe('Controller', () => {
         expect(exampleTreeTable2?._data.length).toBe(
           treesTable._data.length + 1,
         );
+      });
+
+      it('insertMany writes the same rows and returns the same root InsertHistoryRow as one insert() call per node (parity)', async () => {
+        const treeObject: Json = {
+          fileA: 'contentA',
+          dirB: { fileC: 'contentC', fileD: 'contentD' },
+        };
+        const nodes: TreeWithHash[] = treeFromObject(treeObject);
+        expect(nodes.length).toBeGreaterThan(3);
+        const origin = 'parity-origin';
+
+        // --- Reference: today's per-node insert() + Promise.all, as
+        // Db.insertTrees used to call it before batching. ---
+        const perNodeIo = new IoMem();
+        await perNodeIo.init();
+        await perNodeIo.isReady();
+        const perNodeCore = new Core(perNodeIo);
+        await perNodeCore.createTableWithInsertHistory(
+          rmhsh(createTreesTableCfg('parityTree')) as TableCfg,
+        );
+        const perNodeController = (await createController(
+          'trees',
+          perNodeCore,
+          'parityTree',
+        )) as TreeController<'parityTree', Tree>;
+
+        const perNodeResults = await Promise.all(
+          nodes.map((n) => perNodeController.insert('add', n, origin)),
+        );
+        const perNodeRoot = perNodeResults[perNodeResults.length - 1][0];
+        const { parityTree: perNodeTable } =
+          await perNodeCore.dumpTable('parityTree');
+        const perNodeHashes = (perNodeTable!._data as TreeWithHash[])
+          .map((r) => r._hash)
+          .sort();
+
+        // --- New: single insertMany() call. ---
+        const bulkIo = new IoMem();
+        await bulkIo.init();
+        await bulkIo.isReady();
+        const bulkCore = new Core(bulkIo);
+        await bulkCore.createTableWithInsertHistory(
+          rmhsh(createTreesTableCfg('parityTree')) as TableCfg,
+        );
+        const bulkController = (await createController(
+          'trees',
+          bulkCore,
+          'parityTree',
+        )) as TreeController<'parityTree', Tree>;
+
+        const bulkResults = await bulkController.insertMany(nodes, origin);
+        const { parityTree: bulkTable } =
+          await bulkCore.dumpTable('parityTree');
+        const bulkHashes = (bulkTable!._data as TreeWithHash[])
+          .map((r) => r._hash)
+          .sort();
+
+        // Same rows written (content-addressed dedup, order-independent)
+        expect(bulkHashes).toEqual(perNodeHashes);
+
+        // Same root InsertHistoryRow (ref/route/origin identical; timeId
+        // is a fresh timestamp per call, only its presence is checked)
+        expect(bulkResults).toHaveLength(1);
+        expect(bulkResults[0].parityTreeRef).toBe(perNodeRoot.parityTreeRef);
+        expect(bulkResults[0].route).toBe(perNodeRoot.route);
+        expect(bulkResults[0].origin).toBe(perNodeRoot.origin);
+        expect(bulkResults[0].timeId).toBeDefined();
+      });
+
+      it('insertMany returns an empty array for empty input', async () => {
+        const treeController = (await createController(
+          'trees',
+          treeCore,
+          'exampleTree',
+        )) as TreeController<'exampleTree', Tree>;
+
+        const result = await treeController.insertMany([], 'origin');
+        expect(result).toEqual([]);
       });
 
       it('should expand children when path is provided', async () => {
