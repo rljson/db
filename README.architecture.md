@@ -453,6 +453,63 @@ async get(where, filter?, path?): Promise<Rljson> {
 }
 ```
 
+### Bulk Tree Insert (`Db.insertTrees` / `TreeController.insertMany`)
+
+**Problem**: A file-sync catalog decomposes into one `Tree` node per file/
+directory. For a catalog of ~184,000 files, `Db.insertTrees` used to call
+`TreeController.insert()` once per node:
+
+```typescript
+const writePromises = trees.map((tree) =>
+  controller.insert('add', tree, 'db.insertTrees'),
+);
+const writeResults = await Promise.all(writePromises);
+```
+
+Each `insert()` call wraps a single node in its own `Rljson` table payload
+and calls `core.import()` on it — one dedup pass and one sort per node.
+For 184k nodes that is 184k dedup+sort passes instead of one.
+
+**Solution**: `TreeController.insertMany(values, origin)` assembles every
+node into a single `Rljson` table payload (`{ [tableKey]: { _data: values } }`)
+and calls `core.import()` exactly once — one dedup pass, one sort, for the
+whole tree:
+
+```typescript
+async insertMany(values: Tree[], origin?: Ref) {
+  const rlJson = { [this._tableKey]: { _data: values } } as Rljson;
+  await this._core.import(rlJson); // single dedup + sort for all nodes
+
+  // Root is the last node (post-order convention shared with insert()
+  // callers such as treeFromObject / Db.insertTrees).
+  const rootValue = values[values.length - 1];
+  return [{
+    [this._tableKey + 'Ref']: hsh(rootValue as Json)._hash as string,
+    route: '',
+    origin,
+    timeId: timeId(),
+  }];
+}
+```
+
+`Db.insertTrees` now calls `controller.insertMany(trees, 'db.insertTrees')`
+exactly once instead of mapping `controller.insert()` over every node. The
+observable result is unchanged: the same rows are written (import is
+content-addressed, so dedup is order-independent) and exactly one
+`InsertHistoryRow` is written/returned for the root node — only the
+per-node write mechanics were batched.
+
+The second `trees.map(...)` call site in `Db._insert` (the generic,
+route-driven recursive insert behind the public `Db.insert(route, tree)`
+API) was **not** batched. That path processes an arbitrary nested Rljson
+document that may mix cakes, layers, components and trees through a
+uniform `runFns: Record<tableKey, ControllerRunFn>` abstraction — it only
+has a bound `controller.insert` function per table, not the concrete
+`TreeController` instance, so it cannot reach `insertMany` without
+widening that generic abstraction for every controller type. It is also
+not the identified bottleneck: large file-sync catalogs are ingested via
+`Db.insertTrees`, not via a nested-document `Db.insert` call.
+
 ### Tree Memoization
 
 The `buildTreeFromTrees` method uses memoization to avoid reprocessing nodes:
@@ -489,10 +546,24 @@ async buildTreeFromTrees(trees: Tree[]): Promise<Json> {
 
 ### Safety Mechanisms
 
-1. **Recursion Depth Limit**: 100 levels max
-2. **Path-based Expansion**: Only expand when navigating
-3. **Memoization**: Prevent redundant processing
-4. **Early Returns**: Short-circuit on leaf nodes
+`TreeController.buildTreeFromTrees` guards against pathological input with
+three limits:
+
+1. **Node count cap**: `trees.length` must be ≤ 10,000,000 (raised from
+   100,000 — the old cap threw outright on a ~184,000-node file-sync
+   catalog).
+2. **Iteration cap** (`MAX_ITERATIONS`): 20,000,000 recursive
+   `buildObject` calls (raised from 1,000,000, proportional to the node
+   cap) — guards against cycles/bugs producing runaway recursion.
+3. **Depth cap**: 10,000 levels (unchanged) — a wide catalog tree (many
+   siblings, shallow depth) does not need a higher depth limit; only the
+   width-related caps above were raised.
+
+Beyond `buildTreeFromTrees`:
+
+4. **Path-based Expansion**: Only expand children when navigating
+5. **Memoization**: Prevent redundant processing
+6. **Early Returns**: Short-circuit on leaf nodes
 
 ## Join System
 

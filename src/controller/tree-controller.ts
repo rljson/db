@@ -89,6 +89,55 @@ export class TreeController<N extends string, C extends Tree>
     return [result];
   }
 
+  /**
+   * Inserts many pre-decomposed tree nodes in a single `core.import()`
+   * call — one dedup pass, one sort — instead of calling `insert()` once
+   * per node. Used by `Db.insertTrees` to bulk-load large file-sync
+   * catalogs (e.g. ~184,000 nodes) without paying a per-node dedup+sort
+   * cost.
+   *
+   * Observable behavior mirrors calling `insert()` once per node: the same
+   * rows end up written (import is content-addressed, so dedup is
+   * order-independent), but only ONE `InsertHistoryRow` is created/returned
+   * — for the root node, which by convention (shared with `treeFromObject`
+   * and `Db.insertTrees`) is the LAST element of `values`.
+   *
+   * @param values - Pre-decomposed Tree nodes, root LAST
+   * @param origin - Optional origin ref recorded on the returned InsertHistoryRow
+   */
+  async insertMany(
+    values: Tree[],
+    origin?: Ref,
+  ): Promise<InsertHistoryRow<any>[]> {
+    if (values.length === 0) {
+      return [];
+    }
+
+    const rlJson = { [this._tableKey]: { _data: values } } as Rljson;
+
+    // Write every node in ONE import: a single dedup + single sort for
+    // the whole batch, instead of one import per node.
+    await this._core.import(rlJson);
+
+    // Root is the last node (post-order convention).
+    const rootValue = values[values.length - 1];
+
+    //Create InsertHistoryRow for the root node only
+    const result = {
+      //Ref to root node
+      [this._tableKey + 'Ref']: hsh(rootValue as Json)._hash as string,
+
+      //Data from edit
+      route: '',
+      origin,
+
+      //Unique id/timestamp
+      timeId: timeId(),
+    } as InsertHistoryRow<any>;
+
+    return [result];
+  }
+
   async get(
     where: string | Json,
     filter?: Json,
@@ -229,11 +278,13 @@ export class TreeController<N extends string, C extends Tree>
       return {};
     }
 
-    // Safety check: prevent processing excessively large trees
+    // Safety check: prevent processing excessively large trees.
+    // Raised from 100_000 -> 10_000_000 to support file-sync catalogs of
+    // ~184,000 nodes (and headroom beyond that scale).
     /* v8 ignore if -- @preserve */
-    if (trees.length > 100000) {
+    if (trees.length > 10_000_000) {
       throw new Error(
-        `TreeController.buildTreeFromTrees: Tree size exceeds limit (${trees.length} > 100000 nodes). ` +
+        `TreeController.buildTreeFromTrees: Tree size exceeds limit (${trees.length} > 10000000 nodes). ` +
           `This may indicate a performance issue or data structure problem.`,
       );
     }
@@ -248,7 +299,9 @@ export class TreeController<N extends string, C extends Tree>
     const memo = new Map<string, any>();
 
     let buildObjectCallCount = 0;
-    const MAX_ITERATIONS = 1000000; // Safety limit to prevent infinite loops
+    // Safety limit to prevent infinite loops. Raised proportionally to the
+    // node-count cap above (100_000 -> 10_000_000, i.e. 100x).
+    const MAX_ITERATIONS = 20_000_000;
 
     // Recursive function to build object from tree
     const buildObject = (tree: Tree, depth = 0): any => {
@@ -263,7 +316,9 @@ export class TreeController<N extends string, C extends Tree>
         );
       }
 
-      // Safety check: prevent stack overflow from deep nesting
+      // Safety check: prevent stack overflow from deep nesting.
+      // Left unchanged: file-sync catalogs are wide (many siblings), not
+      // deep, so the node/iteration caps above are the relevant limits.
       /* v8 ignore if -- @preserve */
       if (depth > 10000) {
         throw new Error(

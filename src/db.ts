@@ -1567,7 +1567,8 @@ export class Db {
    * element** in the array.
    *
    * The method goes through the full insert pipeline:
-   * 1. Writes each node via TreeController
+   * 1. Writes all nodes via a single `TreeController.insertMany()` call
+   *    (one dedup + one sort for the whole batch, not one per node)
    * 2. Creates an InsertHistoryRow automatically
    * 3. Calls `notify.notify()` so Connector observers fire
    *
@@ -1597,23 +1598,18 @@ export class Db {
       any
     >;
 
-    // Write each tree node via the controller
-    const writePromises = trees.map((tree) =>
-      controller.insert('add', tree, 'db.insertTrees'),
-    );
-    const writeResults = await Promise.all(writePromises);
-
-    // Only the root (last) result matters for InsertHistoryRow
-    const lastResult = writeResults[writeResults.length - 1];
+    // Write all tree nodes in a single import (one dedup + one sort for
+    // the whole batch) instead of one import per node.
+    const writeResults = await controller.insertMany(trees, 'db.insertTrees');
 
     /* v8 ignore next -- @preserve */
-    if (!lastResult || lastResult.length === 0) {
+    if (!writeResults || writeResults.length === 0) {
       throw new Error(
         `Db.insertTrees: TreeController returned no result for root node of table "${treeKey}".`,
       );
     }
 
-    const rootResult = lastResult[0];
+    const rootResult = writeResults[0];
 
     // Add route info to the result
     const route = Route.fromFlat(`/${treeKey}`);
@@ -1954,6 +1950,13 @@ export class Db {
         }
         const trees = treeFromObject(treeObject, true);
 
+        // Not batched via TreeController.insertMany() like Db.insertTrees:
+        // `runFn` here is a generic ControllerRunFn bound once per table in
+        // insert() (used uniformly for cakes/layers/components/trees), not
+        // a concrete TreeController instance, so a tree-specific bulk
+        // import isn't reachable through this abstraction. This path also
+        // isn't the large-catalog bottleneck — bulk file-sync trees go
+        // through Db.insertTrees, not this nested-document Db.insert().
         const writePromises = trees.map((tree) =>
           runFn('add', tree, 'db.insert'),
         );

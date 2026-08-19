@@ -24,6 +24,7 @@ import {
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { TreeController } from '../src/controller/tree-controller';
 import { Container, Db } from '../src/db';
 import {
   CarGeneral,
@@ -2811,6 +2812,55 @@ describe('Db', () => {
       const rawRootHash = trees[trees.length - 1]._hash as string;
 
       expect(insertTreesRef).toBe(rawRootHash);
+    });
+
+    it('writes the same rows and returns the same root InsertHistoryRow as the old per-node insert loop (parity)', async () => {
+      const treeObject = {
+        fileA: 'contentA',
+        dirB: { fileC: 'contentC', fileD: 'contentD' },
+      };
+      const trees: Array<Tree> = treeFromObject(treeObject);
+      expect(trees.length).toBeGreaterThan(3);
+
+      // --- Reference: what Db.insertTrees used to do — one
+      // controller.insert() call per node via Promise.all, root = last
+      // result. ---
+      const oldIo = new IoMem();
+      await oldIo.init();
+      await oldIo.isReady();
+      const oldDb = new Db(oldIo);
+      await oldDb.core.createTableWithInsertHistory(
+        createTreesTableCfg(treeKey),
+      );
+      const oldController = (await oldDb.getController(
+        treeKey,
+      )) as TreeController<any, any>;
+      const oldWriteResults = await Promise.all(
+        trees.map((tree) =>
+          oldController.insert('add', tree, 'db.insertTrees'),
+        ),
+      );
+      const oldRootResult = oldWriteResults[oldWriteResults.length - 1][0];
+      const { [treeKey]: oldTable } = await oldDb.core.dumpTable(treeKey);
+      const oldHashes = (oldTable!._data as Array<Tree & { _hash: string }>)
+        .map((r) => r._hash)
+        .sort();
+
+      // --- New: Db.insertTrees(), backed by a single
+      // TreeController.insertMany() call. ---
+      const results = await treeDb.insertTrees(treeKey, trees);
+      const { [treeKey]: newTable } = await treeDb.core.dumpTable(treeKey);
+      const newHashes = (newTable!._data as Array<Tree & { _hash: string }>)
+        .map((r) => r._hash)
+        .sort();
+
+      // Same rows written
+      expect(newHashes).toEqual(oldHashes);
+
+      // Same root InsertHistoryRow ref as the old per-node approach
+      expect(results[0][`${treeKey}Ref`]).toBe(
+        oldRootResult[`${treeKey}Ref`],
+      );
     });
   });
 
