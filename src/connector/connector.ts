@@ -233,6 +233,29 @@ export class Connector {
 
   // ...........................................................................
   /**
+   * Removes a ref from BOTH dedup sets, so this connector may send it again.
+   *
+   * {@link send} drops a ref it has already sent OR already received, which
+   * assumes a ref describes a state reached once and never returned to. That
+   * holds for an append-only stream and fails for content-addressed state: a
+   * folder that goes A → B → A re-derives A's exact ref, and the return trip
+   * is discarded as a duplicate. A file created and then deleted within one
+   * session is precisely that shape, and its deletion reached no peer at all.
+   *
+   * Callers use this when they move OFF a ref: the ref no longer describes
+   * their state, so a later return to it is real news rather than an echo.
+   * Refs that still describe the current state stay deduped, so ordinary
+   * bounce-back suppression is untouched.
+   * @param ref - The ref to allow re-sending for.
+   */
+  invalidateSent(ref: string): void {
+    this._sentRefsCurrent.delete(ref);
+    this._sentRefsPrevious.delete(ref);
+    this.invalidateReceived(ref);
+  }
+
+  // ...........................................................................
+  /**
    * Returns the current sequence number.
    * Only meaningful when `causalOrdering` is enabled.
    */
@@ -332,7 +355,29 @@ export class Connector {
 
   private _notifyCallbacks(ref: string, predecessorRefs?: string[]) {
     if (this._callbacks.length === 0) {
-      // No callbacks registered yet — store for replay on first listen()
+      // No callbacks registered yet — store for replay on first listen().
+      //
+      // The slot holds ONE ref, so a second arrival before listen() replaces
+      // the first — deliberately, since the newer ref describes the newer
+      // state and replaying a superseded one would regress it. But the
+      // replaced ref was already marked received the instant it arrived, and
+      // nothing ever un-marks it: it is neither delivered nor retired, so it
+      // stays "already received" for the life of the connector.
+      //
+      // Refs are content hashes, so that is not merely a lost notification —
+      // it silently blocks the state itself. A peer that later puts the data
+      // back into exactly that state re-derives that exact ref, and the
+      // advertisement is dropped here before any listener sees it. Deleting a
+      // file created earlier in the session is precisely that shape, and it
+      // is why a THIRD peer changes the outcome: with two connectors only one
+      // bootstrap ref lands in this window, with three there is a second one
+      // to replace it.
+      //
+      // Hand the replaced ref back, so a later return to its state is real
+      // news again. Its own delivery is still (correctly) skipped.
+      if (this._missedRef !== null && this._missedRef !== ref) {
+        this.invalidateReceived(this._missedRef);
+      }
       this._missedRef = ref;
       this._missedPredecessorRefs = predecessorRefs;
       return;
