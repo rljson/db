@@ -63,9 +63,20 @@ export class Connector {
   private _origin: string;
   private _callbacks: ConnectorCallback[] = [];
   private _conflictCallbacks: ConflictCallback[] = [];
-  private _missedRef: string | null = null;
-  private _missedPredecessorRefs: string[] | undefined = undefined;
-  private _missedInfo: RefArrivalInfo | undefined = undefined;
+  /**
+   * Refs that arrived before any callback was registered, in arrival order.
+   *
+   * A QUEUE, not a slot. It held exactly one for most of this class's life,
+   * and an arrival replaced the one already parked — which drops a ref that
+   * was never delivered and never will be, because nothing re-advertises it.
+   * That loss is invisible in a two-party test and needs message density in
+   * the pre-listen window to show up at all.
+   */
+  private _missed: Array<{
+    ref: string;
+    predecessorRefs?: string[];
+    info?: RefArrivalInfo;
+  }> = [];
   private _lastSentRef: string | null = null;
 
   private _isListening: boolean = false;
@@ -122,9 +133,9 @@ export class Connector {
 
     this._addSentRef(ref);
 
-    // Do NOT clear _missedRef here. The bootstrap ref must survive
+    // Do NOT clear _missed here. The bootstrap ref must survive
     // until listen() is called so the callback receives the server's
-    // latest state. Previously, clearing _missedRef caused a race:
+    // latest state. Previously, clearing it caused a race:
     // syncToDb's send() would discard the bootstrap, and the
     // subsequent listen() in syncFromDb would get nothing — leaving
     // the client permanently stuck.
@@ -209,17 +220,21 @@ export class Connector {
     // before listen() is called. Without replay, that initial ref is
     // added to the dedup set (so it won't fire again) but no callback
     // ever sees it.
-    if (this._missedRef !== null) {
-      const ref = this._missedRef;
-      const predecessorRefs = this._missedPredecessorRefs;
-      const info = this._missedInfo;
-      this._missedRef = null;
-      this._missedPredecessorRefs = undefined;
-      this._missedInfo = undefined;
-      /* v8 ignore next -- @preserve */
-      Promise.resolve(callback(ref, predecessorRefs, info)).catch(
-        console.error,
-      );
+    if (this._missed.length > 0) {
+      const missed = this._missed;
+      this._missed = [];
+      // Replayed in ARRIVAL order. An older state replayed before a newer one
+      // converges on the newer, and an older one that is genuinely superseded
+      // is dropped downstream by the staleness check rather than here — which
+      // is what makes replaying all of them safe now and did not before.
+      void (async () => {
+        for (const m of missed) {
+          /* v8 ignore next -- @preserve */
+          await Promise.resolve(
+            callback(m.ref, m.predecessorRefs, m.info),
+          ).catch(console.error);
+        }
+      })();
     }
   }
 
@@ -386,32 +401,34 @@ export class Connector {
     info?: RefArrivalInfo,
   ) {
     if (this._callbacks.length === 0) {
-      // No callbacks registered yet — store for replay on first listen().
+      // No callbacks registered yet — queue for replay on first listen().
       //
-      // The slot holds ONE ref, so a second arrival before listen() replaces
-      // the first — deliberately, since the newer ref describes the newer
-      // state and replaying a superseded one would regress it. But the
-      // replaced ref was already marked received the instant it arrived, and
-      // nothing ever un-marks it: it is neither delivered nor retired, so it
-      // stays "already received" for the life of the connector.
+      // This used to be a one-ref slot, and an arrival REPLACED whatever was
+      // parked, on the reasoning that the newer ref describes the newer state.
+      // Two things were wrong with that.
       //
-      // Refs are content hashes, so that is not merely a lost notification —
-      // it silently blocks the state itself. A peer that later puts the data
-      // back into exactly that state re-derives that exact ref, and the
-      // advertisement is dropped here before any listener sees it. Deleting a
-      // file created earlier in the session is precisely that shape, and it
-      // is why a THIRD peer changes the outcome: with two connectors only one
-      // bootstrap ref lands in this window, with three there is a second one
-      // to replace it.
+      // The replaced ref was marked received the instant it arrived and was
+      // then neither delivered nor retired, so it stayed "already received"
+      // for the life of the connector. Refs are content hashes, so that does
+      // not merely lose a notification — it blocks the STATE. A peer that
+      // later returns the data to exactly that state re-derives that exact ref
+      // and its advertisement is dropped here, before any listener exists to
+      // see it. (Retiring the replaced ref on eviction fixed that half.)
       //
-      // Hand the replaced ref back, so a later return to its state is real
-      // news again. Its own delivery is still (correctly) skipped.
-      if (this._missedRef !== null && this._missedRef !== ref) {
-        this.invalidateReceived(this._missedRef);
-      }
-      this._missedRef = ref;
-      this._missedPredecessorRefs = predecessorRefs;
-      this._missedInfo = info;
+      // The other half is simpler and was the real cost: the evicted ref was
+      // never delivered, and nothing re-advertises it. Every mechanism tried
+      // for getting a rejoining node its missed state — a periodic broadcast,
+      // and a bounded per-connection retry — works by putting MORE messages
+      // into exactly this window, so each one lost more here than it delivered.
+      // That is why four attempts in a row regressed and none of them was
+      // diagnosed: the fault was never in the mechanism.
+      //
+      // Queue them instead. Replaying an older state before a newer one
+      // converges on the newer, and an older state that is genuinely
+      // superseded is now dropped by the per-sender staleness check downstream
+      // — which is what makes replaying all of them safe today and did not
+      // before that check existed.
+      this._missed.push({ ref, predecessorRefs, info });
       return;
     }
     /* v8 ignore next -- @preserve */

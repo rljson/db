@@ -145,39 +145,34 @@ describe('Connector', () => {
       expect(callback.mock.calls.at(-1)?.[0]).toBe(editHistory._hash);
     });
 
-    it('re-opens a missed ref that a later arrival replaced, so a return to its state is deliverable', async () => {
+    it('replays every ref that arrived before listen(), in arrival order', async () => {
       const origin = timeId();
 
-      // Two refs arrive before any listener exists. The slot holds one, so
-      // the second replaces the first — correct, the newer ref describes the
-      // newer state. But BOTH were marked received on arrival, and only the
-      // survivor is ever delivered.
-      const replaced = 'replacedBootstrapRef';
-      const survivor = editHistory._hash;
-      socket.emit(route.flat, { r: replaced, o: origin } as ConnectorPayload);
-      socket.emit(route.flat, { r: survivor, o: origin } as ConnectorPayload);
+      // Two refs arrive before any listener exists. This used to be a
+      // one-ref slot and the second REPLACED the first, which lost the first
+      // for good — nothing re-advertises it. Every attempt at getting a
+      // rejoining node its missed state works by putting more messages into
+      // exactly this window, so each one lost more here than it delivered.
+      const earlier = 'earlierBootstrapRef';
+      const later = editHistory._hash;
+      socket.emit(route.flat, { r: earlier, o: origin } as ConnectorPayload);
+      socket.emit(route.flat, { r: later, o: origin } as ConnectorPayload);
 
       const callback = vi.fn();
       connector.listen(callback);
       await new Promise((r) => setTimeout(r, 0));
 
-      // Only the survivor is replayed — the replaced ref is not resurrected.
-      expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback.mock.calls.at(-1)?.[0]).toBe(survivor);
+      // BOTH are delivered, oldest first. Applying an older state before a
+      // newer one converges on the newer; an older state that is genuinely
+      // superseded is dropped by the per-sender staleness check downstream,
+      // not by silently discarding it here.
+      expect(callback).toHaveBeenCalledTimes(2);
+      expect(callback.mock.calls.map((c) => c[0])).toEqual([earlier, later]);
 
-      // But the replaced ref must no longer count as "already received".
-      // Refs are content hashes: a peer returning to that exact state
-      // re-derives that exact ref, and it has to reach the listener. Left
-      // marked, the state is unreachable for the life of the connector.
+      // Both now count as received, so re-advertising either is an echo.
       callback.mockClear();
-      socket.emit(route.flat, { r: replaced, o: origin } as ConnectorPayload);
-      await new Promise((r) => setTimeout(r, 0));
-      expect(callback.mock.calls.at(-1)?.[0]).toBe(replaced);
-
-      // The survivor still describes the current state, so re-advertising it
-      // is an echo and stays suppressed.
-      callback.mockClear();
-      socket.emit(route.flat, { r: survivor, o: origin } as ConnectorPayload);
+      socket.emit(route.flat, { r: earlier, o: origin } as ConnectorPayload);
+      socket.emit(route.flat, { r: later, o: origin } as ConnectorPayload);
       await new Promise((r) => setTimeout(r, 0));
       expect(callback).not.toHaveBeenCalled();
     });
