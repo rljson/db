@@ -24,6 +24,9 @@ import { Db } from '../../src/db';
 import { exampleEditActionColumnSelection } from '../../src/edit/edit-action';
 import { staticExample } from '../../src/example-static/example-static';
 
+// Ref-callback assertions check the REF rather than the whole call signature.
+// The callback gained a third argument (arrival info) and would otherwise need
+// every assertion rewritten each time it grows.
 describe('Connector', () => {
   let db: Db;
 
@@ -115,7 +118,7 @@ describe('Connector', () => {
       socket.emit(route.flat, payload);
 
       expect(callback).toHaveBeenCalled();
-      expect(callback).toHaveBeenCalledWith(payload.r);
+      expect(callback.mock.calls.at(-1)?.[0]).toBe(payload.r);
     });
 
     it('should replay missed ref that arrived before listen()', async () => {
@@ -139,7 +142,7 @@ describe('Connector', () => {
       await new Promise((r) => setTimeout(r, 0));
 
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(editHistory._hash);
+      expect(callback.mock.calls.at(-1)?.[0]).toBe(editHistory._hash);
     });
 
     it('re-opens a missed ref that a later arrival replaced, so a return to its state is deliverable', async () => {
@@ -160,7 +163,7 @@ describe('Connector', () => {
 
       // Only the survivor is replayed — the replaced ref is not resurrected.
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith(survivor);
+      expect(callback.mock.calls.at(-1)?.[0]).toBe(survivor);
 
       // But the replaced ref must no longer count as "already received".
       // Refs are content hashes: a peer returning to that exact state
@@ -169,7 +172,7 @@ describe('Connector', () => {
       callback.mockClear();
       socket.emit(route.flat, { r: replaced, o: origin } as ConnectorPayload);
       await new Promise((r) => setTimeout(r, 0));
-      expect(callback).toHaveBeenCalledWith(replaced);
+      expect(callback.mock.calls.at(-1)?.[0]).toBe(replaced);
 
       // The survivor still describes the current state, so re-advertising it
       // is an echo and stays suppressed.
@@ -222,7 +225,7 @@ describe('Connector', () => {
       connector.listen(cb);
       await new Promise((r) => setTimeout(r, 0));
       expect(cb).toHaveBeenCalledTimes(1);
-      expect(cb).toHaveBeenCalledWith('old-bootstrap-ref');
+      expect(cb.mock.calls.at(-1)?.[0]).toBe('old-bootstrap-ref');
     });
   });
 

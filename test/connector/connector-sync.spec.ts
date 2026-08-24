@@ -321,7 +321,8 @@ describe('Connector sync protocol', () => {
         p: ['parent-content-ref'],
       } as ConnectorPayload);
 
-      expect(callback).toHaveBeenCalledWith('child-ref', [
+      expect(callback.mock.calls.at(-1)?.[0]).toBe('child-ref');
+      expect(callback.mock.calls.at(-1)?.[1]).toEqual([
         'parent-content-ref',
       ]);
 
@@ -377,10 +378,89 @@ describe('Connector sync protocol', () => {
       socket.emit(events.gapFillRes, gapFillRes);
 
       expect(notifyCallback).toHaveBeenCalledTimes(2);
-      expect(notifyCallback).toHaveBeenCalledWith('ref2');
-      expect(notifyCallback).toHaveBeenCalledWith('ref3');
+      expect(notifyCallback.mock.calls.map((c) => c[0])).toContain('ref2');
+      expect(notifyCallback.mock.calls.map((c) => c[0])).toContain('ref3');
 
       connector.tearDown();
+    });
+
+    // A ref is a content hash: it says WHAT state a sender is in, never
+    // whether that is news. The per-sender sequence says whether it is news,
+    // cheaply — no ancestry walk, no merge, no trusting the sender's view.
+    describe('isNewestFromSender', () => {
+      it('is true for a sender advancing its sequence', async () => {
+        const connector = new Connector(db, route, socket, {
+          causalOrdering: true,
+          includeClientIdentity: true,
+        });
+        const seen: Array<boolean | undefined> = [];
+        connector.listen(async (_r, _p, info) => {
+          seen.push(info?.isNewestFromSender);
+        });
+
+        socket.emit(events.ref, { o: 'peer', r: 'r1', c: 'peer-a', seq: 1 });
+        socket.emit(events.ref, { o: 'peer', r: 'r2', c: 'peer-a', seq: 2 });
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(seen).toEqual([true, true]);
+        connector.tearDown();
+      });
+
+      // The case the whole thing exists for: a sender that has gone backwards
+      // — a reconnected node re-advertising the state it held before it left,
+      // or a heartbeat repeating something already superseded.
+      it('is false when the sender has already said something later', async () => {
+        const connector = new Connector(db, route, socket, {
+          causalOrdering: true,
+          includeClientIdentity: true,
+        });
+        const seen: Array<boolean | undefined> = [];
+        connector.listen(async (_r, _p, info) => {
+          seen.push(info?.isNewestFromSender);
+        });
+
+        socket.emit(events.ref, { o: 'peer', r: 'r5', c: 'peer-a', seq: 5 });
+        socket.emit(events.ref, { o: 'peer', r: 'r3', c: 'peer-a', seq: 3 });
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(seen).toEqual([true, false]);
+        connector.tearDown();
+      });
+
+      it('keeps senders separate', async () => {
+        const connector = new Connector(db, route, socket, {
+          causalOrdering: true,
+          includeClientIdentity: true,
+        });
+        const seen: Array<boolean | undefined> = [];
+        connector.listen(async (_r, _p, info) => {
+          seen.push(info?.isNewestFromSender);
+        });
+
+        socket.emit(events.ref, { o: 'peer', r: 'a9', c: 'peer-a', seq: 9 });
+        // A different sender's low sequence is not stale — it is just theirs.
+        socket.emit(events.ref, { o: 'peer', r: 'b1', c: 'peer-b', seq: 1 });
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(seen).toEqual([true, true]);
+        connector.tearDown();
+      });
+
+      // "Unknown" must not silently become "stale", or every deployment that
+      // carries no metadata would change behaviour.
+      it('is true when there is no sequence to judge by', async () => {
+        const connector = new Connector(db, route, socket);
+        const seen: Array<boolean | undefined> = [];
+        connector.listen(async (_r, _p, info) => {
+          seen.push(info?.isNewestFromSender);
+        });
+
+        socket.emit(events.ref, { o: 'peer', r: 'plain' } as ConnectorPayload);
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(seen).toEqual([true]);
+        connector.tearDown();
+      });
     });
 
     it('should not re-process already received refs from gap-fill', () => {
@@ -411,7 +491,7 @@ describe('Connector sync protocol', () => {
 
       // ref2 should not trigger again, only ref3
       expect(notifyCallback).toHaveBeenCalledTimes(2);
-      expect(notifyCallback).toHaveBeenLastCalledWith('ref3');
+      expect(notifyCallback.mock.calls.at(-1)?.[0]).toBe('ref3');
 
       connector.tearDown();
     });
@@ -730,7 +810,7 @@ describe('Connector sync protocol', () => {
       } as ConnectorPayload);
 
       expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback).toHaveBeenCalledWith('ref1');
+      expect(callback.mock.calls.map((c) => c[0])).toContain('ref1');
 
       // Receiving the same ref again — should be deduped
       socket.emit(events.ref, {

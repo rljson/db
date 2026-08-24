@@ -30,9 +30,33 @@ export type { ConnectorPayload } from '@rljson/rljson';
  * `causalOrdering` is enabled, so the receiver can record correct ancestry in
  * its own InsertHistory. Empty/undefined for roots or when causal ordering is off.
  */
+/**
+ * Whether this advertisement is the newest thing its sender has said.
+ *
+ * A ref is a content hash: it identifies a STATE, and the same state can
+ * legitimately recur, so nothing in the ref answers "is this news?". The
+ * per-sender sequence does, and cheaply — without walking the ancestry DAG,
+ * merging anything, or trusting the sender's view of the world.
+ *
+ * `false` means this sender has already advertised something later; the
+ * payload is a re-advertisement or a straggler. It does NOT mean the content
+ * is wrong, only that acting destructively on it is unsafe.
+ *
+ * `true` when the sequence is unavailable (`causalOrdering` or
+ * `includeClientIdentity` off), because "unknown" must not silently become
+ * "stale" and change behaviour for deployments carrying no metadata.
+ */
+export interface RefArrivalInfo {
+  /** Predecessor content refs the sender declared, when causal ordering is on. */
+  predecessorRefs?: string[];
+  /** See {@link RefArrivalInfo}. `true` when it cannot be determined. */
+  isNewestFromSender: boolean;
+}
+
 export type ConnectorCallback = (
   ref: string,
   predecessorRefs?: string[],
+  info?: RefArrivalInfo,
 ) => Promise<any>;
 
 export class Connector {
@@ -41,6 +65,7 @@ export class Connector {
   private _conflictCallbacks: ConflictCallback[] = [];
   private _missedRef: string | null = null;
   private _missedPredecessorRefs: string[] | undefined = undefined;
+  private _missedInfo: RefArrivalInfo | undefined = undefined;
   private _lastSentRef: string | null = null;
 
   private _isListening: boolean = false;
@@ -187,12 +212,14 @@ export class Connector {
     if (this._missedRef !== null) {
       const ref = this._missedRef;
       const predecessorRefs = this._missedPredecessorRefs;
+      const info = this._missedInfo;
       this._missedRef = null;
       this._missedPredecessorRefs = undefined;
+      this._missedInfo = undefined;
       /* v8 ignore next -- @preserve */
-      Promise.resolve(
-        predecessorRefs ? callback(ref, predecessorRefs) : callback(ref),
-      ).catch(console.error);
+      Promise.resolve(callback(ref, predecessorRefs, info)).catch(
+        console.error,
+      );
     }
   }
 
@@ -353,7 +380,11 @@ export class Connector {
     }
   }
 
-  private _notifyCallbacks(ref: string, predecessorRefs?: string[]) {
+  private _notifyCallbacks(
+    ref: string,
+    predecessorRefs?: string[],
+    info?: RefArrivalInfo,
+  ) {
     if (this._callbacks.length === 0) {
       // No callbacks registered yet — store for replay on first listen().
       //
@@ -380,13 +411,12 @@ export class Connector {
       }
       this._missedRef = ref;
       this._missedPredecessorRefs = predecessorRefs;
+      this._missedInfo = info;
       return;
     }
     /* v8 ignore next -- @preserve */
     Promise.all(
-      this._callbacks.map((cb) =>
-        predecessorRefs ? cb(ref, predecessorRefs) : cb(ref),
-      ),
+      this._callbacks.map((cb) => cb(ref, predecessorRefs, info)),
     ).catch((err) => {
       console.error(`Error notifying connector callbacks for ref ${ref}:`, err);
     });
@@ -400,6 +430,15 @@ export class Connector {
     }
 
     // Gap detection
+    // Is this the newest thing this sender has said? Answered here because
+    // this is where the per-sender sequence already lives — the same number
+    // gap detection keys on. Unknown (no sequence, no sender id) answers
+    // `true`: "unknown" must not silently become "stale".
+    let isNewestFromSender = true;
+    if (this._syncConfig?.causalOrdering && payload.seq != null && payload.c) {
+      isNewestFromSender = payload.seq > (this._peerSeqs.get(payload.c) ?? 0);
+    }
+
     if (this._syncConfig?.causalOrdering && payload.seq != null && payload.c) {
       const lastSeq = this._peerSeqs.get(payload.c) ?? 0;
       if (payload.seq > lastSeq + 1) {
@@ -416,7 +455,10 @@ export class Connector {
     this._addReceivedRef(ref);
     // `payload.p` carries the sender's predecessor content refs (shared
     // identity) so the receiver can record correct local ancestry.
-    this._notifyCallbacks(ref, payload.p);
+    this._notifyCallbacks(ref, payload.p, {
+      predecessorRefs: payload.p,
+      isNewestFromSender,
+    });
 
     // Send individual client ACK if required
     if (this._syncConfig?.requireAck) {
