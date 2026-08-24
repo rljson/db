@@ -422,7 +422,17 @@ export class Connector {
     });
   }
 
-  private _processIncoming(payload: ConnectorPayload) {
+  /**
+   * Handles a ref arriving from the wire.
+   * @param payload - The incoming payload.
+   * @param fromBootstrap - Whether it arrived on the bootstrap channel. A
+   *   bootstrap is the server ANNOUNCING current state, not a link in a
+   *   per-sender chain, so gap detection is skipped for it — a late joiner
+   *   would otherwise see its first announcement as a gap and ask the server
+   *   to replay history that it never missed. Staleness is still computed:
+   *   that is the whole point of the sequence being there.
+   */
+  private _processIncoming(payload: ConnectorPayload, fromBootstrap = false) {
     const ref = payload.r;
     /* v8 ignore next -- @preserve */
     if (this._hasReceivedRef(ref)) {
@@ -439,7 +449,12 @@ export class Connector {
       isNewestFromSender = payload.seq > (this._peerSeqs.get(payload.c) ?? 0);
     }
 
-    if (this._syncConfig?.causalOrdering && payload.seq != null && payload.c) {
+    if (
+      !fromBootstrap &&
+      this._syncConfig?.causalOrdering &&
+      payload.seq != null &&
+      payload.c
+    ) {
       const lastSeq = this._peerSeqs.get(payload.c) ?? 0;
       if (payload.seq > lastSeq + 1) {
         // Gap detected — request fill
@@ -450,6 +465,13 @@ export class Connector {
         this._socket.emit(this._events.gapFillReq, gapReq);
       }
       this._peerSeqs.set(payload.c, payload.seq);
+    }
+
+    // A bootstrap skips gap detection but must still move the high-water mark,
+    // or every repeat of the same announcement would read as new again.
+    if (fromBootstrap && payload.seq != null && payload.c) {
+      const lastSeq = this._peerSeqs.get(payload.c) ?? 0;
+      if (payload.seq > lastSeq) this._peerSeqs.set(payload.c, payload.seq);
     }
 
     this._addReceivedRef(ref);
@@ -491,7 +513,7 @@ export class Connector {
    */
   private _registerBootstrapHandler() {
     this._socket.on(this._events.bootstrap, (p: ConnectorPayload) => {
-      this._processIncoming(p);
+      this._processIncoming(p, true);
     });
   }
 
