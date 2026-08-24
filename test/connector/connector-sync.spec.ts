@@ -387,6 +387,83 @@ describe('Connector sync protocol', () => {
     // A ref is a content hash: it says WHAT state a sender is in, never
     // whether that is news. The per-sender sequence says whether it is news,
     // cheaply — no ancestry walk, no merge, no trusting the sender's view.
+    describe('bootstrap announcements', () => {
+      const bootstrapConnector = () => {
+        const socket = new SocketMock();
+        const connector = new Connector(db, route, socket, {
+          causalOrdering: true,
+          includeClientIdentity: true,
+        });
+        return { socket, connector };
+      };
+
+      // A repeated announcement of the same state must read as "not newest",
+      // or a periodic heartbeat re-asserts a superseded picture to everyone
+      // every few seconds — which is exactly what made the heartbeat unsafe
+      // to switch on.
+      it('marks a repeated announcement as not newest', async () => {
+        const { socket, connector } = bootstrapConnector();
+        const seen: Array<boolean | undefined> = [];
+        connector.listen(async (_r, _p, info) => {
+          seen.push(info?.isNewestFromSender);
+        });
+
+        socket.emit(connector.events.bootstrap, {
+          o: '__server__', r: 'state-1', c: 'srv', seq: 1,
+        });
+        socket.emit(connector.events.bootstrap, {
+          o: '__server__', r: 'state-1b', c: 'srv', seq: 1,
+        });
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(seen).toEqual([true, false]);
+        connector.tearDown();
+      });
+
+      it('marks a genuinely newer announcement as newest', async () => {
+        const { socket, connector } = bootstrapConnector();
+        const seen: Array<boolean | undefined> = [];
+        connector.listen(async (_r, _p, info) => {
+          seen.push(info?.isNewestFromSender);
+        });
+
+        socket.emit(connector.events.bootstrap, {
+          o: '__server__', r: 'state-1', c: 'srv', seq: 1,
+        });
+        socket.emit(connector.events.bootstrap, {
+          o: '__server__', r: 'state-2', c: 'srv', seq: 2,
+        });
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(seen).toEqual([true, true]);
+        connector.tearDown();
+      });
+
+      // A late joiner's first announcement is not a gap. Asking the server to
+      // replay history the client never missed is noise at best.
+      it('does not request a gap fill for a late first announcement', async () => {
+        const { socket, connector } = bootstrapConnector();
+        connector.listen(async () => {});
+        const emitted: string[] = [];
+        const realEmit = socket.emit.bind(socket);
+        (socket as unknown as { emit: typeof socket.emit }).emit = ((
+          ev: string,
+          ...args: unknown[]
+        ) => {
+          emitted.push(ev);
+          return realEmit(ev, ...(args as never[]));
+        }) as typeof socket.emit;
+
+        socket.emit(connector.events.bootstrap, {
+          o: '__server__', r: 'state-9', c: 'srv', seq: 9,
+        });
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(emitted).not.toContain(connector.events.gapFillReq);
+        connector.tearDown();
+      });
+    });
+
     describe('isNewestFromSender', () => {
       it('is true for a sender advancing its sequence', async () => {
         const connector = new Connector(db, route, socket, {
