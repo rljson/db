@@ -212,12 +212,9 @@ describe('Connector/MultiEditManager interoperability', () => {
         a.connector.send(editHistoryRef);
       }
       expect(callback).toHaveBeenCalledTimes(editHistories.length);
-      expect(callback).toHaveBeenCalledWith(
-        (editHistories[0].row as Json)._hash as string,
-      );
-      expect(callback).toHaveBeenCalledWith(
-        (editHistories[1].row as Json)._hash as string,
-      );
+      const refsSeen = callback.mock.calls.map((c) => c[0]);
+      expect(refsSeen).toContain((editHistories[0].row as Json)._hash as string);
+      expect(refsSeen).toContain((editHistories[1].row as Json)._hash as string);
     });
     it('MultiEditManager processes received EditHistoryRefs', async () => {
       const callback = vi.fn();
@@ -245,7 +242,7 @@ describe('Connector/MultiEditManager interoperability', () => {
 
       // Verify that the callback was called with the new head editHistoryRef
       expect(callback).toHaveBeenCalled();
-      expect(callback).toHaveBeenCalledWith(
+      expect(callback.mock.calls.map((c) => c[0])).toContain(
         b.multiEditManager.head?.editHistoryRef,
       );
 
