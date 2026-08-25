@@ -1154,16 +1154,21 @@ describe('Connector sync protocol', () => {
       connector.tearDown();
     });
 
+    // Detaching is what tearDown is for. It is NOT a permanent condition: a
+    // later `listen()` is a statement that this connector is wanted again and
+    // re-arms it — see "re-arms itself when a listener attaches after
+    // tearDown". Asserting permanence here conflated the two, and that is what
+    // made `Node.restartAgent()` produce a deaf agent.
     it('should clean up bootstrap listener on tearDown', () => {
       const connector = new Connector(db, route, socket);
-      connector.tearDown();
-
       const received: string[] = [];
       connector.listen(async (ref) => {
         received.push(ref);
       });
 
-      // Send bootstrap after tearDown — should not be processed
+      connector.tearDown();
+
+      // Sent after tearDown, with no new listener — nothing is processed.
       const payload: ConnectorPayload = {
         o: '__server__',
         r: 'after-teardown-ref',
@@ -1171,6 +1176,7 @@ describe('Connector sync protocol', () => {
       socket.emit(events.bootstrap, payload);
 
       expect(received).toHaveLength(0);
+      expect(connector.isListening).toBe(false);
     });
 
     it('should replay bootstrap ref that arrived before listen()', async () => {

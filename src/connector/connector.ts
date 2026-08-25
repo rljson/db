@@ -212,6 +212,23 @@ export class Connector {
    * @param callback - The callback to invoke with each deduplicated incoming ref
    */
   listen(callback: ConnectorCallback) {
+    // A connector that was torn down is deaf, and appending a callback does not
+    // change that: `tearDown()` removes the SOCKET observers, while `listen()`
+    // only registers interest. Nothing reconnected the two.
+    //
+    // That gap is not theoretical. `@rljson/server`'s `Node.restartAgent()`
+    // rebuilds the agent "from existing transport": stopping the old agent tears
+    // this connector down, and the new agent then calls `listen()` on it and
+    // hears nothing, ever. On the four-node lab that is `snapshot-bootstrap` —
+    // reset a client, restart its agent, wait for it to bootstrap — which has
+    // been red on every run the suite has ever produced.
+    //
+    // Registering interest in a torn-down connector is a statement that it is
+    // wanted again, so re-arm it.
+    if (!this._isListening) {
+      this._init();
+    }
+
     this._callbacks.push(callback);
 
     // Replay ref that arrived before any callback was registered.
