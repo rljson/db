@@ -145,6 +145,36 @@ describe('Connector', () => {
       expect(callback.mock.calls.at(-1)?.[0]).toBe(editHistory._hash);
     });
 
+    // The received set records what a LISTENER was told, so it belongs to that
+    // listener rather than to the socket. Restarting an agent on an existing
+    // connection keeps this connector, and the new agent would otherwise
+    // inherit conclusions drawn for one whose state is gone — which left an
+    // emptied folder empty, because the peers' answer carried exactly the ref
+    // this connector had already delivered to the agent before it.
+    it('forgets what it delivered when a new listener takes over', async () => {
+      const origin = timeId();
+      const ref = editHistory._hash;
+
+      const first = vi.fn();
+      connector.listen(first);
+      socket.emit(route.flat, { r: ref, o: origin } as ConnectorPayload);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(first).toHaveBeenCalledTimes(1);
+
+      // Re-advertised to the same connector: an echo, correctly suppressed.
+      first.mockClear();
+      socket.emit(route.flat, { r: ref, o: origin } as ConnectorPayload);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(first).not.toHaveBeenCalled();
+
+      // …until the consumer is replaced, at which point the same ref is news
+      // again, because the new consumer has never seen it.
+      connector.resetReceived();
+      socket.emit(route.flat, { r: ref, o: origin } as ConnectorPayload);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(first).toHaveBeenCalledTimes(1);
+    });
+
     it('replays every ref that arrived before listen(), in arrival order', async () => {
       const origin = timeId();
 
