@@ -151,6 +151,46 @@ describe('Connector', () => {
     // inherit conclusions drawn for one whose state is gone — which left an
     // emptied folder empty, because the peers' answer carried exactly the ref
     // this connector had already delivered to the agent before it.
+    // tearDown() removes the SOCKET observers; listen() only registers
+    // interest. Nothing reconnected the two, so a connector that had been torn
+    // down was deaf for good — and Node.restartAgent() rebuilds an agent on
+    // exactly such a connector.
+    it('re-arms itself when a listener attaches after tearDown', async () => {
+      const origin = timeId();
+      const before = vi.fn();
+      connector.listen(before);
+      socket.emit(route.flat, {
+        r: 'firstRef',
+        o: origin,
+      } as ConnectorPayload);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(before).toHaveBeenCalledTimes(1);
+
+      connector.tearDown();
+      expect(connector.isListening).toBe(false);
+
+      // Deaf, as tearDown intends.
+      const during = vi.fn();
+      socket.emit(route.flat, {
+        r: 'duringRef',
+        o: origin,
+      } as ConnectorPayload);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(during).not.toHaveBeenCalled();
+
+      // A new consumer attaches — which is a statement that this connector is
+      // wanted again.
+      const after = vi.fn();
+      connector.listen(after);
+      expect(connector.isListening).toBe(true);
+      socket.emit(route.flat, {
+        r: editHistory._hash,
+        o: origin,
+      } as ConnectorPayload);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(after).toHaveBeenCalledTimes(1);
+    });
+
     it('forgets what it delivered when a new listener takes over', async () => {
       const origin = timeId();
       const ref = editHistory._hash;
