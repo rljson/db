@@ -256,6 +256,30 @@ export class Connector {
 
   // ...........................................................................
   /**
+   * Forget every ref this connector has already delivered.
+   *
+   * The received set records what a LISTENER has been told about, so it belongs
+   * to that listener and not to the socket underneath it. A transport can
+   * outlive the thing consuming it: restarting an agent on an existing
+   * connection rebuilds the agent while keeping this connector, and the new
+   * agent then inherits conclusions drawn for one whose state no longer exists.
+   *
+   * That is not academic. An agent restarted onto an emptied folder needs its
+   * peers to re-send the state it lost — and those peers answer with exactly
+   * the ref this connector had already delivered to the previous agent, so it
+   * was dropped here before the new one ever saw it, and the folder stayed
+   * empty. Refs are content hashes, so "already delivered" and "no longer
+   * needed" are not the same claim.
+   *
+   * Cheap to be wrong about: a redelivered ref whose state the folder already
+   * holds costs one content comparison and is then skipped.
+   */
+  resetReceived(): void {
+    this._receivedRefsCurrent.clear();
+    this._receivedRefsPrevious.clear();
+  }
+
+  /**
    * Removes a ref from the received-dedup set so a later re-advertisement of
    * the same ref (e.g. the server's bootstrap heartbeat, which only re-sends
    * the *latest* ref) is delivered to listeners again instead of being
