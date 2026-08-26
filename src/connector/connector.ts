@@ -571,6 +571,23 @@ export class Connector {
    */
   private _registerBootstrapHandler() {
     this._socket.on(this._events.bootstrap, (p: ConnectorPayload) => {
+      // A bootstrap gets the same self-filter as an ordinary ref.
+      //
+      // It did not, and that is the hole the agent has been patching around.
+      // The `ref` channel drops a payload whose origin is this connector's own;
+      // the bootstrap channel handed it straight through. So a client could be
+      // sent its OWN state back, apply it over a newer local edit, and destroy
+      // that edit — which is precisely what `FsAgent` now guards against by
+      // remembering the last ref it sent.
+      //
+      // Harmless until the server starts naming the originating client:
+      // today's bootstrap carries `__server__`, which never equals a client's
+      // origin, so this changes nothing on its own. It is the receiving half of
+      // the fix, landed first so the sending half cannot arrive unguarded.
+      if (p.o === this._origin) {
+        return;
+      }
+
       this._processIncoming(p, true);
     });
   }

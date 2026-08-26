@@ -1159,6 +1159,35 @@ describe('Connector sync protocol', () => {
     // re-arms it — see "re-arms itself when a listener attaches after
     // tearDown". Asserting permanence here conflated the two, and that is what
     // made `Node.restartAgent()` produce a deaf agent.
+    // The ref channel has always dropped a payload whose origin is this
+    // connector's own. The bootstrap channel handed it straight through, so a
+    // client could be sent its OWN state back and apply it over a newer local
+    // edit — the defect FsAgent works around by remembering its last sent ref.
+    it('drops a bootstrap this connector originated', async () => {
+      const connector = new Connector(db, route, socket);
+      const received: string[] = [];
+      connector.listen(async (ref) => {
+        received.push(ref);
+      });
+
+      socket.emit(events.bootstrap, {
+        o: connector.origin,
+        r: 'my-own-state',
+      } as ConnectorPayload);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(received).toHaveLength(0);
+
+      // Anyone else's bootstrap still arrives, including the server's.
+      socket.emit(events.bootstrap, {
+        o: '__server__',
+        r: 'someone-elses-state',
+      } as ConnectorPayload);
+      await new Promise((r) => setTimeout(r, 0));
+      expect(received).toEqual(['someone-elses-state']);
+
+      connector.tearDown();
+    });
+
     it('should clean up bootstrap listener on tearDown', () => {
       const connector = new Connector(db, route, socket);
       const received: string[] = [];
