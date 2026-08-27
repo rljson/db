@@ -492,9 +492,33 @@ export class Connector {
    */
   private _processIncoming(payload: ConnectorPayload, fromBootstrap = false) {
     const ref = payload.r;
-    /* v8 ignore next -- @preserve */
+
+    // A repeated ref is usually an echo — and on a large folder it is
+    // routinely not.
+    //
+    // A ref is a content hash, so a folder that RETURNS to an earlier state
+    // re-derives that state's exact ref. Deleting one file out of a big folder
+    // does precisely that: the result is a state every peer already saw
+    // streaming past while it was catching up, so every peer dropped the
+    // deletion here as already-received and the file came back.
+    //
+    // Measured on four machines: with 1 200 files seeded, the tree converged on
+    // all four nodes and an added file propagated — and a deletion reached
+    // nobody, with no apply attempted anywhere, because it never got past this
+    // line.
+    //
+    // The sequence tells the two apart. An echo carries a number this sender
+    // has already used; a genuine return to an old state is the sender's NEXT
+    // message and carries a higher one. Where the sequence is not available
+    // there is nothing to distinguish them by, and the dedup stands as before.
     if (this._hasReceivedRef(ref)) {
-      return;
+      const seqIsNewer =
+        this._syncConfig?.causalOrdering === true &&
+        payload.seq != null &&
+        payload.c != null &&
+        payload.seq > (this._peerSeqs.get(payload.c) ?? 0);
+      /* v8 ignore next -- @preserve */
+      if (!seqIsNewer) return;
     }
 
     // Gap detection

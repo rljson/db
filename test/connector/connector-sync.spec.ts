@@ -213,6 +213,81 @@ describe('Connector sync protocol', () => {
       connector.tearDown();
     });
 
+    // A ref is a content hash, so a folder that RETURNS to an earlier state
+    // re-derives that state's exact ref. Deleting one file out of a big folder
+    // does precisely that — the result is a state every peer already saw
+    // streaming past while it was catching up.
+    //
+    // Measured on four machines: 1200 files seeded, the tree converged
+    // everywhere, an added file propagated, and a deletion reached nobody with
+    // no apply attempted anywhere. It never got past the dedup.
+    it('delivers a repeated ref when the sender has moved on', () => {
+      const config: SyncConfig = { causalOrdering: true };
+      const connector = new Connector(db, route, socket, config);
+      const seen: string[] = [];
+      connector.listen((ref) => seen.push(ref));
+
+      const ref = editHistory._hash as string;
+      socket.emit(events.ref, { o: 'peer', r: ref, c: 'peer-a', seq: 1 });
+      // The echo: same ref, same place in that sender's sequence.
+      socket.emit(events.ref, { o: 'peer', r: ref, c: 'peer-a', seq: 1 });
+      // The return: same ref, but it is the sender's NEXT message.
+      socket.emit(events.ref, { o: 'peer', r: ref, c: 'peer-a', seq: 2 });
+
+      expect(seen).toEqual([ref, ref]);
+
+      connector.tearDown();
+    });
+
+    // A second sender has its own series, and this node has heard none of it
+    // yet — so its first message is ahead of nothing and still counts as news,
+    // even when another sender has already advertised the same state.
+    it('delivers a repeated ref from a sender it has not heard from before', () => {
+      const config: SyncConfig = { causalOrdering: true };
+      const connector = new Connector(db, route, socket, config);
+      const seen: string[] = [];
+      connector.listen((ref) => seen.push(ref));
+
+      const ref = editHistory._hash as string;
+      socket.emit(events.ref, { o: 'peer', r: ref, c: 'peer-a', seq: 1 });
+      socket.emit(events.ref, { o: 'peer', r: ref, c: 'peer-b', seq: 1 });
+
+      expect(seen).toEqual([ref, ref]);
+
+      connector.tearDown();
+    });
+
+    // A sequence with nobody attached to it cannot be compared: sequences are
+    // per sender, and without a sender there is no series to be ahead of.
+    it('still drops a repeated ref whose sequence names no sender', () => {
+      const config: SyncConfig = { causalOrdering: true };
+      const connector = new Connector(db, route, socket, config);
+      const seen: string[] = [];
+      connector.listen((ref) => seen.push(ref));
+
+      const ref = editHistory._hash as string;
+      socket.emit(events.ref, { o: 'peer', r: ref, seq: 1 });
+      socket.emit(events.ref, { o: 'peer', r: ref, seq: 2 });
+
+      expect(seen).toEqual([ref]);
+
+      connector.tearDown();
+    });
+
+    it('still drops a repeated ref when there is no sequence to judge it by', () => {
+      const connector = new Connector(db, route, socket);
+      const seen: string[] = [];
+      connector.listen((ref) => seen.push(ref));
+
+      const ref = editHistory._hash as string;
+      socket.emit(events.ref, { o: 'peer', r: ref });
+      socket.emit(events.ref, { o: 'peer', r: ref });
+
+      expect(seen).toEqual([ref]);
+
+      connector.tearDown();
+    });
+
     it('should increment seq with each send', () => {
       const config: SyncConfig = { causalOrdering: true };
       const connector = new Connector(db, route, socket, config);
