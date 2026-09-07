@@ -2,3 +2,4 @@ onlyBuiltDependencies:
   - esbuild
 minimumReleaseAgeExclude:
   - '@rljson/*'
+  - '@ggdna/dna-gg@0.2.0'
