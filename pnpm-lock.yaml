@@ -9,19 +9,19 @@ importers:
   .:
     dependencies:
       '@rljson/hash':
-        specifier: ^0.0.19
+        specifier: 0.0.19
         version: 0.0.19
       '@rljson/io':
-        specifier: ^0.0.71
-        version: 0.0.71
+        specifier: 0.0.75
+        version: 0.0.75
       '@rljson/json':
-        specifier: ^0.0.23
+        specifier: 0.0.23
         version: 0.0.23
       '@rljson/rljson':
-        specifier: ^0.0.80
+        specifier: 0.0.80
         version: 0.0.80
       '@rljson/validate':
-        specifier: ^0.0.11
+        specifier: 0.0.11
         version: 0.0.11
       filtrex:
         specifier: ^3.1.0
@@ -258,8 +258,8 @@ packages:
     resolution: {integrity: sha512-1bBHWbzzaOE3ba2niyvmu4d9VYv5atLzzHDI2ka3AlHLyBDD8Q9qI/HCjimULJlprIGVeN4+jN8sth4CdnGxOQ==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/io@0.0.71':
-    resolution: {integrity: sha512-e+GUwKtBfkuBJdXiuqjmdrVJiNNANgpxbs9Qjo/WkzrqtvKNELUWDAxRxtoBmy5w9lPD2YWlD6SaX5MfQidXWg==}
+  '@rljson/io@0.0.75':
+    resolution: {integrity: sha512-yxL3ULEtf3argsKXAxjtJ4JB2ZZD1pgDMCiFecfn3krAEI1IPsHo9lp6Nt8IaKaW7To/mfXKumsMZmNg52hWcQ==}
     engines: {node: '>=22.14.0'}
 
   '@rljson/is-ready@0.0.17':
@@ -276,10 +276,6 @@ packages:
 
   '@rljson/rljson@0.0.55':
     resolution: {integrity: sha512-anRhE21B5VEqTlDjcJy3ce7yrTZ/hwPN3C4YQCd1FnFfJZI4mjhlnygvCBhSR9WDLnIAxDFERFBt20f57PVBsQ==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/rljson@0.0.76':
-    resolution: {integrity: sha512-scKjJI0BlbB8YCXN0fXlqyXWLPwKMaclrK9GssevCJJfAWgPz1iPFm6lNr65tcxainbiatiD6TNbxkYAIdRu5w==}
     engines: {node: '>=22.14.0'}
 
   '@rljson/rljson@0.0.79':
@@ -780,6 +776,7 @@ packages:
   eslint@9.39.4:
     resolution: {integrity: sha512-XoMjdBOwe/esVgEvLmNsD3IRHkm7fbKIUGvrleloJXUZgDHig2IPWNniv+GwjyJXzuNqVjlr5+4yVUZjycJwfQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
+    deprecated: This version is no longer supported. Please see https://eslint.org/version-support for other options.
     hasBin: true
     peerDependencies:
       jiti: '*'
@@ -1805,12 +1802,12 @@ snapshots:
     dependencies:
       '@rljson/json': 0.0.23
 
-  '@rljson/io@0.0.71':
+  '@rljson/io@0.0.75':
     dependencies:
-      '@rljson/hash': 0.0.18
+      '@rljson/hash': 0.0.19
       '@rljson/is-ready': 0.0.17
       '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.76
+      '@rljson/rljson': 0.0.80
       '@rljson/validate': 0.0.11
 
   '@rljson/is-ready@0.0.17': {}
@@ -1823,12 +1820,6 @@ snapshots:
     dependencies:
       '@rljson/hash': 0.0.16
       '@rljson/json': 0.0.21
-
-  '@rljson/rljson@0.0.76':
-    dependencies:
-      '@rljson/hash': 0.0.18
-      '@rljson/json': 0.0.23
-      nanoid: 5.1.16
 
   '@rljson/rljson@0.0.79':
     dependencies:
