@@ -1,33 +1,17 @@
-/*
+/**
  * @license
- * Copyright (c) 2025 Rljson
+ * Copyright (c) rljson
  *
  * Use of this source code is governed by terms that can be
  * found in the LICENSE file in the root of this package.
  */
 
-import { execSync } from 'child_process';
-
-// Color helpers
-const red = (str) => `\x1b[31m${str}\x1b[0m`;
-const gray = (str) => `\x1b[90m${str}\x1b[0m`;
-const yellow = (str) => `\x1b[33m${str}\x1b[0m`;
-const green = (str) => `\x1b[32m${str}\x1b[0m`;
-const blue = (str) => `\x1b[34m${str}\x1b[0m`;
-const lightGray = (str) => gray(str);
-
-// Execute a shell command and return trimmed output
-function runCommand(command, silent = true) {
-  console.log(gray(`# ${command}`));
-  return execSync(command, {
-    encoding: 'utf-8',
-    stdio: silent ? ['pipe', 'pipe', 'pipe'] : undefined,
-  }).trim();
-}
+import { gray, green, red, yellow } from './functions/colors.js';
+import { runCommand } from './functions/run-command.js';
 
 // Check for uncommitted changes
 function hasUncommittedChanges() {
-  console.log(lightGray('Check for uncommitted changes'));
+  console.log(gray('Check for uncommitted changes'));
   const status = runCommand('git status --porcelain');
   return status.length > 0;
 }
@@ -35,7 +19,7 @@ function hasUncommittedChanges() {
 // Check for unpushed commits
 function hasUnpushedCommits(branch) {
   try {
-    console.log(lightGray('Check for unpushed commits'));
+    console.log(gray('Check for unpushed commits'));
     runCommand(`git rev-parse --abbrev-ref ${branch}@{u}`);
     const ahead = runCommand(`git rev-list --count ${branch}@{u}..${branch}`);
     return parseInt(ahead, 10) > 0;
@@ -46,7 +30,7 @@ function hasUnpushedCommits(branch) {
 
 // Try a test merge into main and check if it introduces changes
 function isBranchEffectivelyMerged(featureBranch) {
-  console.log(lightGray('Check if feature was fully merged'));
+  console.log(gray('Check if feature was fully merged'));
 
   try {
     runCommand(`git merge --no-commit --no-ff ${featureBranch}`);
@@ -62,7 +46,7 @@ function isBranchEffectivelyMerged(featureBranch) {
 }
 
 try {
-  console.log(lightGray('Get current branch name'));
+  console.log(gray('Get current branch name'));
   const currentBranch = runCommand('git rev-parse --abbrev-ref HEAD');
 
   if (currentBranch === 'main') {
@@ -84,7 +68,7 @@ try {
     process.exit(1);
   }
 
-  console.log(lightGray(`Fetching and pulling 'main'...`));
+  console.log(gray(`Fetching and pulling 'main'...`));
   runCommand('git fetch');
   runCommand('git checkout main');
   runCommand('git pull origin main');
