@@ -13,7 +13,7 @@ export default defineConfig({
     sourcemap: true,
 
     lib: {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: resolve(import.meta.dirname, 'src/index.ts'),
       formats: ['es'],
     },
     rollupOptions: {
@@ -36,7 +36,7 @@ export default defineConfig({
           // Make paths absolute so VS Code can find them
           return relativeSourcePath.replace(
             '../src/',
-            resolve(__dirname, 'src') + '/',
+            resolve(import.meta.dirname, 'src') + '/',
           );
         },
       },
