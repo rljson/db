@@ -37,7 +37,7 @@
       "name": "dna-index",
       "package": "@ggdna/dna-index",
       "ecosystem": "node",
-      "resolvedVersion": "0.1.0",
+      "resolvedVersion": "0.1.1",
       "via": "dna-rljson",
       "hash": "0x1d92b0add37a1ac7"
     },
@@ -53,7 +53,7 @@
       "name": "dna-install",
       "package": "@ggdna/dna-install",
       "ecosystem": "node",
-      "resolvedVersion": "0.1.0",
+      "resolvedVersion": "0.1.1",
       "via": "dna-rljson",
       "hash": "0xbe88eb4256745ee1"
     },
