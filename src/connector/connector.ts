@@ -59,6 +59,22 @@ export type ConnectorCallback = (
   info?: RefArrivalInfo,
 ) => Promise<any>;
 
+/**
+ * The event a hub's **state beacon** is sent on, for a route.
+ *
+ * `@rljson/server` sends the state it holds on it (`stateBeaconMs`), and
+ * `@rljson/fs-agent`'s anti-entropy reads it off the socket. It lives here, and
+ * only here, because it is defined by what the {@link Connector} does NOT do:
+ * the connector never subscribes to this event, so nothing is applied because
+ * of a beacon. A periodic announcement that did enter the apply path — the
+ * bootstrap heartbeat — was measured net-harmful. Both packages import this;
+ * neither spells the name out.
+ * @param routeFlat - The route, as `Route.flat`.
+ * @returns The event name.
+ */
+export const stateBeaconEvent = (routeFlat: string): string =>
+  `${routeFlat}:state`;
+
 export class Connector {
   private _origin: string;
   private _callbacks: ConnectorCallback[] = [];

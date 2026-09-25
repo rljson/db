@@ -977,6 +977,26 @@ The Connector automatically listens for `${route}:bootstrap` events from the ser
 
 No additional setup is needed — the bootstrap handler is registered in `_init()` and cleaned up in `tearDown()`.
 
+### The state beacon — the one event the Connector ignores
+
+`stateBeaconEvent(route)` (`${route}:state`) names the event on which
+`@rljson/server` periodically announces the state a hub holds
+(`stateBeaconMs`). The Connector **never subscribes to it**, on purpose:
+nothing is applied because of a beacon. It exists for readers that only need
+to notice a lasting disagreement with the hub — `@rljson/fs-agent`'s
+anti-entropy subscribes to it on `connector.socket` directly.
+
+```typescript
+import { stateBeaconEvent } from '@rljson/db';
+
+connector.socket.on(stateBeaconEvent(connector.route.flat), (payload) => {
+  // payload: { o, r, c, seq, p } — the hub's state, its producer, its ancestry
+});
+```
+
+Defined here, and imported by both the server and the agent, so the name
+exists once.
+
 ### Cleanup
 
 ```typescript

@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- **`stateBeaconEvent(route)`** (ONE-446): the name of the event a hub's
+  state beacon is sent on (`${route}:state`). Defined next to the Connector
+  because the Connector deliberately never subscribes to it; imported by
+  `@rljson/server` (which sends it) and `@rljson/fs-agent` (which reads it),
+  so the name exists once instead of in both.
+
 ### Fixed
 
 - **Tree INSERT Double-Root Issue**: Fixed bug where `treeFromObject` was creating an automatic root node wrapper even for already-isolated subtrees during INSERT operations. This caused a double-root structure (auto-root wrapping user-root, both with id='root') that prevented proper tree navigation. The fix adds a `skipRootCreation` parameter to `treeFromObject` call in `db.ts` line 1365, which is set to `true` to prevent the extra wrapper when inserting tree data.
