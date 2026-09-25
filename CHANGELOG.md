@@ -10,6 +10,14 @@
   `@rljson/server` (which sends it) and `@rljson/fs-agent` (which reads it),
   so the name exists once instead of in both.
 
+### Changed
+
+- **`@rljson/io` pinned to 0.0.79.** Its two fixes — an error that survives the
+  peer boundary so a benign miss stays benign, and a readable that rejects with
+  nothing no longer breaking the read — reach every package that reads through
+  `db`. Pinned here first because `db` declares `io` itself: lifting it only in
+  a consumer would leave `db` running against an `io` it never declared.
+
 ### Fixed
 
 - **Tree INSERT Double-Root Issue**: Fixed bug where `treeFromObject` was creating an automatic root node wrapper even for already-isolated subtrees during INSERT operations. This caused a double-root structure (auto-root wrapping user-root, both with id='root') that prevented proper tree navigation. The fix adds a `skipRootCreation` parameter to `treeFromObject` call in `db.ts` line 1365, which is set to `true` to prevent the extra wrapper when inserting tree data.
