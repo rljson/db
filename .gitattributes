@@ -1,4 +1,3 @@
 * text=auto eol=lf
 .gg/gg.json merge=ours
 CHANGELOG.md merge=union
-pnpm-lock.yaml merge=ours
