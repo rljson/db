@@ -3,7 +3,7 @@
 //
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
-export { Connector } from './connector/connector.ts';
+export { Connector, stateBeaconEvent } from './connector/connector.ts';
 export type {
   ConnectorCallback,
   ConnectorPayload,
