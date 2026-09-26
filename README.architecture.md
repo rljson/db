@@ -962,9 +962,10 @@ The `Connector` class implements the client side of the RLJSON sync protocol. It
 │    1. Receive ConnectorPayload from socket      │
 │    2. Reject self-echo (origin === own origin)  │
 │    3. Reject duplicate (ref already received)   │
-│    4. Detect sequence gaps → request gap-fill   │
-│    5. Emit client ACK (if requireAck)           │
-│    6. Invoke listen() callbacks                │
+│    4. Detect sequence gaps                      │
+│    5. Invoke listen() callbacks                │
+│    6. Emit client ACK (if requireAck)           │
+│    7. Request gap-fill (last, see below)        │
 └────────────────────────────────────────────────┘
 ```
 
@@ -986,6 +987,27 @@ When `causalOrdering` is enabled, the Connector's Db observer reads the `previou
 ### listen()
 
 `listen()` registers callbacks that receive incoming refs through the full sync pipeline: origin filtering, dedup, gap detection, and ACK. All protocol safeguards are applied before callbacks are invoked.
+
+### Gap-fill ordering
+
+A gap is detected when a sender's `seq` jumps. Two rules keep the answer from
+feeding back into the question:
+
+- **The request goes out last.** `_processIncoming()` first moves the sender's
+  high-water mark, records the ref and notifies callbacks, and only then emits
+  `gapFillReq`. A synchronous transport (in-memory sockets in tests) answers
+  inside `emit`, and when the missing message never reached the hub the
+  answer carries the very ref that revealed the gap. Asked earlier, that ref
+  reopened the same gap and recursed until `Maximum call stack size exceeded`
+  (seen in `@rljson/fs-agent`'s `heals-after-forced-divergence`, which drops a
+  push on purpose), or was delivered twice.
+- **Own refs are skipped.** The hub answers from its whole ref log, every
+  sender included. A gap-fill entry carrying this connector's own origin is
+  dropped, as the live channel drops it.
+
+A `seq` lost before the hub stays missing — the hub cannot replay what it never
+received. Closing that divergence is the anti-entropy's job
+(`@rljson/fs-agent`), not the gap-fill's.
 
 ### sendWithAck ordering
 

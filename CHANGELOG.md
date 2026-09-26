@@ -20,6 +20,14 @@
 
 ### Fixed
 
+- **Gap-fill no longer recurses on a message the hub never received**
+  (ONE-446). The Connector asked for a gap before recording the ref that
+  revealed it; over a synchronous socket the answer arrived inside that
+  request, carried the same ref again and reopened the same gap — until
+  `Maximum call stack size exceeded` swallowed the ref (1–16 times per CI run
+  of `@rljson/fs-agent`). The request now goes out last, and gap-fill entries
+  with the connector's own origin are skipped like on the live channel.
+
 - **Tree INSERT Double-Root Issue**: Fixed bug where `treeFromObject` was creating an automatic root node wrapper even for already-isolated subtrees during INSERT operations. This caused a double-root structure (auto-root wrapping user-root, both with id='root') that prevented proper tree navigation. The fix adds a `skipRootCreation` parameter to `treeFromObject` call in `db.ts` line 1365, which is set to `true` to prevent the extra wrapper when inserting tree data.
   - Impact: Tree INSERT operations now work correctly without requiring `isolate()` calls
   - Tests: All 361 tests passing, including previously failing "insert on tree simple branch" and "insert new child on branch"
