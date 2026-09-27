@@ -24,8 +24,8 @@ importers:
         specifier: 0.0.83
         version: 0.0.83
       '@rljson/validate':
-        specifier: link:.gg/ts_links/@rljson/validate
-        version: link:.gg/ts_links/@rljson/validate
+        specifier: 0.0.12
+        version: 0.0.12
       filtrex:
         specifier: ^3.1.0
         version: 3.1.0
