@@ -1,0 +1,109 @@
+# Publishes the package to npm when its version on `main` is one npm does not
+# have yet.
+#
+# ## Why this exists
+#
+# Every release of every rljson package used to be `npm publish` typed on one
+# laptop, authenticated by a classic npm token kept in that laptop's `~/.npmrc`.
+# On 2026-09-27 that token stopped working, and npm said why: *tokens that
+# bypass 2FA are being restricted for account changes and direct publishing*.
+# So the mechanism the release process rested on is being withdrawn, and the
+# release process rested on one machine either way — a package nobody else can
+# publish is a package with a single point of failure wearing a laptop.
+#
+# ## Why a version check rather than a tag
+#
+# These repos already bump the version inside the PR that makes the change, so
+# the version on `main` IS the intent to release; a tag would be a second,
+# forgettable statement of the same thing. The check makes this idempotent: a
+# push to main whose version is already on npm publishes nothing and says so,
+# so re-runs, reverts and doc-only merges are all safe.
+name: Publish
+
+on:
+  push:
+    branches: ['main']
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    # Never from a fork: a fork's push cannot reach this repo's secrets anyway,
+    # and failing loudly there would be noise on somebody else's clone.
+    if: github.repository == 'rljson/db'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+          # Writes the registry line into the runner's .npmrc so `npm publish`
+          # reads NODE_AUTH_TOKEN below. Without it the publish is anonymous
+          # and fails with a 404 that reads like a missing package.
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: pnpm install --frozen-lockfile
+
+      # Is this version already out there? `npm view` exits non-zero when the
+      # version does not exist, which is the answer we want, so the failure is
+      # caught rather than allowed to fail the job.
+      - name: Decide whether to publish
+        id: decide
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          NAME="$(node -p "require('./package.json').name")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "$NAME@$VERSION" version > /dev/null 2>&1; then
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "$NAME@$VERSION is already on npm — nothing to do."
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "$NAME@$VERSION is not on npm — publishing."
+          fi
+
+      # Checked BEFORE the suite runs, not left to npm. npm answers a missing
+      # credential with a 404 on the package — a message that reads as "this
+      # package does not exist" and sends whoever is looking at it entirely the
+      # wrong way — and it would say so three minutes in, after a full test run
+      # spent on a release that could never land.
+      - name: Require the npm token
+        if: steps.decide.outputs.publish == 'true'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "::error::No NPM_TOKEN secret on this repository, so this" \
+              "release cannot be published. Create an npm Automation token" \
+              "(npmjs.com → Access Tokens → Generate → Automation) and add it" \
+              "as the repository secret NPM_TOKEN, then re-run this workflow."
+            exit 1
+          fi
+
+      # The gate, as its own step. `npm publish` would run the same thing
+      # through `prepublishOnly`, but a test failure would then arrive as a
+      # publish failure — and the two want different reactions.
+      - name: Test
+        if: steps.decide.outputs.publish == 'true'
+        run: pnpm test
+
+      - name: Build
+        if: steps.decide.outputs.publish == 'true'
+        run: pnpm build
+
+      # `--ignore-scripts`: the build above IS `prepublishOnly`, and running it
+      # again would re-run the whole suite a second time for nothing. What is
+      # published is exactly what was built and tested in the two steps above.
+      - name: Publish
+        if: steps.decide.outputs.publish == 'true'
+        run: npm publish --access public --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
