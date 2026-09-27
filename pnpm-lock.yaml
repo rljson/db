@@ -5,7 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  '@rljson/rljson': link:./.gg/ts_links/@rljson/rljson
   '@rljson/io': link:./.gg/ts_links/@rljson/io
   eslint-plugin-tsdoc>@typescript-eslint/utils: ^8.62.1
   '@rljson/validate': link:./.gg/ts_links/@rljson/validate
@@ -25,8 +24,8 @@ importers:
         specifier: 0.0.23
         version: 0.0.23
       '@rljson/rljson':
-        specifier: link:.gg/ts_links/@rljson/rljson
-        version: link:.gg/ts_links/@rljson/rljson
+        specifier: 0.0.83
+        version: 0.0.83
       '@rljson/validate':
         specifier: link:.gg/ts_links/@rljson/validate
         version: link:.gg/ts_links/@rljson/validate
@@ -278,6 +277,10 @@ packages:
 
   '@rljson/json@0.0.23':
     resolution: {integrity: sha512-ViYo8zx0z/SomjpS2f+xK+tS7HTwZI1HzRarHpXO3spVjpaF+GKCa7HgDXoV/Wc+zsliDzo8wz7S5NFb0yZaow==}
+    engines: {node: '>=22.14.0'}
+
+  '@rljson/rljson@0.0.83':
+    resolution: {integrity: sha512-/JVC8yEtbWP/lnQbmYTlEAqGBJN/6LoKJSYoxyn8IUTouBIylPNhBmSy9kxYnRlCfgL7pkXlRL/DXQn8jzTOQw==}
     engines: {node: '>=22.14.0'}
 
   '@rolldown/binding-android-arm-eabi@1.2.11':
@@ -1032,6 +1035,11 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  nanoid@6.0.1:
+    resolution: {integrity: sha512-3wVS3i51pE2pi1k5FFL/95BGfVS0kSsvDVuGXHOtxox/TywUmtgq+3qiTOTbs9J7KfHaXPiN171k/A6dBnaXFw==}
+    engines: {node: ^22 || ^24 || >=26}
+    hasBin: true
+
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
@@ -1632,6 +1640,12 @@ snapshots:
       '@rljson/json': 0.0.23
 
   '@rljson/json@0.0.23': {}
+
+  '@rljson/rljson@0.0.83':
+    dependencies:
+      '@rljson/hash': 0.0.19
+      '@rljson/json': 0.0.23
+      nanoid: 6.0.1
 
   '@rolldown/binding-android-arm-eabi@1.2.11':
     optional: true
@@ -2320,6 +2334,8 @@ snapshots:
   ms@2.1.3: {}
 
   nanoid@3.3.19: {}
+
+  nanoid@6.0.1: {}
 
   natural-compare@1.4.0: {}
 

@@ -28,7 +28,7 @@
     "updateGoldens": "cross-env UPDATE_GOLDENS=true pnpm test"
   },
   "devDependencies": {
-    "@rljson/converter": "^0.0.44",
+    "@rljson/converter": "link:.gg/ts_links/@rljson/converter",
     "@rljson/dna-rljson": "^0.2.0",
     "@tssuite/helix-js": "^0.3.0",
     "@types/node": "^26.6.3",
@@ -53,10 +53,10 @@
   },
   "dependencies": {
     "@rljson/hash": "0.0.19",
-    "@rljson/io": "0.0.79",
+    "@rljson/io": "link:.gg/ts_links/@rljson/io",
     "@rljson/json": "0.0.23",
-    "@rljson/rljson": "0.0.81",
-    "@rljson/validate": "0.0.11",
+    "@rljson/rljson": "0.0.83",
+    "@rljson/validate": "link:.gg/ts_links/@rljson/validate",
     "filtrex": "^3.1.0",
     "object-traversal": "^1.0.1"
   }
