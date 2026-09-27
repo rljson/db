@@ -28,7 +28,7 @@
     "updateGoldens": "cross-env UPDATE_GOLDENS=true pnpm test"
   },
   "devDependencies": {
-    "@rljson/converter": "link:.gg/ts_links/@rljson/converter",
+    "@rljson/converter": "^0.0.59",
     "@rljson/dna-rljson": "^0.2.0",
     "@tssuite/helix-js": "^0.3.0",
     "@types/node": "^26.6.3",

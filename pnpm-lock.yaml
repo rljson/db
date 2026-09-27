@@ -7,8 +7,6 @@ settings:
 overrides:
   '@rljson/io': link:./.gg/ts_links/@rljson/io
   eslint-plugin-tsdoc>@typescript-eslint/utils: ^8.62.1
-  '@rljson/validate': link:./.gg/ts_links/@rljson/validate
-  '@rljson/converter': link:./.gg/ts_links/@rljson/converter
 
 importers:
 
@@ -37,8 +35,8 @@ importers:
         version: 1.0.1
     devDependencies:
       '@rljson/converter':
-        specifier: link:.gg/ts_links/@rljson/converter
-        version: link:.gg/ts_links/@rljson/converter
+        specifier: ^0.0.59
+        version: 0.0.59
       '@rljson/dna-rljson':
         specifier: ^0.2.0
         version: 0.2.0
@@ -266,6 +264,10 @@ packages:
 
   '@oxc-project/types@0.151.0':
     resolution: {integrity: sha512-J1yXrIlNDZVzE3ada310xeAw7nH8yCAyLPuUIsjKatFPmfn5bS1oW+cM+QsGOtVWd5nhSpbwZWx/rue+r5Z+PA==}
+
+  '@rljson/converter@0.0.59':
+    resolution: {integrity: sha512-Cw3gC8otiMiPLEJisX8rkUaTWjUtelNntEHf5Y3S7HtrB5JnZwtvuDQs2pXncVFG7PZCKGef8TKelJuhwwn3cA==}
+    engines: {node: '>=22.14.0'}
 
   '@rljson/dna-rljson@0.2.0':
     resolution: {integrity: sha512-YpBMK+uUXA+K3JzNJuv9TRvG27ogNshKAagsrJ22OghPwINh67EWelHPWNhnaXLcPQcOWFEWxFyjyNB7oP1OAA==}
@@ -1623,6 +1625,13 @@ snapshots:
   '@microsoft/tsdoc@0.17.0': {}
 
   '@oxc-project/types@0.151.0': {}
+
+  '@rljson/converter@0.0.59':
+    dependencies:
+      '@rljson/hash': 0.0.19
+      '@rljson/json': 0.0.23
+      '@rljson/rljson': 0.0.83
+      object-traversal: 1.0.1
 
   '@rljson/dna-rljson@0.2.0':
     dependencies:
