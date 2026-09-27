@@ -8,6 +8,7 @@ import { Json, JsonValue } from '@rljson/json';
 import {
   InsertCommand,
   InsertHistoryRow,
+  mergeSliceIds,
   Ref,
   Rljson,
   SliceId,
@@ -150,8 +151,7 @@ export class SliceIdController<N extends string, C extends SliceId[]>
       }
     }
 
-    const add = new Set<SliceId>();
-    const remove = new Set<SliceId>();
+    let base: SliceId[] = [];
 
     if (!!sliceIds.base) {
       const baseSliceIds = await this.get(sliceIds.base);
@@ -168,32 +168,11 @@ export class SliceIdController<N extends string, C extends SliceId[]>
       }
 
       const baseSliceId = baseSliceIds[this._tableKey]._data[0] as SliceIds;
-      const resolvedBaseSliceIds = await this.resolveBaseSliceIds(baseSliceId);
-
-      for (const sliceId of resolvedBaseSliceIds.add) {
-        add.add(sliceId);
-      }
+      base = (await this.resolveBaseSliceIds(baseSliceId)).add;
     }
 
-    for (const sliceId of sliceIds.add) {
-      add.add(sliceId);
-    }
-
-    /* v8 ignore next -- @preserve */
-    if (!!sliceIds.remove)
-      for (const sliceId of sliceIds.remove) {
-        remove.add(sliceId);
-      }
-
-    // Remove sliceIds that are both in add and remove
-    /* v8 ignore next -- @preserve */
-    for (const sliceId of remove.values()) {
-      if (add.has(sliceId)) {
-        add.delete(sliceId);
-      }
-    }
-
-    const result = { add: Array.from(add) };
+    // The base package defines how a row is merged with its base
+    const result = { add: mergeSliceIds(base, sliceIds) };
 
     if (sliceIdsHash) {
       this._resolvedSliceIds.set(sliceIdsHash, result);
