@@ -3,4 +3,8 @@ onlyBuiltDependencies:
 minimumReleaseAgeExclude:
   - '@rljson/*'
 overrides:
+  "@rljson\/rljson": link:./.gg/ts_links/@rljson/rljson
+  "@rljson\/io": link:./.gg/ts_links/@rljson/io
   eslint-plugin-tsdoc>@typescript-eslint/utils: ^8.62.1
+  "@rljson\/validate": link:./.gg/ts_links/@rljson/validate
+  "@rljson\/converter": link:./.gg/ts_links/@rljson/converter
