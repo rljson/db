@@ -647,6 +647,73 @@ describe('Connector sync protocol', () => {
 
       connector.tearDown();
     });
+
+    // A message lost BEFORE the hub is not in the hub's ref log, so the
+    // gap-fill answer cannot close the gap: it carries the message that
+    // revealed it once more. Over a synchronous socket that answer arrives
+    // while the gap is still being handled — before this fix the connector
+    // saw the same gap again, asked again, and recursed until
+    // "Maximum call stack size exceeded" swallowed the message.
+    it('asks once for a message the hub never received', () => {
+      const config: SyncConfig = {
+        causalOrdering: true,
+        includeClientIdentity: true,
+      };
+      const connector = new Connector(db, route, socket, config);
+
+      const notifyCallback = vi.fn();
+      (connector as any)._callbacks.push(notifyCallback);
+
+      const peerId = 'client_PeerClient1';
+      const one = { o: 'other-origin', r: 'ref1', c: peerId, seq: 1 };
+      const three = { o: 'other-origin', r: 'ref3', c: peerId, seq: 3 };
+
+      // A hub that answers at once, from a log that never saw seq 2.
+      const log: ConnectorPayload[] = [one, three];
+      const requests = vi.fn();
+      socket.on(events.gapFillReq, (req: { afterSeq: number }) => {
+        requests(req);
+        socket.emit(events.gapFillRes, {
+          route: route.flat,
+          refs: log.filter((p) => p.seq! > req.afterSeq),
+        } as GapFillResponse);
+      });
+
+      socket.emit(events.ref, one as ConnectorPayload);
+      socket.emit(events.ref, three as ConnectorPayload);
+
+      expect(requests).toHaveBeenCalledTimes(1);
+      expect(requests).toHaveBeenCalledWith({ route: route.flat, afterSeq: 1 });
+      expect(notifyCallback.mock.calls.map((c) => c[0])).toEqual([
+        'ref1',
+        'ref3',
+      ]);
+
+      connector.tearDown();
+    });
+
+    // The hub answers a gap-fill from its whole log — every sender's refs,
+    // this connector's own included. Its own refs are not news to it; the
+    // live channel drops them by origin, and so must the gap-fill.
+    it('ignores its own refs in a gap-fill response', () => {
+      const config: SyncConfig = { causalOrdering: true };
+      const connector = new Connector(db, route, socket, config);
+
+      const notifyCallback = vi.fn();
+      (connector as any)._callbacks.push(notifyCallback);
+
+      socket.emit(events.gapFillRes, {
+        route: route.flat,
+        refs: [
+          { o: connector.origin, r: 'mine', seq: 2 },
+          { o: 'other-origin', r: 'theirs', seq: 3 },
+        ],
+      } as GapFillResponse);
+
+      expect(notifyCallback.mock.calls.map((c) => c[0])).toEqual(['theirs']);
+
+      connector.tearDown();
+    });
   });
 
   // =========================================================================

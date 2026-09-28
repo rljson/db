@@ -547,6 +547,7 @@ export class Connector {
       isNewestFromSender = payload.seq > (this._peerSeqs.get(payload.c) ?? 0);
     }
 
+    let gapReq: GapFillRequest | undefined;
     if (
       !fromBootstrap &&
       this._syncConfig?.causalOrdering &&
@@ -555,12 +556,11 @@ export class Connector {
     ) {
       const lastSeq = this._peerSeqs.get(payload.c) ?? 0;
       if (payload.seq > lastSeq + 1) {
-        // Gap detected — request fill
-        const gapReq: GapFillRequest = {
+        // Gap detected — request fill (sent below, once this payload is done)
+        gapReq = {
           route: this._route.flat,
           afterSeq: lastSeq,
         };
-        this._socket.emit(this._events.gapFillReq, gapReq);
       }
       this._peerSeqs.set(payload.c, payload.seq);
     }
@@ -584,6 +584,15 @@ export class Connector {
     if (this._syncConfig?.requireAck) {
       this._socket.emit(this._events.ackClient, { r: ref });
     }
+
+    // Ask for the gap only now, with this payload fully recorded. A
+    // synchronous socket answers inside `emit`, and when the missing message
+    // never reached the hub the answer carries THIS payload again: asked any
+    // earlier, it reopened the same gap and recursed until the stack
+    // overflowed, or delivered this ref twice.
+    if (gapReq) {
+      this._socket.emit(this._events.gapFillReq, gapReq);
+    }
   }
 
   private _registerSocketObserver() {
@@ -599,6 +608,8 @@ export class Connector {
   private _registerGapFillHandler() {
     this._socket.on(this._events.gapFillRes, (res: GapFillResponse) => {
       for (const p of res.refs) {
+        // The hub answers from its whole log, our own refs included.
+        if (p.o === this._origin) continue;
         this._processIncoming(p);
       }
     });
