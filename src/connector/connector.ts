@@ -506,6 +506,18 @@ export class Connector {
    *   to replay history that it never missed. Staleness is still computed:
    *   that is the whole point of the sequence being there.
    */
+  /**
+   * Shortest gap between two gap-fill requests from this connector.
+   *
+   * Small enough that a genuine gap is filled without a person noticing, large
+   * enough that a self-feeding storm cannot cost the hub more than a handful of
+   * answers per second. See {@link Connector._mayAskForGapFill}.
+   */
+  static gapFillMinIntervalMs = 250;
+
+  /** When the last gap-fill request went out, for the rate limit. */
+  private _lastGapFillAskedAt = 0;
+
   private _processIncoming(payload: ConnectorPayload, fromBootstrap = false) {
     const ref = payload.r;
 
@@ -590,9 +602,45 @@ export class Connector {
     // never reached the hub the answer carries THIS payload again: asked any
     // earlier, it reopened the same gap and recursed until the stack
     // overflowed, or delivered this ref twice.
-    if (gapReq) {
+    if (gapReq && this._mayAskForGapFill()) {
       this._socket.emit(this._events.gapFillReq, gapReq);
     }
+  }
+
+  /**
+   * Whether another gap-fill request may go out now.
+   *
+   * ## Why a rate limit and not a suppression
+   *
+   * A gap-fill answer is processed ref by ref through
+   * {@link Connector._processIncoming}, so any ref in it that jumps ANOTHER
+   * sender's sequence opens a second gap and asks again. Each answer carries the
+   * hub's whole matching ref log, so each round trip is expensive on the hub:
+   * on 2026-09-29 the cloud EventHub served **858 of them in 18.2 seconds** and
+   * died of `FATAL ERROR: Reached heap limit`, the heap at 990 MB, inside
+   * socket.io's outbound packet encoder — 124-203 kB of `JSON.stringify` per
+   * answer, built synchronously, faster than the collector could keep up.
+   *
+   * The tempting fix is to mark replayed refs the way a bootstrap is marked and
+   * skip gap detection for them. **That loses refs.** A gap-fill answer is
+   * filtered by one `afterSeq` across every sender in the log, so it routinely
+   * carries refs from senders whose own gaps it does not fill. Skipping
+   * detection would move those senders' high-water marks past refs that were
+   * never delivered, and nothing would ever ask for them again.
+   *
+   * So the rate is bounded instead of the detection. A storm collapses to a few
+   * requests; every gap is still detected, and the next live ref re-opens any
+   * request this window dropped. Nothing is permanently suppressed, which is the
+   * property that makes this safe to put in the convergence path.
+   * @returns Whether to send it.
+   */
+  private _mayAskForGapFill(): boolean {
+    const now = Date.now();
+    if (now - this._lastGapFillAskedAt < Connector.gapFillMinIntervalMs) {
+      return false;
+    }
+    this._lastGapFillAskedAt = now;
+    return true;
   }
 
   private _registerSocketObserver() {
