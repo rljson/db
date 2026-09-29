@@ -339,6 +339,105 @@ describe('Connector sync protocol', () => {
       connector.tearDown();
     });
 
+    it('collapses a storm of gaps into a bounded number of requests', () => {
+      // 2026-09-29: a gap-fill answer is processed ref by ref, so any ref in it
+      // that jumps ANOTHER sender's sequence opens a second gap and asks again.
+      // Each answer carries the hub's whole matching ref log — 124-203 kB — and
+      // the cloud EventHub served 858 of them in 18.2 seconds before dying of
+      // `Reached heap limit` inside socket.io's outbound encoder.
+      const config: SyncConfig = {
+        causalOrdering: true,
+        includeClientIdentity: true,
+      };
+      const connector = new Connector(db, route, socket, config);
+      const gapCallback = vi.fn();
+      socket.on(events.gapFillReq, gapCallback);
+
+      // Twenty different senders, each announcing a jump — twenty gaps, all
+      // inside one tick, which is what a reconnect storm looks like.
+      for (let i = 0; i < 20; i++) {
+        socket.emit(events.ref, {
+          o: 'other-origin',
+          r: `ref-a-${String(i)}`,
+          c: `client_Peer${String(i)}`,
+          seq: 1,
+        } as ConnectorPayload);
+        socket.emit(events.ref, {
+          o: 'other-origin',
+          r: `ref-b-${String(i)}`,
+          c: `client_Peer${String(i)}`,
+          seq: 50,
+        } as ConnectorPayload);
+      }
+
+      expect(connector).toBeDefined();
+      expect(
+        gapCallback.mock.calls.length,
+        'every detected gap still costs the hub a whole-log answer',
+      ).toBeLessThanOrEqual(2);
+    });
+
+    it('asks again once the window has passed, so nothing is suppressed for good', () => {
+      // The property that makes a rate limit safe in the convergence path: a
+      // request this window dropped is re-opened by the next live ref. Skipping
+      // detection outright would move other senders' high-water marks past refs
+      // that were never delivered, and nothing would ask for them again.
+      const config: SyncConfig = {
+        causalOrdering: true,
+        includeClientIdentity: true,
+      };
+      const connector = new Connector(db, route, socket, config);
+      const gapCallback = vi.fn();
+      socket.on(events.gapFillReq, gapCallback);
+
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'r1',
+        c: 'client_P',
+        seq: 1,
+      } as ConnectorPayload);
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'r2',
+        c: 'client_P',
+        seq: 9,
+      } as ConnectorPayload);
+      expect(gapCallback).toHaveBeenCalledTimes(1);
+
+      // A second gap in the same window is dropped ...
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'r3',
+        c: 'client_Q',
+        seq: 1,
+      } as ConnectorPayload);
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'r4',
+        c: 'client_Q',
+        seq: 9,
+      } as ConnectorPayload);
+      expect(gapCallback).toHaveBeenCalledTimes(1);
+
+      // ... and asked for once the window has passed.
+      (
+        connector as never as Record<string, number>
+      )['_lastGapFillAskedAt'] = Date.now() - Connector.gapFillMinIntervalMs - 1;
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'r5',
+        c: 'client_R',
+        seq: 1,
+      } as ConnectorPayload);
+      socket.emit(events.ref, {
+        o: 'other-origin',
+        r: 'r6',
+        c: 'client_R',
+        seq: 9,
+      } as ConnectorPayload);
+      expect(gapCallback).toHaveBeenCalledTimes(2);
+    });
+
     it('should detect gap and emit gapFillReq', () => {
       const config: SyncConfig = {
         causalOrdering: true,
