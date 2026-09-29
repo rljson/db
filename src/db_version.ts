@@ -2,4 +2,4 @@
 // Kept in sync by test/db_version.test.ts.
 
 /** The version of the `@rljson/db` package. */
-export const dbVersion = '0.0.47';
+export const dbVersion = '0.0.48';

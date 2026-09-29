@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.0.48]
+
+### A gap-fill storm can no longer feed itself
+
+A gap-fill answer is processed ref by ref through `_processIncoming`, so any ref
+in it that jumps ANOTHER sender's sequence opens a second gap and asks again.
+Each answer carries the hub's whole matching ref log, so each round trip is
+expensive on the hub: on 2026-09-29 the cloud EventHub served **858 of them in
+18.2 seconds** and died of `FATAL ERROR: Reached heap limit`, heap at 990 MB,
+inside socket.io's outbound packet encoder — 124-203 kB of `JSON.stringify` per
+answer, built synchronously, faster than the collector could keep up.
+
+This is a different fault from the recursion closed in 0.0.47 (#60). That one was
+one ref reopening its own gap until the call stack blew; this one is many senders'
+refs opening each other's gaps, and it terminates — expensively.
+
+- **Added** `Connector.gapFillMinIntervalMs` (250 ms) and a rate limit in front
+  of the request.
+
+### Why a rate limit and not a suppression
+
+The tempting fix is to mark replayed refs the way a bootstrap is marked and skip
+gap detection for them. **That loses refs.** A gap-fill answer is filtered by one
+`afterSeq` across every sender in the log, so it routinely carries refs from
+senders whose own gaps it does not fill. Skipping detection would move those
+senders' high-water marks past refs that were never delivered, and nothing would
+ever ask for them again.
+
+So the rate is bounded instead of the detection. A storm collapses to a couple of
+requests; every gap is still detected, and the next live ref re-opens any request
+the window dropped. Nothing is permanently suppressed — the property that makes
+this safe to put in the convergence path, and the reason the tests assert it
+explicitly.
+
+Pairs with `@rljson/server` 0.0.70, which bounds the size of each answer. Either
+change alone survives the storm; together the storm costs a couple of 25 kB
+messages instead of 858 × 150 kB.
+
 ## [Unreleased]
 
 ### Added
