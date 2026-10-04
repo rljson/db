@@ -1,6 +1,6 @@
 {
   "name": "@rljson/db",
-  "version": "0.0.49",
+  "version": "0.0.50",
   "packageManager": "pnpm@11.10.0+sha512.0b7f8b98060031904c017e3a41eb187a16d40eeb829b95c4f8cb03681761fc4ab53dd219115b9b447f4dce1a05a214764461e7d3703392a9f32f9511ce8c86c8",
   "description": "A high level interface to read and write RLJSON data from and into a database",
   "homepage": "https://github.com/rljson/db",
@@ -53,7 +53,7 @@
   },
   "dependencies": {
     "@rljson/hash": "0.0.19",
-    "@rljson/io": "0.0.81",
+    "@rljson/io": "0.0.82",
     "@rljson/json": "0.0.23",
     "@rljson/rljson": "0.0.83",
     "@rljson/validate": "0.0.12",
