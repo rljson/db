@@ -60,13 +60,6 @@ export class CakeController<N extends string, C extends Cake>
   async init() {
     // Validate Table
 
-    // TableKey must end with 'Cake'
-    if (this._tableKey.endsWith('Cake') === false) {
-      throw new Error(
-        `Table ${this._tableKey} is not supported by CakeController.`,
-      );
-    }
-
     // Table must be of type cakes
     const contentType = await this._core.contentType(this._tableKey);
     if (contentType !== 'cakes') {
