@@ -86,7 +86,8 @@ export class MultiEditManager {
       // edit concurrently with processing it
       const persistEditPromise = this._persistEdit(edit);
 
-      multiEditProc = await this.head.processor.edit(edit);
+      // Edit a clone so that the state of the head stays unchanged
+      multiEditProc = await this.head.processor.clone().edit(edit);
 
       await persistEditPromise;
 

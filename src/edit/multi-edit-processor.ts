@@ -256,6 +256,8 @@ export class MultiEditProcessor {
     );
     clone._multiEdit = this._multiEdit;
     clone._edits = [...this._edits];
+    // Join operations return a new Join and never change this one,
+    // so the join can be shared
     clone._join = this._join;
     return clone;
   }
