@@ -452,7 +452,7 @@ describe('Controller', () => {
         //Wrong TableKey
         layerCtrl = new LayerController(core, '#', carGeneralLayerRefs);
         await expect(layerCtrl.init()).rejects.toThrow(
-          'Table # is not supported by LayerController.',
+          'Table "#" not found',
         );
 
         //Table not existing
@@ -869,7 +869,7 @@ describe('Controller', () => {
         );
 
         await expect(sliceIdCtrl.init()).rejects.toThrow(
-          'Table # is not supported by SliceIdController.',
+          'Table "#" not found',
         );
 
         //Table not of type layers
@@ -883,7 +883,7 @@ describe('Controller', () => {
 
         sliceIdCtrl = new SliceIdController(core, mockSliceIdName, {});
         await expect(sliceIdCtrl.init()).rejects.toThrow(
-          'Table mockSliceIds is not supported by SliceIdController.',
+          'Table mockSliceIds is not of type sliceIds.',
         );
 
         //Valid w/o refs
@@ -1210,7 +1210,7 @@ describe('Controller', () => {
         //Wrong TableKey
         cakeCtrl = new CakeController(core, '#', carCakeRefs);
         await expect(cakeCtrl.init()).rejects.toThrow(
-          'Table # is not supported by CakeController.',
+          'Table "#" not found',
         );
 
         //Table not existing
@@ -1556,13 +1556,13 @@ describe('Controller', () => {
         //Wrong TableKey
         treeCtrl = new TreeController(treeCore, '#');
         await expect(treeCtrl.init()).rejects.toThrow(
-          'Table # is not supported by TreeController.',
+          'Table "#" not found',
         );
 
         //Table not of type trees
         treeCtrl = new TreeController(treeCore, 'notATreeCake');
         await expect(treeCtrl.init()).rejects.toThrow(
-          'Table notATreeCake is not supported by TreeController.',
+          'Table notATreeCake is not of type trees.',
         );
 
         //Valid

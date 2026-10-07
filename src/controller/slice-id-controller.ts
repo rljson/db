@@ -48,16 +48,8 @@ export class SliceIdController<N extends string, C extends SliceId[]>
   async init() {
     // Validate Table
 
-    // TableKey must end with 'SliceId'
-    if (this._tableKey.endsWith('SliceId') === false) {
-      throw new Error(
-        `Table ${this._tableKey} is not supported by SliceIdController.`,
-      );
-    }
-
     // Table must be of type sliceIds
     const contentType = await this._core.contentType(this._tableKey);
-    /* v8 ignore next -- @preserve */
     if (contentType !== 'sliceIds') {
       throw new Error(`Table ${this._tableKey} is not of type sliceIds.`);
     }

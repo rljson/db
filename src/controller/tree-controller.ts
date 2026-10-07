@@ -39,16 +39,8 @@ export class TreeController<N extends string, C extends Tree>
   async init() {
     // Validate Table
 
-    // TableKey must end with 'Tree'
-    if (this._tableKey.endsWith('Tree') === false) {
-      throw new Error(
-        `Table ${this._tableKey} is not supported by TreeController.`,
-      );
-    }
-
     // Table must be of type trees
     const contentType = await this._core.contentType(this._tableKey);
-    /* v8 ignore next -- @preserve */
     if (contentType !== 'trees') {
       throw new Error(`Table ${this._tableKey} is not of type trees.`);
     }

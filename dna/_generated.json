@@ -13,7 +13,7 @@
       "name": "dna-readme",
       "package": "@ggdna/dna-readme",
       "ecosystem": "node",
-      "resolvedVersion": "0.1.1",
+      "resolvedVersion": "0.1.2",
       "via": "dna-rljson",
       "hash": "0xb8eeee4e2937ca0d"
     },
@@ -21,7 +21,7 @@
       "name": "dna-guides",
       "package": "@ggdna/dna-guides",
       "ecosystem": "node",
-      "resolvedVersion": "0.1.1",
+      "resolvedVersion": "0.1.2",
       "via": "dna-rljson",
       "hash": "0x3bd4be7c009270a6"
     },
@@ -29,7 +29,7 @@
       "name": "dna-translate",
       "package": "@ggdna/dna-translate",
       "ecosystem": "node",
-      "resolvedVersion": "0.1.1",
+      "resolvedVersion": "0.1.2",
       "via": "dna-rljson",
       "hash": "0x1c92ce37a7ede19b"
     },
@@ -37,7 +37,7 @@
       "name": "dna-index",
       "package": "@ggdna/dna-index",
       "ecosystem": "node",
-      "resolvedVersion": "0.1.2",
+      "resolvedVersion": "0.1.3",
       "via": "dna-rljson",
       "hash": "0x1d92b0add37a1ac7"
     },
@@ -45,7 +45,7 @@
       "name": "dna-blog",
       "package": "@ggdna/dna-blog",
       "ecosystem": "node",
-      "resolvedVersion": "0.1.1",
+      "resolvedVersion": "0.1.2",
       "via": "dna-rljson",
       "hash": "0x2aafe5211ebd4365"
     },
@@ -53,7 +53,7 @@
       "name": "dna-install",
       "package": "@ggdna/dna-install",
       "ecosystem": "node",
-      "resolvedVersion": "0.1.2",
+      "resolvedVersion": "0.1.3",
       "via": "dna-rljson",
       "hash": "0xbe88eb4256745ee1"
     },
@@ -61,7 +61,7 @@
       "name": "dna-clean-code",
       "package": "@ggdna/dna-clean-code",
       "ecosystem": "node",
-      "resolvedVersion": "0.1.1",
+      "resolvedVersion": "0.1.2",
       "via": "dna-rljson",
       "hash": "0xacaa785dad36b047"
     },
