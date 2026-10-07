@@ -131,7 +131,8 @@ export class Join {
 
   // ...........................................................................
   /**
-   * Applies a filter to the join and returns the filtered view
+   * Applies a filter and returns the filtered view as a new join.
+   * This join stays unchanged.
    *
    * @param filter The filter to apply
    */
@@ -148,15 +149,13 @@ export class Join {
       columnSelection: this.columnSelection,
     };
 
-    // Store the process
-    this._processes.push(process);
-
-    return this;
+    return this._withProcess(process);
   }
 
   // ...........................................................................
   /**
-   * Applies a set value action to the join and returns the edited join
+   * Applies a set value action and returns the edited view as a new
+   * join. This join stays unchanged.
    *
    * @param setValue The set value action to apply
    */
@@ -167,69 +166,65 @@ export class Join {
     const setValueRoute = Route.fromFlat(setValue.route);
 
     for (const [sliceId, joinRowH] of Object.entries(this.data)) {
-      const cols = [...joinRowH.columns];
       const insertCols: JoinColumn[] = [];
-      for (const col of cols) {
-        const insertCol = {
-          ...col,
-          //inserts: col.inserts ? [...col.inserts] : [],
-        };
-
-        /*v8 ignore else -- @preserve */
-        if (setValueRoute.equalsWithoutRefs(col.route)) {
-          for (const cell of col.value.cell) {
-            /* v8 ignore next -- @preserve */
-            if (cell.path.length === 0) {
-              throw new Error(
-                `Join: Error while applying SetValue: ` +
-                  `Cannot set value for column without paths. ` +
-                  `Route: ${setValue.route.toString()}.`,
-              );
-            }
-
-            /* v8 ignore next -- @preserve */
-            if (cell.path.length > 1) {
-              throw new Error(
-                `Join: Error while applying SetValue: ` +
-                  `Cannot set value for multiple paths in one cell. ` +
-                  `Found paths: [${cell.path.join(', ')}] for route: ` +
-                  `${setValue.route.toString()}.`,
-              );
-            }
-
-            const cellInsertTree = isolate(
-              { ...col.value.tree },
-              cell.path[0],
-              joinPreserveKeys,
-            );
-            inject(cellInsertTree, cell.path[0], setValue.value);
-
-            const propertyKey = cell.path[0].slice(-1)[0];
-            const insert: Container = {
-              cell: [
-                {
-                  ...cell,
-                  ...{ value: setValue.value },
-                  ...{
-                    row: {
-                      ...(cell.row as Json),
-                      ...{ [propertyKey]: setValue.value },
-                    } as any,
-                  },
-                },
-              ],
-              tree: cellInsertTree,
-              rljson: col.value.rljson,
-            };
-
-            /* v8 ignore next -- @preserve */
-            if (insert) {
-              if (insertCol.inserts) insertCol.inserts.push(insert);
-              else insertCol.inserts = [insert];
-            }
-          }
+      for (const col of joinRowH.columns) {
+        // Untouched columns are shared with this join
+        if (!setValueRoute.equalsWithoutRefs(col.route)) {
+          insertCols.push(col);
+          continue;
         }
-        insertCols.push(insertCol);
+
+        // Edited columns get a new inserts array. The inserts of this
+        // join stay unchanged.
+        let inserts = col.inserts;
+        for (const cell of col.value.cell) {
+          /* v8 ignore next -- @preserve */
+          if (cell.path.length === 0) {
+            throw new Error(
+              `Join: Error while applying SetValue: ` +
+                `Cannot set value for column without paths. ` +
+                `Route: ${setValue.route.toString()}.`,
+            );
+          }
+
+          /* v8 ignore next -- @preserve */
+          if (cell.path.length > 1) {
+            throw new Error(
+              `Join: Error while applying SetValue: ` +
+                `Cannot set value for multiple paths in one cell. ` +
+                `Found paths: [${cell.path.join(', ')}] for route: ` +
+                `${setValue.route.toString()}.`,
+            );
+          }
+
+          const cellInsertTree = isolate(
+            { ...col.value.tree },
+            cell.path[0],
+            joinPreserveKeys,
+          );
+          inject(cellInsertTree, cell.path[0], setValue.value);
+
+          const propertyKey = cell.path[0].slice(-1)[0];
+          const insert: Container = {
+            cell: [
+              {
+                ...cell,
+                ...{ value: setValue.value },
+                ...{
+                  row: {
+                    ...(cell.row as Json),
+                    ...{ [propertyKey]: setValue.value },
+                  } as any,
+                },
+              },
+            ],
+            tree: cellInsertTree,
+            rljson: col.value.rljson,
+          };
+
+          inserts = inserts ? [...inserts, insert] : [insert];
+        }
+        insertCols.push({ ...col, inserts });
       }
 
       data[sliceId] = Join._lazyHashedRow(
@@ -249,10 +244,7 @@ export class Join {
       columnSelection: this.columnSelection,
     };
 
-    // Store the process
-    this._processes.push(process);
-
-    return this;
+    return this._withProcess(process);
   }
 
   // ...........................................................................
@@ -311,7 +303,7 @@ export class Join {
    * surfaced via `pendingSliceIdsInsert` for the caller to persist.
    *
    * @param data - The layer, sliceId and whole component to set
-   * @returns This Join, with the pending direct insert recorded
+   * @returns A new Join with the pending direct insert recorded
    */
   putComponent(data: PutComponent): Join {
     const found = this._findLayerContainer(data.layer);
@@ -352,7 +344,8 @@ export class Join {
     const sliceIdsRowsByHash = new Map<string, Json>();
     sliceIdsRowsByHash.set(newLayerSliceIds._hash as string, newLayerSliceIds);
     sliceIdsRowsByHash.set(newCakeSliceIds._hash as string, newCakeSliceIds);
-    this._pendingSliceIdsInsert = {
+    const result = this.clone();
+    result._pendingSliceIdsInsert = {
       table: sliceIdsTable,
       rows: Array.from(sliceIdsRowsByHash.values()),
     };
@@ -400,12 +393,12 @@ export class Join {
       },
     };
 
-    this._directInsert = {
+    result._directInsert = {
       route: Route.fromFlat(`/${cakeKey}/${data.layer}/${componentsTable}`),
       tree,
     };
 
-    return this;
+    return result;
   }
 
   // ...........................................................................
@@ -445,7 +438,8 @@ export class Join {
 
   // ...........................................................................
   /**
-   * Selects columns from the join and returns the resulting join
+   * Selects columns and returns the resulting view as a new join.
+   * This join stays unchanged.
    *
    * @param columnSelection The column selection to apply
    */
@@ -485,15 +479,13 @@ export class Join {
       columnSelection,
     };
 
-    // Store the process
-    this._processes.push(process);
-
-    return this;
+    return this._withProcess(process);
   }
 
   // ...........................................................................
   /**
-   * Sorts the join rows and returns the sorted join
+   * Sorts the rows and returns the sorted view as a new join.
+   * This join stays unchanged.
    *
    * @param rowSort The row sort to apply
    */
@@ -514,10 +506,7 @@ export class Join {
       columnSelection: this.columnSelection,
     };
 
-    // Store the process
-    this._processes.push(process);
-
-    return this;
+    return this._withProcess(process);
   }
 
   // ...........................................................................
@@ -627,10 +616,29 @@ export class Join {
    * @returns The cloned join
    */
   clone(): Join {
-    const cloned = Object.create(this);
-    cloned._data = this._base;
+    // Skip the constructor: the base rows are already hashed and are
+    // shared, like the data of all processes. Only the process list is
+    // copied.
+    const cloned = Object.create(Join.prototype) as Join;
+    cloned._base = this._base;
+    cloned._baseColumnSelection = this._baseColumnSelection;
     cloned._processes = [...this._processes];
+    cloned._directInsert = this._directInsert;
+    cloned._pendingSliceIdsInsert = this._pendingSliceIdsInsert;
     return cloned;
+  }
+
+  // ...........................................................................
+  /**
+   * Returns a clone of this join with the given process added
+   *
+   * @param process The process to add
+   * @returns The new join
+   */
+  private _withProcess(process: JoinProcess): Join {
+    const result = this.clone();
+    result._processes.push(process);
+    return result;
   }
 
   // ...........................................................................
