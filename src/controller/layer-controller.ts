@@ -54,13 +54,6 @@ export class LayerController<N extends string, C extends Layer>
   async init() {
     // Validate Table
 
-    // TableKey must end with 'Layer'
-    if (this._tableKey.endsWith('Layer') === false) {
-      throw new Error(
-        `Table ${this._tableKey} is not supported by LayerController.`,
-      );
-    }
-
     // Table must be of type layers
     const contentType = await this._core.contentType(this._tableKey);
     if (contentType !== 'layers') {
@@ -267,9 +260,8 @@ export class LayerController<N extends string, C extends Layer>
         const sliceIdController = this._sliceIdController(
           baseLayerSliceIdsTable,
         );
-        const resolvedSliceIds = await sliceIdController.resolveBaseSliceIds(
-          sIds,
-        );
+        const resolvedSliceIds =
+          await sliceIdController.resolveBaseSliceIds(sIds);
 
         // Merge resolved sliceIds
         for (const sId of resolvedSliceIds.add) {

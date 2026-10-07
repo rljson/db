@@ -28,10 +28,10 @@ import {
 } from './controller.ts';
 
 export class ComponentController<
-    N extends string,
-    C extends Json,
-    T extends Json,
-  >
+  N extends string,
+  C extends Json,
+  T extends Json,
+>
   extends BaseController<ComponentsTable<T>, C>
   implements Controller<ComponentsTable<T>, C, N>
 {
@@ -373,10 +373,15 @@ export class ComponentController<
    * @param columns - The columns to resolve.
    * @returns A promise that resolves to an object containing base and reference columns.
    */
-  private async _resolveReferenceColumns(columns: {
-    base: ColumnCfg[];
-    references?: Record<TableKey, ColumnCfg[]>;
-  }): Promise<{
+  private async _resolveReferenceColumns(
+    columns: {
+      base: ColumnCfg[];
+      references?: Record<TableKey, ColumnCfg[]>;
+    },
+    // Tables already on the path. A table that refers to itself, directly
+    // or through others, is resolved only once.
+    visited: Set<TableKey> = new Set([this._tableKey]),
+  ): Promise<{
     base: ColumnCfg[];
     references: Record<TableKey, ColumnCfg[]>;
   }> {
@@ -397,10 +402,11 @@ export class ComponentController<
         // Check if referenced columns have refs themselves and resolve them too
         const refsHaveRefs = refColumns.some((c) => !!c.ref);
         /*v8 ignore next -- @preserve */
-        if (refsHaveRefs) {
-          const resolvedRefColumns = await this._resolveReferenceColumns({
-            base: refColumns,
-          });
+        if (refsHaveRefs && !visited.has(refTableKey)) {
+          const resolvedRefColumns = await this._resolveReferenceColumns(
+            { base: refColumns },
+            new Set([...visited, refTableKey]),
+          );
           references[refTableKey].push(...resolvedRefColumns.base);
         }
 
