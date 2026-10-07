@@ -127,10 +127,15 @@ describe('Join', () => {
       );
 
       // Edit the column selection and verify that it has changed
-      join.select(new ColumnSelection(columnSelection.columns.slice(0, 2)));
-      const editedColSelection = join.columnSelection;
+      const edited = join.select(
+        new ColumnSelection(columnSelection.columns.slice(0, 2)),
+      );
+      const editedColSelection = edited.columnSelection;
 
       expect(editedColSelection).not.toBe(initialColSelection);
+
+      // The original join stays unchanged
+      expect(join.columnSelection).toBe(initialColSelection);
       expect(editedColSelection.columns).toEqual(
         columnSelection.columns.slice(0, 2),
       );
