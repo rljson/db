@@ -870,7 +870,13 @@ describe('MultiEditProcessor', () => {
           {},
         );
 
-        expect(writtenCarGeneral.length).toBe(5);
+        // The 5 filtered cars are edited, the other cars are inherited
+        // unchanged from the base layer
+        const edited = writtenCarGeneral.filter((c: any) =>
+          equals(c.serviceIntervals, [15000, 30000, 45000, 60000]),
+        );
+        expect(edited.length).toBe(5);
+        expect(writtenCarGeneral.length).toBe(8);
       });
     });
   });

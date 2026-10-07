@@ -4,6 +4,7 @@
 // Use of this source code is governed by terms that can be
 // found in the LICENSE file in the root of this package.
 
+import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Route } from '@rljson/rljson';
 
@@ -405,12 +406,23 @@ describe('Join', () => {
         {},
       );
 
-      expect(writtenData['carGeneral']._data.length).toBe(12);
-      const writtenDataSet = new Set(
-        writtenData['carGeneral']._data.map((d: any) => d['brand']),
+      // Each edited car gets a new layer. It holds the edited car only and
+      // inherits the untouched cars from its base layer.
+      const layers = writtenData['carGeneralLayer']._data as any[];
+      expect(layers.length).toBe(12);
+      expect(layers.every((l) => !!l.base)).toBe(true);
+
+      const editedRefs = new Set(
+        layers.flatMap((l) => Object.values(rmhsh(l.add))),
       );
-      expect(writtenDataSet.has('Opel')).toBe(true);
-      expect(writtenDataSet.size).toBe(1);
+      const edited = writtenData['carGeneral']._data.filter((d: any) =>
+        editedRefs.has(d._hash),
+      );
+      expect(edited.length).toBe(12);
+      expect(edited.every((d: any) => d['brand'] === 'Opel')).toBe(true);
+
+      // The untouched cars of the base layer are still readable
+      expect(writtenData['carGeneral']._data.length).toBe(24);
     }, 20000);
   });
 });
