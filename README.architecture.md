@@ -275,6 +275,19 @@ class LayerController extends Controller {
 5. Return InsertHistoryRows
 ```
 
+#### Cakes and layers derived from a previous version
+
+A nested insert into a cake writes a delta, not a full copy. The previous
+cake is the one the route refers to (`catalogs@<ref or timeId>/...`), or
+else the stored row whose `_hash` the inserted cake carries (the tree a
+`Join` builds from fetched data).
+
+- The new cake takes over `sliceIdsTable`, `sliceIdsRow`, `id` and all
+  untouched layers of the previous cake
+- The new layer gets `base: <previous layer>` and only the edited items in
+  `add`; untouched items are inherited through the base chain
+- Without a stored previous version, only the given data is written
+
 ## Route Resolution
 
 Routes define paths through related data. The route system supports:

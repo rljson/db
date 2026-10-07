@@ -1649,6 +1649,8 @@ export class Db {
    * @param insert - The Insert to run
    * @param route - The route of the Insert
    * @param runFns - A record of controller run functions, keyed by table name
+   * @param options - Notification and history options
+   * @param parentBase - Base row ref handed down by the parent cake
    * @returns The result of the Insert
    * @throws {Error} If the route is not valid or if any controller cannot be created
    */
@@ -1657,6 +1659,7 @@ export class Db {
     tree: Json,
     runFns: Record<string, ControllerRunFn<any, any>>,
     options?: { skipNotification?: boolean; skipHistory?: boolean },
+    parentBase?: Ref,
   ): Promise<InsertHistoryRow<any>[]> {
     const results: InsertHistoryRow<any>[] = [];
 
@@ -1702,11 +1705,22 @@ export class Db {
 
         //Check if there is no cake or no childTree --> Add new one
         const cake = cakes[0] as Cake;
+
+        // The new cake inherits everything of the cake it was derived
+        // from: untouched layers, sliceIds and id
+        const baseCake = (await this._insertBaseRow(
+          nodeTableKey,
+          await this._segmentRef(nodeSegment),
+          (cake as Json)._hash as Ref,
+        )) as Cake | null;
+
         const childTree = (cake.layers as Json)[childTableKey] as TableType;
         const childResults = await this._insert(
           childRoute,
           { [childTableKey]: childTree },
           runFns,
+          undefined,
+          baseCake?.layers[childTableKey],
         );
 
         /* v8 ignore next -- @preserve */
@@ -1719,9 +1733,11 @@ export class Db {
         const childResult = childResults[0];
 
         const insertValue = {
+          ...(baseCake as Json),
           ...(cake as any as Json),
           ...{
             layers: {
+              ...baseCake?.layers,
               ...cake.layers,
               ...{
                 [childTableKey]: (childResult as any)[childTableKey + 'Ref'],
@@ -1744,9 +1760,19 @@ export class Db {
 
         //Check what if there is no layer or no compomentTree --> Add new one
 
+        // Edited layers are written as delta on top of the layer they
+        // were derived from, so that untouched slices are inherited
+        const segmentRef = await this._segmentRef(nodeSegment);
+
         // Write the components of all layers and slices in parallel
         const layerResults = await Promise.all(
           layers.map(async (layer) => {
+            const baseLayer = (await this._insertBaseRow(
+              nodeTableKey,
+              segmentRef ?? parentBase,
+              (layer as Json)._hash as Ref,
+            )) as Layer | null;
+
             const sliceEntries = Object.entries(layer.add).filter(
               ([sliceId]) => sliceId !== '_hash',
             );
@@ -1796,8 +1822,14 @@ export class Db {
             return runFn(
               'add',
               rmhsh({
+                ...(baseLayer && {
+                  sliceIdsTable: baseLayer.sliceIdsTable,
+                  sliceIdsTableRow: baseLayer.sliceIdsTableRow,
+                  componentsTable: baseLayer.componentsTable,
+                }),
                 ...layer,
                 ...{ add: layerInsert },
+                ...(baseLayer && { base: baseLayer._hash }),
               }),
               'db.insert',
             );
@@ -1987,6 +2019,40 @@ export class Db {
     }
 
     return results;
+  }
+
+  // ...........................................................................
+  /**
+   * Resolves the ref of a route segment. TimeIds are mapped to their ref.
+   * @param segment - The route segment
+   * @returns The ref of the segment or undefined if it carries none
+   */
+  private async _segmentRef(segment: RouteSegment<any>): Promise<Ref | undefined> {
+    const ref = Route.segmentRef(segment);
+    if (!ref) return undefined;
+    if (!isTimeId(ref)) return ref;
+    return (await this.getRefOfTimeId(segment.tableKey, ref)) ?? undefined;
+  }
+
+  // ...........................................................................
+  /**
+   * Finds the stored row an inserted cake or layer row is derived from.
+   * Candidates are checked in order, the first stored one wins.
+   * @param tableKey - The table of the row
+   * @param candidates - Refs that may point to the previous row
+   * @returns The previous row or null if none of the candidates is stored
+   */
+  private async _insertBaseRow(
+    tableKey: string,
+    ...candidates: (Ref | undefined)[]
+  ): Promise<Json | null> {
+    for (const ref of candidates) {
+      if (!ref) continue;
+      const { [tableKey]: table } = await this.core.readRow(tableKey, ref);
+      const row = table?._data?.[0];
+      if (row) return row as Json;
+    }
+    return null;
   }
 
   // ...........................................................................
