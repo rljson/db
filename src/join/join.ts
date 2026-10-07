@@ -222,7 +222,14 @@ export class Join {
             rljson: col.value.rljson,
           };
 
-          inserts = inserts ? [...inserts, insert] : [insert];
+          // A later setValue on the same cell replaces the earlier one.
+          // Inserts of other cells stay.
+          const cellPath = JSON.stringify(cell.path[0]);
+          const others = (inserts ?? []).filter(
+            (ins) =>
+              !ins.cell.some((c) => JSON.stringify(c.path[0]) === cellPath),
+          );
+          inserts = [...others, insert];
         }
         insertCols.push({ ...col, inserts });
       }

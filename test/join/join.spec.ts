@@ -240,7 +240,7 @@ describe('Join', () => {
       const values = editedJoin.rows.flatMap((r) => r).flat();
       const uniqueValues = Array.from(new Set(values)).sort();
 
-      expect(uniqueValues).toEqual(['BMW', 'Opel']);
+      expect(uniqueValues).toEqual(['BMW']);
     });
   });
 
