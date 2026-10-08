@@ -8,7 +8,7 @@ import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Route } from '@rljson/rljson';
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Db } from '../../src/db';
 import { staticExample } from '../../src/example-static/example-static';
@@ -50,6 +50,38 @@ describe('Join', () => {
       expect(join).toBeDefined();
     });
   });
+  describe('formatView()', () => {
+    it('formats the rows as a text table', async () => {
+      const join = await db.join(columnSelection, cakeKey, cakeRef);
+      const lines = join.formatView().split('\n');
+
+      expect(lines[0]).toBe(
+        join.columnSelection.aliases
+          .map((alias, i) =>
+            alias.padEnd(lines[1].split('-|-')[i].length),
+          )
+          .join(' | ')
+          .trimEnd(),
+      );
+      expect(lines[1]).toMatch(/^-+(-\|-+)*$/);
+      expect(lines.length).toBe(join.rowCount + 2);
+    });
+
+    it('joins several values and prints missing values empty', async () => {
+      const join = await db.join(columnSelection, cakeKey, cakeRef);
+      vi.spyOn(join, 'columnSelection', 'get').mockReturnValue({
+        aliases: ['a', 'bb', 'c'],
+      } as unknown as ColumnSelection);
+      vi.spyOn(join, 'rows', 'get').mockReturnValue([
+        [['x', 'y'], 'z', null],
+      ]);
+
+      expect(join.formatView()).toBe(
+        ['a    | bb | c', '-----|----|--', 'x, y | z  |'].join('\n'),
+      );
+    });
+  });
+
   describe('componentRoutes', () => {
     it('should return all component routes of Join', async () => {
       const join = await db.join(columnSelection, cakeKey, cakeRef);

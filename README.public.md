@@ -505,6 +505,9 @@ join.sort(sort);
 // Get transformed results
 const resultRows = await join.rows();
 console.log(resultRows);
+
+// Format the rows as a text table with the column aliases as header
+console.log(join.formatView());
 ```
 
 ### Multi-Edit Operations

@@ -798,6 +798,37 @@ export class Join {
 
   // ...........................................................................
   /**
+   * Formats the rows of the join as a text table with the column aliases as
+   * header. A cell holding several values, e.g. from a reference array, lists
+   * them separated by commas.
+   *
+   * @return The join as text table
+   */
+  formatView(): string {
+    const header = this.columnSelection.aliases;
+    const rows = this.rows.map((row) =>
+      row.map((cell: unknown) =>
+        Array.isArray(cell) ? cell.join(', ') : String(cell ?? ''),
+      ),
+    );
+    const widths = header.map((title, i) =>
+      Math.max(title.length, ...rows.map((row) => row[i].length)),
+    );
+    const line = (cells: string[]) =>
+      cells
+        .map((cell, i) => cell.padEnd(widths[i]))
+        .join(' | ')
+        .trimEnd();
+
+    return [
+      line(header),
+      widths.map((w) => '-'.repeat(w)).join('-|-'),
+      ...rows.map(line),
+    ].join('\n');
+  }
+
+  // ...........................................................................
+  /**
    * Returns all rows of the join w/ nulled missing values
    *
    * @return The rows of the join
