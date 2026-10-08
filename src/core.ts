@@ -64,6 +64,37 @@ export class Core {
   }
 
   /**
+   * Creates the tables described by the table configurations of an Rljson
+   * object, each with an insert history, so that the data can be imported
+   * afterwards.
+   *
+   * - Tables are created in the order of `data.tableCfgs._data`.
+   * - The table `tableCfgs` is skipped: every Io has it.
+   * - Insert history tables found in the data are created as they are,
+   *   without an insert history of their own.
+   * - Existing tables are extended, like `createTable` does.
+   * @param data Rljson with a `tableCfgs` table
+   * @throws when `data` has no `tableCfgs` table
+   */
+  async createTablesFromData(data: Rljson): Promise<void> {
+    const tableCfgs = data.tableCfgs?._data as TableCfg[] | undefined;
+    if (!tableCfgs) {
+      throw new Error(
+        'Core.createTablesFromData: data has no tableCfgs table.',
+      );
+    }
+
+    for (const tableCfg of tableCfgs) {
+      if (tableCfg.key === 'tableCfgs') continue;
+      if (tableCfg.key.endsWith('InsertHistory')) {
+        await this.createTable(tableCfg);
+      } else {
+        await this.createTableWithInsertHistory(tableCfg);
+      }
+    }
+  }
+
+  /**
    * Creates a table
    * @param tableCfg TableCfg of table to create
    */

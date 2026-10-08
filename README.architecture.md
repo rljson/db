@@ -135,6 +135,7 @@ Low-level data management layer wrapping Io operations.
 ```typescript
 class Core {
   async createTableWithInsertHistory(tableCfg): Promise<void>
+  async createTablesFromData(data): Promise<void>
   async createTable(tableCfg): Promise<void>
   async import(data): Promise<void>
   async dump(): Promise<Rljson>

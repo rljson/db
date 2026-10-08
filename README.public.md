@@ -800,6 +800,24 @@ Create a table with automatic version tracking.
 
 **Returns:** `Promise<void>`
 
+#### `db.core.createTablesFromData(data)`
+
+Create every table described in `data.tableCfgs`, each with an insert
+history, in the order of the configurations. Use it before
+`db.core.import(data)`.
+
+- The table `tableCfgs` is skipped, every Io has it
+- Insert history tables in the data are created without a history of
+  their own
+- Existing tables are extended
+- Throws when `data` has no `tableCfgs` table
+
+**Parameters:**
+
+- `data: Rljson` - Data with a `tableCfgs` table
+
+**Returns:** `Promise<void>`
+
 ### Utility Functions
 
 #### `isolate(tree, path, preservedKeys?)`
