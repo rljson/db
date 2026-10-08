@@ -16,6 +16,7 @@ import {
   TableCfg,
   TablesCfgTable,
   TableType,
+  Tables,
 } from '@rljson/rljson';
 
 import { traverse } from 'object-traversal';
@@ -51,12 +52,14 @@ describe('Core', () => {
   describe('createTable(name, type)', () => {
     it('creates a table', async () => {
       const tables = await core.tables();
-      expect(Object.keys(tables)).toEqual([
+      expect(Object.keys(tables.rljson)).toEqual([
         '_hash',
         'tableCfgs',
         'revisions',
         'table',
       ]);
+      expect(tables).toBeInstanceOf(Tables);
+      expect(tables.ls()).toEqual(['revisions', 'table', 'tableCfgs']);
     });
   });
 
@@ -64,7 +67,7 @@ describe('Core', () => {
     it('creates an insertHistory table for a given table', async () => {
       await core.createInsertHistory(tableCfg);
       const tables = await core.tables();
-      expect(Object.keys(tables)).toEqual([
+      expect(Object.keys(tables.rljson)).toEqual([
         '_hash',
         'tableCfgs',
         'revisions',
@@ -101,7 +104,7 @@ describe('Core', () => {
 
       await core.createTableWithInsertHistory(newTableCfg);
       const tables = await core.tables();
-      expect(Object.keys(tables)).toEqual([
+      expect(Object.keys(tables.rljson)).toEqual([
         '_hash',
         'tableCfgs',
         'revisions',
@@ -140,7 +143,7 @@ describe('Core', () => {
         },
       } as unknown as Rljson);
 
-      const keys = Object.keys(await core.tables());
+      const keys = Object.keys((await core.tables()).rljson);
       expect(keys.slice(-5)).toEqual([
         'first',
         'firstInsertHistory',
@@ -214,12 +217,14 @@ describe('Core', () => {
   describe('tables()', () => {
     it('returns the list of tables', async () => {
       const tables = await core.tables();
-      expect(Object.keys(tables)).toEqual([
+      expect(Object.keys(tables.rljson)).toEqual([
         '_hash',
         'tableCfgs',
         'revisions',
         'table',
       ]);
+      expect(tables).toBeInstanceOf(Tables);
+      expect(tables.ls()).toEqual(['revisions', 'table', 'tableCfgs']);
     });
   });
 

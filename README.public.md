@@ -790,6 +790,20 @@ Export all database data.
 
 **Returns:** `Promise<Rljson>`
 
+#### `db.core.tables()`
+
+List the tables of the database. Returns a `Tables` view from
+`@rljson/rljson` on the dump of the database.
+
+```ts
+const tables = await db.core.tables();
+tables.ls(); // sorted keys, without insert history and `_` tables
+tables.ls({ long: true }); // aligned lines: name, type, row count
+tables.rljson; // the full dump
+```
+
+**Returns:** `Promise<Tables>`
+
 #### `db.core.createTableWithInsertHistory(cfg)`
 
 Create a table with automatic version tracking.

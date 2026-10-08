@@ -13,6 +13,7 @@ import {
   Rljson,
   TableCfg,
   Validate,
+  Tables,
 } from '@rljson/rljson';
 
 /** Implements core functionalities like importing data, setting tables  */
@@ -164,8 +165,12 @@ export class Core {
   }
 
   // ...........................................................................
-  async tables(): Promise<Rljson> {
-    return await this._io.dump();
+  /**
+   * Returns the tables of the database
+   * @returns a Tables view on the dump of the database
+   */
+  async tables(): Promise<Tables> {
+    return new Tables(await this._io.dump());
   }
 
   // ...........................................................................
