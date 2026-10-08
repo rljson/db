@@ -136,9 +136,14 @@ export class Core {
    * @param data - The rljson data to import.
    * @param options - Set `validate: false` to skip validation for
    *   internally constructed payloads whose shape is fixed by the caller.
+   *   Set `createTables: true` to create the tables of `data.tableCfgs`
+   *   before writing, see `createTablesFromData`.
    * @throws {Error} If the data is invalid.
    */
-  async import(data: Rljson, options?: { validate?: boolean }): Promise<void> {
+  async import(
+    data: Rljson,
+    options?: { validate?: boolean; createTables?: boolean },
+  ): Promise<void> {
     if (options?.validate !== false) {
       // Throw an error if the data is invalid
       const validate = new Validate();
@@ -158,6 +163,11 @@ export class Core {
             JSON.stringify(result, null, 2),
         );
       }
+    }
+
+    // Create the tables described by the data
+    if (options?.createTables) {
+      await this.createTablesFromData(data);
     }
 
     // Write data

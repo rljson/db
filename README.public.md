@@ -774,13 +774,30 @@ Get version history for a table.
 
 **Returns:** `Promise<InsertHistoryTable>`
 
-#### `db.core.import(rljson)`
+#### `Db.example()`
+
+Create a ready Db on an empty in-memory Io, for tests and examples.
+
+```ts
+const db = await Db.example();
+```
+
+**Returns:** `Promise<Db>`
+
+#### `db.core.import(rljson, options?)`
 
 Import RLJSON data into the database.
 
 **Parameters:**
 
 - `rljson: Rljson` - Data to import
+- `options.validate?: boolean` - Set `false` to skip validation
+- `options.createTables?: boolean` - Set `true` to create the tables of
+  `rljson.tableCfgs` first, see `db.core.createTablesFromData`
+
+```ts
+await db.core.import(world, { createTables: true });
+```
 
 **Returns:** `Promise<void>`
 
@@ -818,7 +835,7 @@ Create a table with automatic version tracking.
 
 Create every table described in `data.tableCfgs`, each with an insert
 history, in the order of the configurations. Use it before
-`db.core.import(data)`.
+`db.core.import(data)`, or call `db.core.import(data, { createTables: true })`.
 
 - The table `tableCfgs` is skipped, every Io has it
 - Insert history tables in the data are created without a history of

@@ -170,6 +170,47 @@ describe('Core', () => {
     });
   });
 
+  describe('import(data, {createTables})', () => {
+    const data = (): Rljson =>
+      ({
+        tableCfgs: {
+          _type: 'tableCfgs',
+          _data: [
+            {
+              version: 0,
+              key: 'imported',
+              type: 'components',
+              isHead: false,
+              isRoot: false,
+              isShared: true,
+              columns: [
+                {
+                  titleLong: 'Hash',
+                  titleShort: 'Hash',
+                  key: '_hash',
+                  type: 'string',
+                },
+                { titleLong: 'C', titleShort: 'C', key: 'c', type: 'boolean' },
+              ],
+            },
+          ],
+        },
+        imported: { _type: 'components', _data: [{ c: true }] },
+      }) as unknown as Rljson;
+
+    it('creates the tables before writing the data', async () => {
+      await core.import(data(), { createTables: true, validate: false });
+      expect(await core.hasTable('importedInsertHistory')).toBe(true);
+      const { imported } = await core.dumpTable('imported');
+      expect(imported._data.map((r: any) => r.c)).toEqual([true]);
+    });
+
+    it('does not create tables by default', async () => {
+      await expect(core.import(data(), { validate: false })).rejects.toThrow();
+      expect(await core.hasTable('imported')).toBe(false);
+    });
+  });
+
   describe('dump()', () => {
     it('returns the complete db content as Rljson', async () => {
       const dump = await core.dump();
