@@ -506,8 +506,8 @@ join.sort(sort);
 const resultRows = await join.rows();
 console.log(resultRows);
 
-// Format the rows as a text table with the column aliases as header
-console.log(join.formatView());
+// Get the rows as a markdown table with the column aliases as header
+console.log(join.markdown());
 ```
 
 ### Multi-Edit Operations

@@ -50,34 +50,38 @@ describe('Join', () => {
       expect(join).toBeDefined();
     });
   });
-  describe('formatView()', () => {
-    it('formats the rows as a text table', async () => {
+  describe('markdown()', () => {
+    it('returns the rows as a markdown table', async () => {
       const join = await db.join(columnSelection, cakeKey, cakeRef);
-      const lines = join.formatView().split('\n');
+      const lines = join.markdown().split('\n');
 
-      expect(lines[0]).toBe(
-        join.columnSelection.aliases
-          .map((alias, i) =>
-            alias.padEnd(lines[1].split('-|-')[i].length),
-          )
-          .join(' | ')
-          .trimEnd(),
-      );
-      expect(lines[1]).toMatch(/^-+(-\|-+)*$/);
       expect(lines.length).toBe(join.rowCount + 2);
+      for (const line of lines) {
+        expect(line).toMatch(/^\| .* \|$/);
+      }
+      expect(lines[1]).toMatch(/^\|( -{3,} \|)+$/);
+      const columns = (line: string) => line.split(/(?<!\\)\|/).length;
+      expect(lines.map(columns)).toEqual(lines.map(() => columns(lines[0])));
+      expect(lines[0]).toContain(join.columnSelection.aliases[0]);
     });
 
-    it('joins several values and prints missing values empty', async () => {
+    it('joins several values, escapes pipes and line breaks', async () => {
       const join = await db.join(columnSelection, cakeKey, cakeRef);
       vi.spyOn(join, 'columnSelection', 'get').mockReturnValue({
-        aliases: ['a', 'bb', 'c'],
+        aliases: ['a', 'b|c', 'd'],
       } as unknown as ColumnSelection);
       vi.spyOn(join, 'rows', 'get').mockReturnValue([
-        [['x', 'y'], 'z', null],
+        [['x', 'y'], 'p|q', null],
+        ['line\nbreak', 7, undefined],
       ]);
 
-      expect(join.formatView()).toBe(
-        ['a    | bb | c', '-----|----|--', 'x, y | z  |'].join('\n'),
+      expect(join.markdown()).toBe(
+        [
+          '| a          | b\\|c | d   |',
+          '| ---------- | ---- | --- |',
+          '| x, y       | p\\|q |     |',
+          '| line break | 7    |     |',
+        ].join('\n'),
       );
     });
   });
