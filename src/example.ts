@@ -28,7 +28,7 @@ export const example = async () => {
 
   l('Get the tables');
   const tables = await db.core.tables();
-  l(Object.keys(tables).join(', '));
+  l(tables.ls().join(', '));
 
   l('Dump the database');
   const dump = await db.core.dump();

@@ -3,7 +3,7 @@ Create an example instance
 Create the tables
 Import Rljson
 Get the tables
-_hash, tableCfgs, revisions, table
+revisions, table, tableCfgs
 Dump the database
 {
   "_hash": "-xZM-_Xsz2vetSYzDLVQKt",

@@ -38,6 +38,14 @@ import { inject } from '../src/tools/inject';
 import { isolate } from '../src/tools/isolate';
 
 describe('Db', () => {
+  describe('example()', () => {
+    it('returns a ready Db on an empty in-memory Io', async () => {
+      const example = await Db.example();
+      expect(example).toBeInstanceOf(Db);
+      expect(await example.core.hasTable('tableCfgs')).toBe(true);
+    });
+  });
+
   let db: Db;
 
   beforeEach(async () => {

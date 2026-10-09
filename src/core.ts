@@ -13,6 +13,7 @@ import {
   Rljson,
   TableCfg,
   Validate,
+  Tables,
 } from '@rljson/rljson';
 
 /** Implements core functionalities like importing data, setting tables  */
@@ -64,6 +65,37 @@ export class Core {
   }
 
   /**
+   * Creates the tables described by the table configurations of an Rljson
+   * object, each with an insert history, so that the data can be imported
+   * afterwards.
+   *
+   * - Tables are created in the order of `data.tableCfgs._data`.
+   * - The table `tableCfgs` is skipped: every Io has it.
+   * - Insert history tables found in the data are created as they are,
+   *   without an insert history of their own.
+   * - Existing tables are extended, like `createTable` does.
+   * @param data Rljson with a `tableCfgs` table
+   * @throws when `data` has no `tableCfgs` table
+   */
+  async createTablesFromData(data: Rljson): Promise<void> {
+    const tableCfgs = data.tableCfgs?._data as TableCfg[] | undefined;
+    if (!tableCfgs) {
+      throw new Error(
+        'Core.createTablesFromData: data has no tableCfgs table.',
+      );
+    }
+
+    for (const tableCfg of tableCfgs) {
+      if (tableCfg.key === 'tableCfgs') continue;
+      if (tableCfg.key.endsWith('InsertHistory')) {
+        await this.createTable(tableCfg);
+      } else {
+        await this.createTableWithInsertHistory(tableCfg);
+      }
+    }
+  }
+
+  /**
    * Creates a table
    * @param tableCfg TableCfg of table to create
    */
@@ -104,9 +136,14 @@ export class Core {
    * @param data - The rljson data to import.
    * @param options - Set `validate: false` to skip validation for
    *   internally constructed payloads whose shape is fixed by the caller.
+   *   Set `createTables: true` to create the tables of `data.tableCfgs`
+   *   before writing, see `createTablesFromData`.
    * @throws {Error} If the data is invalid.
    */
-  async import(data: Rljson, options?: { validate?: boolean }): Promise<void> {
+  async import(
+    data: Rljson,
+    options?: { validate?: boolean; createTables?: boolean },
+  ): Promise<void> {
     if (options?.validate !== false) {
       // Throw an error if the data is invalid
       const validate = new Validate();
@@ -128,13 +165,22 @@ export class Core {
       }
     }
 
+    // Create the tables described by the data
+    if (options?.createTables) {
+      await this.createTablesFromData(data);
+    }
+
     // Write data
     await this._io.write({ data });
   }
 
   // ...........................................................................
-  async tables(): Promise<Rljson> {
-    return await this._io.dump();
+  /**
+   * Returns the tables of the database
+   * @returns a Tables view on the dump of the database
+   */
+  async tables(): Promise<Tables> {
+    return new Tables(await this._io.dump());
   }
 
   // ...........................................................................

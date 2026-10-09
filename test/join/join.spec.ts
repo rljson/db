@@ -8,7 +8,7 @@ import { rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { Route } from '@rljson/rljson';
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Db } from '../../src/db';
 import { staticExample } from '../../src/example-static/example-static';
@@ -50,6 +50,42 @@ describe('Join', () => {
       expect(join).toBeDefined();
     });
   });
+  describe('markdown()', () => {
+    it('returns the rows as a markdown table', async () => {
+      const join = await db.join(columnSelection, cakeKey, cakeRef);
+      const lines = join.markdown().split('\n');
+
+      expect(lines.length).toBe(join.rowCount + 2);
+      for (const line of lines) {
+        expect(line).toMatch(/^\| .* \|$/);
+      }
+      expect(lines[1]).toMatch(/^\|( -{3,} \|)+$/);
+      const columns = (line: string) => line.split(/(?<!\\)\|/).length;
+      expect(lines.map(columns)).toEqual(lines.map(() => columns(lines[0])));
+      expect(lines[0]).toContain(join.columnSelection.aliases[0]);
+    });
+
+    it('joins several values, escapes pipes and line breaks', async () => {
+      const join = await db.join(columnSelection, cakeKey, cakeRef);
+      vi.spyOn(join, 'columnSelection', 'get').mockReturnValue({
+        aliases: ['a', 'b|c', 'd'],
+      } as unknown as ColumnSelection);
+      vi.spyOn(join, 'rows', 'get').mockReturnValue([
+        [['x', 'y'], 'p|q', null],
+        ['line\nbreak', 7, undefined],
+      ]);
+
+      expect(join.markdown()).toBe(
+        [
+          '| a          | b\\|c | d   |',
+          '| ---------- | ---- | --- |',
+          '| x, y       | p\\|q |     |',
+          '| line break | 7    |     |',
+        ].join('\n'),
+      );
+    });
+  });
+
   describe('componentRoutes', () => {
     it('should return all component routes of Join', async () => {
       const join = await db.join(columnSelection, cakeKey, cakeRef);

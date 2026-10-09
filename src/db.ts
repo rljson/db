@@ -5,7 +5,7 @@
 // found in the LICENSE file in the root of this package.
 
 import { rmhsh } from '@rljson/hash';
-import { Io } from '@rljson/io';
+import { Io, IoMem } from '@rljson/io';
 import { Json, JsonValue } from '@rljson/json';
 import {
   Cake,
@@ -87,6 +87,15 @@ export class Db {
     this.core = new Core(this._io);
     this.notify = new Notify();
   }
+
+  /**
+   * Returns a ready Db on an empty in-memory Io, e.g. for tests and examples
+   */
+  static example = async (): Promise<Db> => {
+    const io = await IoMem.example();
+    await io.isReady();
+    return new Db(io);
+  };
 
   /**
    * Core functionalities like importing data, setting and getting tables

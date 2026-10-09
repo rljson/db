@@ -505,6 +505,9 @@ join.sort(sort);
 // Get transformed results
 const resultRows = await join.rows();
 console.log(resultRows);
+
+// Get the rows as a markdown table with the column aliases as header
+console.log(join.markdown());
 ```
 
 ### Multi-Edit Operations
@@ -774,13 +777,30 @@ Get version history for a table.
 
 **Returns:** `Promise<InsertHistoryTable>`
 
-#### `db.core.import(rljson)`
+#### `Db.example()`
+
+Create a ready Db on an empty in-memory Io, for tests and examples.
+
+```ts
+const db = await Db.example();
+```
+
+**Returns:** `Promise<Db>`
+
+#### `db.core.import(rljson, options?)`
 
 Import RLJSON data into the database.
 
 **Parameters:**
 
 - `rljson: Rljson` - Data to import
+- `options.validate?: boolean` - Set `false` to skip validation
+- `options.createTables?: boolean` - Set `true` to create the tables of
+  `rljson.tableCfgs` first, see `db.core.createTablesFromData`
+
+```ts
+await db.core.import(world, { createTables: true });
+```
 
 **Returns:** `Promise<void>`
 
@@ -790,6 +810,20 @@ Export all database data.
 
 **Returns:** `Promise<Rljson>`
 
+#### `db.core.tables()`
+
+List the tables of the database. Returns a `Tables` view from
+`@rljson/rljson` on the dump of the database.
+
+```ts
+const tables = await db.core.tables();
+tables.ls(); // sorted keys, without insert history and `_` tables
+tables.ls({ long: true }); // aligned lines: name, type, row count
+tables.rljson; // the full dump
+```
+
+**Returns:** `Promise<Tables>`
+
 #### `db.core.createTableWithInsertHistory(cfg)`
 
 Create a table with automatic version tracking.
@@ -797,6 +831,24 @@ Create a table with automatic version tracking.
 **Parameters:**
 
 - `cfg: TableCfg` - Table configuration
+
+**Returns:** `Promise<void>`
+
+#### `db.core.createTablesFromData(data)`
+
+Create every table described in `data.tableCfgs`, each with an insert
+history, in the order of the configurations. Use it before
+`db.core.import(data)`, or call `db.core.import(data, { createTables: true })`.
+
+- The table `tableCfgs` is skipped, every Io has it
+- Insert history tables in the data are created without a history of
+  their own
+- Existing tables are extended
+- Throws when `data` has no `tableCfgs` table
+
+**Parameters:**
+
+- `data: Rljson` - Data with a `tableCfgs` table
 
 **Returns:** `Promise<void>`
 
