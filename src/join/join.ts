@@ -798,6 +798,36 @@ export class Join {
 
   // ...........................................................................
   /**
+   * Returns the rows of the join as a markdown table with the column aliases
+   * as header. A cell holding several values, e.g. from a reference array,
+   * lists them separated by commas. Pipes are escaped and line breaks are
+   * replaced by spaces, so every row stays one table row.
+   *
+   * @return The join as markdown table
+   */
+  markdown(): string {
+    const text = (value: unknown): string =>
+      (Array.isArray(value) ? value.join(', ') : String(value ?? ''))
+        .replace(/\|/g, '\\|')
+        .replace(/\r?\n/g, ' ');
+
+    const header = this.columnSelection.aliases.map(text);
+    const rows = this.rows.map((row) => row.map(text));
+    const widths = header.map((title, i) =>
+      Math.max(3, title.length, ...rows.map((row) => row[i].length)),
+    );
+    const line = (cells: string[]) =>
+      `| ${cells.map((cell, i) => cell.padEnd(widths[i])).join(' | ')} |`;
+
+    return [
+      line(header),
+      line(widths.map((w) => '-'.repeat(w))),
+      ...rows.map(line),
+    ].join('\n');
+  }
+
+  // ...........................................................................
+  /**
    * Returns all rows of the join w/ nulled missing values
    *
    * @return The rows of the join

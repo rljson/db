@@ -8,6 +8,7 @@ import { hip, hsh, rmhsh } from '@rljson/hash';
 import { IoMem } from '@rljson/io';
 import { JsonArray, JsonValue } from '@rljson/json';
 import {
+  createInsertHistoryTableCfg,
   Example,
   exampleRljson,
   exampleTableCfgTable,
@@ -15,6 +16,7 @@ import {
   TableCfg,
   TablesCfgTable,
   TableType,
+  Tables,
 } from '@rljson/rljson';
 
 import { traverse } from 'object-traversal';
@@ -50,12 +52,14 @@ describe('Core', () => {
   describe('createTable(name, type)', () => {
     it('creates a table', async () => {
       const tables = await core.tables();
-      expect(Object.keys(tables)).toEqual([
+      expect(Object.keys(tables.rljson)).toEqual([
         '_hash',
         'tableCfgs',
         'revisions',
         'table',
       ]);
+      expect(tables).toBeInstanceOf(Tables);
+      expect(tables.ls()).toEqual(['revisions', 'table', 'tableCfgs']);
     });
   });
 
@@ -63,7 +67,7 @@ describe('Core', () => {
     it('creates an insertHistory table for a given table', async () => {
       await core.createInsertHistory(tableCfg);
       const tables = await core.tables();
-      expect(Object.keys(tables)).toEqual([
+      expect(Object.keys(tables.rljson)).toEqual([
         '_hash',
         'tableCfgs',
         'revisions',
@@ -100,7 +104,7 @@ describe('Core', () => {
 
       await core.createTableWithInsertHistory(newTableCfg);
       const tables = await core.tables();
-      expect(Object.keys(tables)).toEqual([
+      expect(Object.keys(tables.rljson)).toEqual([
         '_hash',
         'tableCfgs',
         'revisions',
@@ -108,6 +112,102 @@ describe('Core', () => {
         'newTable',
         'newTableInsertHistory',
       ]);
+    });
+  });
+
+  describe('createTablesFromData(data)', () => {
+    const cfg = (key: string): TableCfg => ({
+      version: 0,
+      key,
+      type: 'components',
+      isHead: false,
+      isRoot: false,
+      isShared: true,
+      columns: [
+        { titleLong: 'Hash', titleShort: 'Hash', key: '_hash', type: 'string' },
+        { titleLong: 'C', titleShort: 'C', key: 'c', type: 'boolean' },
+      ],
+    });
+
+    it('creates every table of the data with an insert history', async () => {
+      const ownTableCfgs = (
+        (await core.dumpTable('tableCfgs')).tableCfgs._data as TableCfg[]
+      ).find((c) => c.key === 'tableCfgs')!;
+      expect(ownTableCfgs).toBeDefined();
+      const history = createInsertHistoryTableCfg(cfg('logs'));
+
+      await core.createTablesFromData({
+        tableCfgs: {
+          _type: 'tableCfgs',
+          _data: [ownTableCfgs, cfg('first'), cfg('second'), history],
+        },
+      } as unknown as Rljson);
+
+      const keys = Object.keys((await core.tables()).rljson);
+      expect(keys.slice(-5)).toEqual([
+        'first',
+        'firstInsertHistory',
+        'second',
+        'secondInsertHistory',
+        'logsInsertHistory',
+      ]);
+      expect(keys).not.toContain('logsInsertHistoryInsertHistory');
+    });
+
+    it('extends tables that exist already', async () => {
+      const data = {
+        tableCfgs: { _type: 'tableCfgs', _data: [cfg('first')] },
+      } as unknown as Rljson;
+      await core.createTablesFromData(data);
+      await core.createTablesFromData(data);
+      expect(await core.hasTable('firstInsertHistory')).toBe(true);
+    });
+
+    it('throws when the data has no tableCfgs', async () => {
+      await expect(core.createTablesFromData({} as Rljson)).rejects.toThrow(
+        'Core.createTablesFromData: data has no tableCfgs table.',
+      );
+    });
+  });
+
+  describe('import(data, {createTables})', () => {
+    const data = (): Rljson =>
+      ({
+        tableCfgs: {
+          _type: 'tableCfgs',
+          _data: [
+            {
+              version: 0,
+              key: 'imported',
+              type: 'components',
+              isHead: false,
+              isRoot: false,
+              isShared: true,
+              columns: [
+                {
+                  titleLong: 'Hash',
+                  titleShort: 'Hash',
+                  key: '_hash',
+                  type: 'string',
+                },
+                { titleLong: 'C', titleShort: 'C', key: 'c', type: 'boolean' },
+              ],
+            },
+          ],
+        },
+        imported: { _type: 'components', _data: [{ c: true }] },
+      }) as unknown as Rljson;
+
+    it('creates the tables before writing the data', async () => {
+      await core.import(data(), { createTables: true, validate: false });
+      expect(await core.hasTable('importedInsertHistory')).toBe(true);
+      const { imported } = await core.dumpTable('imported');
+      expect(imported._data.map((r: any) => r.c)).toEqual([true]);
+    });
+
+    it('does not create tables by default', async () => {
+      await expect(core.import(data(), { validate: false })).rejects.toThrow();
+      expect(await core.hasTable('imported')).toBe(false);
     });
   });
 
@@ -158,12 +258,14 @@ describe('Core', () => {
   describe('tables()', () => {
     it('returns the list of tables', async () => {
       const tables = await core.tables();
-      expect(Object.keys(tables)).toEqual([
+      expect(Object.keys(tables.rljson)).toEqual([
         '_hash',
         'tableCfgs',
         'revisions',
         'table',
       ]);
+      expect(tables).toBeInstanceOf(Tables);
+      expect(tables.ls()).toEqual(['revisions', 'table', 'tableCfgs']);
     });
   });
 
@@ -212,7 +314,12 @@ describe('Core', () => {
         isRoot: false,
         isShared: true,
         columns: [
-          { titleLong: 'Hash', titleShort: 'Hash', key: '_hash', type: 'string' },
+          {
+            titleLong: 'Hash',
+            titleShort: 'Hash',
+            key: '_hash',
+            type: 'string',
+          },
           { titleLong: 'X', titleShort: 'X', key: 'x', type: 'string' },
         ],
       };
