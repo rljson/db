@@ -1048,6 +1048,14 @@ The Connector registers a listener on `events.bootstrap` in `_init()` via `_regi
 
 The `tearDown()` method cleans up the bootstrap listener alongside all other socket listeners.
 
+### Stamp handling
+
+A stamping server (`@rljson/server`) puts a `RefStamp` on the payloads it relays. The Connector never mints or orders stamps; it only carries them, and it checks every one with `isRefStamp` before passing it on:
+
+- **Incoming**: `_processIncoming()` copies a well-formed `payload.stamp` into the `RefArrivalInfo` handed to `listen()` callbacks — for multicast and bootstrap alike, since both take that path. A malformed one is left out.
+- **Outgoing**: `send(ref, { stamp })` sets `payload.stamp` only for a well-formed stamp, so a ref forwarded or announced again keeps the stamp it already has.
+- **The sender's own stamp**: the server relays a ref to everyone but its sender, and tells the sender on `events.stamp` (`${route}:stamp`, a `StampPayload`). `_registerStampHandler()` listens in `_init()` and calls the `onStamp()` callbacks; a notice without a string ref or a well-formed stamp is dropped. `tearDown()` removes the listener.
+
 ### Conflict Detection
 
 The `Db` class integrates DAG branch conflict detection directly into the write path. After every call to `_writeInsertHistory()`, the system invokes `detectDagBranch(table)` to scan the InsertHistory for forks.

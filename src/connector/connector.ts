@@ -14,7 +14,10 @@ import {
   GapFillRequest,
   GapFillResponse,
   clientId as generateClientId,
+  isRefStamp,
+  RefStamp,
   Route,
+  StampPayload,
   SyncConfig,
   SyncEventNames,
   syncEvents,
@@ -51,7 +54,22 @@ export interface RefArrivalInfo {
   predecessorRefs?: string[];
   /** See {@link RefArrivalInfo}. `true` when it cannot be determined. */
   isNewestFromSender: boolean;
+  /**
+   * Where a stamping hub placed the ref in the order it relays them.
+   *
+   * Absent when the hub does not stamp, or when the payload's stamp is
+   * malformed — a stamp from the wire is checked before anybody orders by it.
+   */
+  stamp?: RefStamp;
 }
+
+/**
+ * Invoked when the hub tells this connector the stamp a ref it SENT received.
+ *
+ * A hub forwards an announcement to every client but its sender, so this is
+ * the only way a sender learns its own stamps.
+ */
+export type StampCallback = (ref: string, stamp: RefStamp) => void;
 
 export type ConnectorCallback = (
   ref: string,
@@ -79,6 +97,7 @@ export class Connector {
   private _origin: string;
   private _callbacks: ConnectorCallback[] = [];
   private _conflictCallbacks: ConflictCallback[] = [];
+  private _stampCallbacks: StampCallback[] = [];
   /**
    * Refs that arrived before any callback was registered, in arrival order.
    *
@@ -143,8 +162,11 @@ export class Connector {
    * Sends a ref to the server via the socket.
    * Enriches the payload based on SyncConfig flags.
    * @param ref - The ref to send
+   * @param opts - `stamp`: a stamp the ref already carries, for a ref that is
+   *   forwarded or announced again. A stamping hub keeps a payload's stamp
+   *   instead of minting a second one. A malformed stamp is not sent.
    */
-  send(ref: string) {
+  send(ref: string, opts?: { stamp?: RefStamp }) {
     if (this._hasSentRef(ref) || this._hasReceivedRef(ref)) return;
 
     this._addSentRef(ref);
@@ -171,6 +193,10 @@ export class Connector {
       if (this._lastPredecessors.length > 0) {
         payload.p = [...this._lastPredecessors];
       }
+    }
+
+    if (isRefStamp(opts?.stamp)) {
+      payload.stamp = opts.stamp;
     }
 
     this._lastSentRef = ref;
@@ -269,6 +295,20 @@ export class Connector {
         }
       })();
     }
+  }
+
+  // ...........................................................................
+  /**
+   * Registers a callback for the stamps a stamping hub gives the refs this
+   * connector sends. A hub that does not stamp never calls it.
+   * @param callback - Called with the ref and its stamp
+   * @returns A function that removes the callback
+   */
+  onStamp(callback: StampCallback): () => void {
+    this._stampCallbacks.push(callback);
+    return () => {
+      this._stampCallbacks = this._stampCallbacks.filter((c) => c !== callback);
+    };
   }
 
   // ...........................................................................
@@ -394,6 +434,7 @@ export class Connector {
   private _init() {
     this._registerSocketObserver();
     this._registerBootstrapHandler();
+    this._registerStampHandler();
     this._registerDbObserver();
     this._registerConflictObserver();
 
@@ -407,6 +448,7 @@ export class Connector {
   public tearDown() {
     this._socket.removeAllListeners(this._events.ref);
     this._socket.removeAllListeners(this._events.bootstrap);
+    this._socket.removeAllListeners(this._events.stamp);
 
     if (this._syncConfig?.causalOrdering) {
       this._socket.removeAllListeners(this._events.gapFillRes);
@@ -587,10 +629,12 @@ export class Connector {
     this._addReceivedRef(ref);
     // `payload.p` carries the sender's predecessor content refs (shared
     // identity) so the receiver can record correct local ancestry.
-    this._notifyCallbacks(ref, payload.p, {
+    const info: RefArrivalInfo = {
       predecessorRefs: payload.p,
       isNewestFromSender,
-    });
+    };
+    if (isRefStamp(payload.stamp)) info.stamp = payload.stamp;
+    this._notifyCallbacks(ref, payload.p, info);
 
     // Send individual client ACK if required
     if (this._syncConfig?.requireAck) {
@@ -688,6 +732,19 @@ export class Connector {
       }
 
       this._processIncoming(p, true);
+    });
+  }
+
+  /**
+   * Listens for the stamp the hub gave a ref this connector sent.
+   * A malformed notice is dropped.
+   */
+  private _registerStampHandler() {
+    this._socket.on(this._events.stamp, (p: StampPayload) => {
+      if (typeof p?.r !== 'string' || !isRefStamp(p.stamp)) return;
+      for (const cb of this._stampCallbacks) {
+        cb(p.r, p.stamp);
+      }
     });
   }
 

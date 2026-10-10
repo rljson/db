@@ -7,6 +7,8 @@ export { Connector, stateBeaconEvent } from './connector/connector.ts';
 export type {
   ConnectorCallback,
   ConnectorPayload,
+  RefArrivalInfo,
+  StampCallback,
 } from './connector/connector.ts';
 export type {
   AckPayload,
@@ -16,6 +18,8 @@ export type {
   ConflictType,
   GapFillRequest,
   GapFillResponse,
+  RefStamp,
+  StampPayload,
   SyncConfig,
   SyncEventNames,
 } from '@rljson/rljson';
