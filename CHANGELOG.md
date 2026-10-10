@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.1.1]
+
+### The hub's order reaches the client
+
+A stamping server (`@rljson/server` ≥ 0.0.76, `ServerOptions.stamp`) gives
+every ref it relays a `RefStamp` — `(domain, epoch, hub, n)`, compared with
+`compareRefStamp` and read from no clock. The Connector carries it without
+interpreting it:
+
+- **Added** `RefArrivalInfo.stamp`: a listener's third argument holds the stamp
+  an announcement or a bootstrap arrived with.
+- **Added** `send(ref, { stamp })`: a ref forwarded by a bridge, or announced
+  again, keeps the stamp it already has instead of getting a second one.
+- **Added** `onStamp(cb)`: a hub relays to everyone but the sender, so the
+  sender is told its stamp on `${route}:stamp`. This is the only way it learns
+  it.
+- A malformed stamp, from the wire or from a caller, is dropped, never passed
+  on. Against a server that does not stamp, nothing changes.
+- **Exported** the types `RefArrivalInfo`, `StampCallback`, `RefStamp` and
+  `StampPayload`.
+
+### `EditChainManager`
+
+**Added** an append-only edit chain that knows nothing about what its entries
+contain. An entry names its data (`dataRef`), what it was made from
+(`previous`: none for a root, two or more for a merge) and an action. It keeps
+no head and orders nothing by `timeId`: where a caller stands is the caller's
+state. `entries()` reads many entries in three batched reads and leaves out any
+whose rows cannot all be read.
+
+### Dependencies
+
+`@rljson/rljson` 0.0.86, `@rljson/io` 0.0.85.
+
 ## [0.0.48]
 
 ### A gap-fill storm can no longer feed itself

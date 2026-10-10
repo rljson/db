@@ -7,6 +7,8 @@ export { Connector, stateBeaconEvent } from './connector/connector.ts';
 export type {
   ConnectorCallback,
   ConnectorPayload,
+  RefArrivalInfo,
+  StampCallback,
 } from './connector/connector.ts';
 export type {
   AckPayload,
@@ -16,6 +18,8 @@ export type {
   ConflictType,
   GapFillRequest,
   GapFillResponse,
+  RefStamp,
+  StampPayload,
   SyncConfig,
   SyncEventNames,
 } from '@rljson/rljson';
@@ -43,6 +47,11 @@ export type {
   EditRowSort,
   EditSetValue,
 } from './edit/edit.ts';
+export { EditChainManager } from './edit/edit-chain-manager.ts';
+export type {
+  EditChainAppendOptions,
+  EditChainEntry,
+} from './edit/edit-chain-manager.ts';
 export { MultiEditManager } from './edit/multi-edit-manager.ts';
 export { staticExample } from './example-static/example-static.ts';
 export type { BoolOperator } from './join/filter/boolean-filter-processor.ts';

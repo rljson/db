@@ -542,6 +542,43 @@ const published = await manager.publishHead();
 console.log(published);
 ```
 
+### Edit Chains
+
+`EditChainManager` keeps an append-only chain of edits without knowing what
+they contain. Each entry names what it refers to (`dataRef`), what it was made
+from (`previous` — none for a root, two or more for a merge) and an action.
+It applies nothing to a cake and keeps no head: which entry a caller stands on
+is the caller's state, and nothing orders entries by `timeId`.
+
+The `dataRef` column refers to the `${key}` table itself (the trees or cake
+table the edits are about), so that table must exist before the first append.
+
+```typescript
+import { EditChainManager } from '@rljson/db';
+
+const chain = new EditChainManager('fileTree', db);
+await chain.init(); // creates fileTreeEdits, fileTreeMultiEdits, fileTreeEditHistory
+
+const root = await chain.append({
+  dataRef: treeRef0,
+  previous: [],
+  action: { name: 'putTree', type: 'putTree', data: {} },
+  timeId: `0:${treeRef0}`, // optional: an entry that is a function of its content
+});
+const next = await chain.append({
+  dataRef: treeRef1,
+  previous: [root.head],
+  action: { name: 'putTree', type: 'putTree', data: {} },
+});
+
+const entry = await chain.entry(next.head); // { head, timeId, dataRef, previous, action }
+const many = await chain.entries([root.head, next.head]); // three batched reads
+```
+
+`entries()` leaves out every entry whose rows cannot all be read, so a caller
+that needs all of them compares the result's size with what it asked for. A
+failing read rejects.
+
 ### Real-Time Notifications
 
 Register callbacks for data changes:
@@ -1048,6 +1085,31 @@ connector.socket.on(stateBeaconEvent(connector.route.flat), (payload) => {
 
 Defined here, and imported by both the server and the agent, so the name
 exists once.
+
+### Stamps — the hub's order
+
+A server that stamps (`ServerOptions.stamp` in `@rljson/server`) gives every
+ref it relays a `RefStamp`: `(domain, epoch, hub, n)`, ordered by
+`compareRefStamp` from `@rljson/rljson` and read from no clock. The Connector
+carries it both ways:
+
+- **Receiving.** A listener's third argument, `RefArrivalInfo`, holds `stamp`
+  when the announcement or bootstrap carried a well-formed one.
+- **Sending a stamp a ref already has.** `connector.send(ref, { stamp })` puts
+  it on the payload, so a stamping server forwards it instead of minting a
+  second one. A bridge between two servers needs this, and so does a node that
+  announces a ref again.
+- **Learning your own stamp.** A server forwards a ref to everybody but its
+  sender, so the sender is told its stamp on `${route}:stamp`:
+
+```typescript
+const stop = connector.onStamp((ref, stamp) => remember(ref, stamp));
+// later: stop();
+```
+
+A malformed stamp, whether from the wire or from a caller, is dropped, never
+passed on. A server that does not stamp sends no `:stamp` notice, and passes a
+carried stamp on unchanged.
 
 ### Cleanup
 
