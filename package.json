@@ -53,9 +53,9 @@
   },
   "dependencies": {
     "@rljson/hash": "0.0.19",
-    "@rljson/io": "0.0.84",
+    "@rljson/io": "0.0.85",
     "@rljson/json": "0.0.23",
-    "@rljson/rljson": "0.0.85",
+    "@rljson/rljson": "0.0.86",
     "@rljson/validate": "0.0.12",
     "filtrex": "^3.1.0",
     "object-traversal": "^1.0.1"

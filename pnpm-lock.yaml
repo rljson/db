@@ -15,14 +15,14 @@ importers:
         specifier: 0.0.19
         version: 0.0.19
       '@rljson/io':
-        specifier: 0.0.84
-        version: 0.0.84
+        specifier: 0.0.85
+        version: 0.0.85
       '@rljson/json':
         specifier: 0.0.23
         version: 0.0.23
       '@rljson/rljson':
-        specifier: 0.0.85
-        version: 0.0.85
+        specifier: 0.0.86
+        version: 0.0.86
       '@rljson/validate':
         specifier: 0.0.12
         version: 0.0.12
@@ -276,8 +276,8 @@ packages:
     resolution: {integrity: sha512-1bBHWbzzaOE3ba2niyvmu4d9VYv5atLzzHDI2ka3AlHLyBDD8Q9qI/HCjimULJlprIGVeN4+jN8sth4CdnGxOQ==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/io@0.0.84':
-    resolution: {integrity: sha512-aL78VfpcozwYt8biUitdFJtZNB3lb0XpLCqPGTz3rRoT5oLfy3m2K/axpA4B/gzRYqmYcoa3H9fkeQIwZpZjZA==}
+  '@rljson/io@0.0.85':
+    resolution: {integrity: sha512-gTUK3DeAd87ahApKMYDR99mTih+6pL1B/m7NheVealkTXdyvARj89JsvM0O1YBVfg2AQPCjdefMH3yK99nVUgg==}
     engines: {node: '>=22.14.0'}
 
   '@rljson/is-ready@0.0.19':
@@ -292,8 +292,8 @@ packages:
     resolution: {integrity: sha512-/JVC8yEtbWP/lnQbmYTlEAqGBJN/6LoKJSYoxyn8IUTouBIylPNhBmSy9kxYnRlCfgL7pkXlRL/DXQn8jzTOQw==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/rljson@0.0.85':
-    resolution: {integrity: sha512-q2SdV+twwf5wH1REzefsWVC4Kz9RTA3IODwfz6+avs0eq4/KL5U4Ym/nBFxcm/DxOvwXAPgG1Gcb+WI8VNP0Wg==}
+  '@rljson/rljson@0.0.86':
+    resolution: {integrity: sha512-8hoaeG4p8P9+Oq4eCSsg2OHvXgAh8Bzo1l3zUPfjA8Zjb0fKOViF54DoLnYhESH/gngpkrUyqZDQlXZwk6sooQ==}
     engines: {node: '>=22.14.0'}
 
   '@rljson/validate@0.0.12':
@@ -1663,12 +1663,12 @@ snapshots:
     dependencies:
       '@rljson/json': 0.0.23
 
-  '@rljson/io@0.0.84':
+  '@rljson/io@0.0.85':
     dependencies:
       '@rljson/hash': 0.0.19
       '@rljson/is-ready': 0.0.19
       '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.83
+      '@rljson/rljson': 0.0.86
       '@rljson/validate': 0.0.12
 
   '@rljson/is-ready@0.0.19': {}
@@ -1681,7 +1681,7 @@ snapshots:
       '@rljson/json': 0.0.23
       nanoid: 6.0.2
 
-  '@rljson/rljson@0.0.85':
+  '@rljson/rljson@0.0.86':
     dependencies:
       '@rljson/hash': 0.0.19
       '@rljson/json': 0.0.23
