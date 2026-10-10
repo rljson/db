@@ -43,6 +43,11 @@ export type {
   EditRowSort,
   EditSetValue,
 } from './edit/edit.ts';
+export { EditChainManager } from './edit/edit-chain-manager.ts';
+export type {
+  EditChainAppendOptions,
+  EditChainEntry,
+} from './edit/edit-chain-manager.ts';
 export { MultiEditManager } from './edit/multi-edit-manager.ts';
 export { staticExample } from './example-static/example-static.ts';
 export type { BoolOperator } from './join/filter/boolean-filter-processor.ts';

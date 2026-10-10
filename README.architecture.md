@@ -692,6 +692,16 @@ MultiEditProcessor
 └─ Supports rollback
 ```
 
+### Edit Chain
+
+`EditChainManager` (`src/edit/edit-chain-manager.ts`) is the content-agnostic
+sibling of `MultiEditManager`: it writes the same three rows per entry
+(`Edits`, `MultiEdits`, `EditHistory`) but accepts any number of `previous`
+entries, applies nothing and holds no head. `entries()` reads a batch of
+entries with one `Core.readRowsByHashes` call per table. A caller that passes
+`timeId` makes an entry a function of its content, so two nodes appending the
+same entry write the same rows and get the same ref.
+
 ### Edit Actions
 
 ```typescript

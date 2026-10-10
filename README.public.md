@@ -542,6 +542,43 @@ const published = await manager.publishHead();
 console.log(published);
 ```
 
+### Edit Chains
+
+`EditChainManager` keeps an append-only chain of edits without knowing what
+they contain. Each entry names what it refers to (`dataRef`), what it was made
+from (`previous` — none for a root, two or more for a merge) and an action.
+It applies nothing to a cake and keeps no head: which entry a caller stands on
+is the caller's state, and nothing orders entries by `timeId`.
+
+The `dataRef` column refers to the `${key}` table itself (the trees or cake
+table the edits are about), so that table must exist before the first append.
+
+```typescript
+import { EditChainManager } from '@rljson/db';
+
+const chain = new EditChainManager('fileTree', db);
+await chain.init(); // creates fileTreeEdits, fileTreeMultiEdits, fileTreeEditHistory
+
+const root = await chain.append({
+  dataRef: treeRef0,
+  previous: [],
+  action: { name: 'putTree', type: 'putTree', data: {} },
+  timeId: `0:${treeRef0}`, // optional: an entry that is a function of its content
+});
+const next = await chain.append({
+  dataRef: treeRef1,
+  previous: [root.head],
+  action: { name: 'putTree', type: 'putTree', data: {} },
+});
+
+const entry = await chain.entry(next.head); // { head, timeId, dataRef, previous, action }
+const many = await chain.entries([root.head, next.head]); // three batched reads
+```
+
+`entries()` leaves out every entry whose rows cannot all be read, so a caller
+that needs all of them compares the result's size with what it asked for. A
+failing read rejects.
+
 ### Real-Time Notifications
 
 Register callbacks for data changes:
