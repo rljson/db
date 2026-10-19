@@ -44,11 +44,8 @@ See also: [doc/workflows/prepare.md](doc/workflows/prepare.md)
 ### 1. Create a Feature Branch
 
 ```bash
-# Create and switch to a new branch
-git checkout -b feature/my-feature
-
-# Or use the script
-node scripts/create-branch.js feature/my-feature
+# Create and switch to the ticket branch
+gg one do create ticket my-feature -m "What the ticket does"
 ```
 
 ### 2. Make Changes
@@ -212,8 +209,6 @@ rljson-db/
 │       ├── tools.md            # Available tools
 │       └── ...
 ├── scripts/                    # Build and automation scripts
-│   ├── publish-to-npm.js       # NPM publishing
-│   ├── add-version-tag.js      # Git tagging
 │   ├── run-in-all-repos.js     # Monorepo utilities
 │   └── ...
 ├── coverage/                   # Test coverage reports
@@ -399,12 +394,14 @@ Fixes #123
 
 ## Release Process
 
-Releases are managed by maintainers. The process:
+Releases are made by the owner with gg. Before that, the branch is committed
+(`gg one do commit`) and pushed (`gg one do push`), and `CHANGELOG.md` is
+updated by hand — gg writes nothing into it in a TypeScript repository.
 
-1. Update version in `package.json`
-2. Update `CHANGELOG.md`
-3. Create git tag: `node scripts/add-version-tag.js`
-4. Publish to npm: `node scripts/publish-to-npm.js`
+`gg one do publish` asks for the increment (patch / minor / major), bumps the
+version, merges through an auto-merge pull request, and only then publishes to
+npm and tags the release. `gg one do publish --merge-only` merges without a
+release.
 
 Version scheme: `MAJOR.MINOR.PATCH` (semver)
 
@@ -424,7 +421,7 @@ pnpm run test -- --grep "pattern"     # Pattern match
 pnpm run updateGoldens                # Update golden files
 
 # Scripts
-node scripts/create-branch.js feature/name    # Create branch
+gg one do create ticket name -m "…"          # Create the ticket branch
 node scripts/is-clean-repo.js                 # Check git status
 node scripts/run-in-all-repos.js "command"    # Run in all repos
 ```

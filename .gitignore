@@ -39,3 +39,6 @@ Thumbs.db
 .gg/gg-publish.json
 .gg/pubspec_overrides_backup.yaml
 .gg/pnpm_workspace_backup.yaml
+
+# gg: the local ticket marker written by `gg one do create ticket`
+ticket.json
