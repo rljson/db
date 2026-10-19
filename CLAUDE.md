@@ -34,9 +34,12 @@ Database layer for the RLJSON ecosystem. Depends on `@rljson/rljson`, `@rljson/i
 git clone --no-hardlinks <repo> <repo>-<branch-name>
 cd <repo>-<branch-name>
 git remote set-url origin <origin-url>
-git checkout -b <branch-name>
+gg one do create ticket <branch-name> -m "<what the ticket does>"
 pnpm install
 ```
+
+`gg one do create ticket` creates the branch and writes `ticket.json`, which
+stays local (gitignored).
 
 - **When the branch is merged: remove the folder from the workspace and delete
   it.** A stale clone is a source of work against a dead branch.
@@ -54,72 +57,79 @@ pnpm install
 1. **Update docs FIRST** — update README.public.md, README.architecture.md, CLAUDE.md for any API/behavior change **before** proposing a commit. A feature is NOT complete until documentation matches.
 2. **Fix TypeScript/lint errors** in every touched file (use IDE error checker).
 3. **`pnpm exec eslint <changed-files>`** to catch lint violations.
-4. **`pnpm test`** — must pass at 100% coverage. Fix all errors before moving on.
+4. **`gg one can commit`** — lint, `tsc`, eslint and the tests at 100% coverage:
+   the checks `gg one do commit` runs before it commits. Fix all errors before
+   moving on.
 
-### Version bump = separate commit
+### Version and CHANGELOG
 
-```bash
-pnpm version patch --no-git-tag-version
-git commit -am"Increase version"
-```
+Never bump `package.json` by hand: `gg one do publish` asks for the increment
+(patch / minor / major) and bumps the version. gg writes nothing into
+`CHANGELOG.md` in a TypeScript repository, so the entry is prose written by
+hand: under the version the release will carry (the current version plus
+the increment named when handing over), or under `## [Unreleased]` for a
+change merged with `--merge-only`, which the next release then renames.
 
 ---
 
-## Full Ticket Workflow (exact order — complete all steps before starting next ticket)
+## Full Ticket Workflow — through gg (exact order)
+
+Every repository chore runs through **gg** in single-repo mode (`gg one …`);
+there is no gg ticket workspace. The CI publishes nothing.
+
+The skills the rljson DNA installs in `.claude/skills` (`/ticket`, `/commit`,
+`/push`, `/publish`, `/cleanup`) are written for gg's ticket workspace
+(`gg do …` from `~/dev`). There is none here: use the `gg one …` commands
+below instead.
 
 ```bash
 # 1. Start clean
-git checkout main && git fetch && git pull
+git checkout main && git pull
 
-# 2. Feature branch
-node scripts/create-branch.js "<description>"
+# 2. Branch clone + ticket branch (see Branch & Workspace Discipline)
+gg one do create ticket <branch-name> -m "<what the ticket does>"
 
-# 3. Update deps (verify eslint stays on 9.x)
-pnpm update --latest && pnpm ls eslint
+# 3. Update deps when the ticket needs it (verify eslint stays on 9.x)
+gg one do upgrade deps && pnpm ls eslint
 
-# 4. Develop, write tests, update docs
+# 4. Develop, write tests, update docs and CHANGELOG (see Version and CHANGELOG)
 
-# 5. Commit every ≤5-file logical unit
-git add . && git commit -am"<description>"
+# 5. Commit every ≤5-file logical unit. Runs lint, tsc, eslint and the tests
+#    at 100% coverage, commits only when all are green and records the result
+#    in .gg/gg.json
+gg one do commit -m "<what this step does>"
 
-# 6. Version bump
-pnpm version patch --no-git-tag-version && git commit -am"Increase version"
+# 6. Push
+gg one do push
 
-# 7. Build (runs tests via prebuild)
-pnpm run build
+# 7. Merge — the OWNER runs this, never Claude (see Publish Workflow)
+gg one do publish                # merge + release
+gg one do publish --merge-only   # merge only: no version, no npm, no tag
 
-# 8. Rebase
-git rebase main
-
-# 9. Push
-node scripts/push-branch.js
-
-# 10. Create PR + auto-merge
-gh pr create --base main --title "<title>" --body " "
-gh pr merge --auto --squash
-
-# 11. Wait
-node scripts/wait-for-pr.js
-
-# 12. Cleanup
-node scripts/delete-feature-branch.js
+# 8. Cleanup: pull main in the primary clone, delete the branch clone
 ```
 
-**`pnpm link` is acceptable during development for local cross-repo dependencies. Before PR/merge: remove all `pnpm.overrides` using `link:../...` and restore published versions.**
+**`pnpm link` is acceptable during development for local cross-repo dependencies. Before the merge: remove all `pnpm.overrides` using `link:../...` and restore published versions.**
 
 ---
 
-## Git Scripts Reference
+## gg Reference
 
-| Script | Guard |
+| Command | What it does |
 |---|---|
-| `node scripts/create-branch.js "desc"` | Kebab-case; fails without input |
-| `node scripts/push-branch.js` | Refuses dirty tree; refuses push to `main` |
-| `node scripts/wait-for-pr.js` | Polls until MERGED/CLOSED |
-| `node scripts/delete-feature-branch.js` | Requires clean tree + merged |
+| `gg one do create ticket <branch> -m "…"` | Creates the ticket branch, carries uncommitted changes over, writes the local `ticket.json` |
+| `gg one can commit` / `gg one do commit -m "…"` | Lint, `tsc`, eslint, tests at 100% coverage; commits only when green; records `.gg/gg.json` |
+| `gg one can push` / `gg one do push` | Checks / pushes the feature branch |
+| `gg one can publish` | Whether the branch can be released |
+| `gg one do publish [--merge-only]` | **Owner only.** See Publish Workflow |
+| `gg one did commit` / `did push` / `did publish` | Whether the current state went through gg — the CI Quick Check runs `did commit` on every push |
+| `gg one do upgrade deps` | Upgrades the dependencies |
+| `node scripts/delete-feature-branch.js` | Local cleanup after the merge: switches to `main`, pulls, deletes the branch only when merged |
 | `node scripts/is-clean-repo.js` | Prints ✅/❌ |
 
-Never bypass these with raw git commands.
+`create-branch.js`, `push-branch.js`, `wait-for-pr.js`, `publish-to-npm.js`
+and `add-version-tag.js` were removed: gg does what they did. Never replace
+a gg step with raw git or `gh`.
 
 ---
 
@@ -210,13 +220,20 @@ Also:
 
 ### Hard rules (NEVER SKIP)
 
-- **Publish only from `main`.** Never from a branch, never from a worktree,
-  never with an uncommitted version bump. Merge first, `git checkout main &&
-  git pull`, publish from there.
+- **Releases happen only through gg, run by the owner.** The CI publishes
+  nothing (`.github/workflows/publish.yml.disabled`). Claude prepares the
+  branch — committed and pushed through gg, CHANGELOG written — and hands
+  over, naming the increment the CHANGELOG assumes. It never runs
+  `gg one do publish` and never writes versions or tags by hand.
+- **gg merges before it uploads.** `gg one do publish` merges the feature
+  branch into `main` first (an auto-merge pull request) and uploads to npm
+  only once that merge went through, so what reaches npm is what `main`
+  holds. Then it tags `main`'s release commit and deletes the feature
+  branch. A run that fails partway is resumed with
+  `gg one do publish --continue`, never finished by hand.
 - **Then build the cascade through the npm packages**, bottom-up, one level at
-  a time. Publish a level only once it is green and only from its own `main`,
-  and wait for the registry before starting the next: `pnpm view <pkg>@<version>`
-  must resolve.
+  a time. Release a level only once it is green, and wait for the registry
+  before starting the next: `pnpm view <pkg>@<version>` must resolve.
 - **If the repo's version disagrees with npm, STOP.** Diff a build of `main`
   against the published tarball before doing anything else. A mismatch means
   releases were cut off-branch and `main` is missing shipped code — publishing
@@ -228,31 +245,27 @@ that existed only in the tarball. Separately, an `io` fix was shipped by
 pinning it in one app's overrides, leaving `db`, `server` and `mongo-agent`
 declaring a version they did not run. Each cost half a day.*
 
-
 ### Pre-publish checklist
 
-1. Remove all `pnpm.overrides` using `link:../...`, restore `package.json` + `pnpm-lock.yaml`.
-2. `pnpm install` — reinstall with published versions.
-3. `pnpm test` — must pass at 100%.
-4. `pnpm run build`.
-5. `pnpm version patch --no-git-tag-version && git commit -am"Increase version"`.
-6. Commit ALL files including `package.json` and `pnpm-lock.yaml`.
+1. Remove all `pnpm.overrides` using `link:../...`, restore `package.json` +
+   `pnpm-lock.yaml`, `pnpm install`.
+2. Everything committed and pushed through gg: `gg one did commit` and
+   `gg one did push` are green.
+3. `CHANGELOG.md` names the version the release will carry, and the
+   hand-over names the increment that produces it.
+4. `gg one can publish` is green.
 
-### Merge & publish
+### Merge & publish — the owner runs it
 
 ```bash
-git rebase main
-node scripts/push-branch.js
-gh pr create --base main --title "<PR title>" --body " "
-gh pr merge --auto --squash
-node scripts/wait-for-pr.js
-node scripts/delete-feature-branch.js
-git checkout main && git pull
-pnpm login
-pnpm publish
+gg one do publish                # merge + release: asks patch/minor/major
+gg one do publish --merge-only   # merge only: no version, no npm, no tag
+gg one do publish --continue     # resume a run that failed partway
 ```
 
-**Always use exactly `pnpm publish` — no flags, no piping.**
+Afterwards: `node scripts/delete-feature-branch.js` in the branch clone,
+`git checkout main && git pull` in the primary clone, then remove the branch
+clone.
 
 ### Cross-repo publish order (bottom-up)
 
