@@ -150,18 +150,18 @@ pnpm updateGoldens
 ## Commit the initial state
 
 ```bash
-git add .
-git commit -am "Rename template-project into my-new-repo"
+gg one do commit -m "Rename template-project into my-new-repo"
 ```
 
-### Create and complete pull request
+### Push and merge
 
 ```bash
-git push -u origin my-new-repo
-gh pr create --base main --title "Rename template-project into my-new-repo" --body " "
-gh pr merge --auto --squash
-node ./scripts/wait-for-pr.js
+gg one do push
+gg one do publish --merge-only
 ```
+
+The merge runs through an auto-merge pull request; `--merge-only` releases
+nothing. The first release is a plain `gg one do publish` later.
 
 ### Delete feature branch
 
