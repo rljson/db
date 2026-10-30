@@ -5,27 +5,34 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@rljson/io': link:./.gg/ts_links/@rljson/io
+  '@rljson/dna-rljson': link:../dna_rljson
+  '@rljson/hash': link:./.gg/ts_links/@rljson/hash
   eslint-plugin-tsdoc>@typescript-eslint/utils: ^8.62.1
+  '@rljson/is-ready': link:./.gg/ts_links/@rljson/is-ready
+  '@rljson/rljson': link:./.gg/ts_links/@rljson/rljson
+  '@rljson/validate': link:./.gg/ts_links/@rljson/validate
+  '@rljson/converter': link:./.gg/ts_links/@rljson/converter
 
 importers:
 
   .:
     dependencies:
       '@rljson/hash':
-        specifier: 0.0.20
-        version: 0.0.20
+        specifier: link:.gg/ts_links/@rljson/hash
+        version: link:.gg/ts_links/@rljson/hash
       '@rljson/io':
-        specifier: 0.0.86
-        version: 0.0.86
+        specifier: link:.gg/ts_links/@rljson/io
+        version: link:.gg/ts_links/@rljson/io
       '@rljson/json':
         specifier: 0.0.23
         version: 0.0.23
       '@rljson/rljson':
-        specifier: 0.0.87
-        version: 0.0.87
+        specifier: link:.gg/ts_links/@rljson/rljson
+        version: link:.gg/ts_links/@rljson/rljson
       '@rljson/validate':
-        specifier: 0.0.13
-        version: 0.0.13
+        specifier: link:.gg/ts_links/@rljson/validate
+        version: link:.gg/ts_links/@rljson/validate
       filtrex:
         specifier: ^3.1.0
         version: 3.1.0
@@ -34,11 +41,11 @@ importers:
         version: 1.0.1
     devDependencies:
       '@rljson/converter':
-        specifier: ^0.0.60
-        version: 0.0.60
+        specifier: link:.gg/ts_links/@rljson/converter
+        version: link:.gg/ts_links/@rljson/converter
       '@rljson/dna-rljson':
-        specifier: ^0.3.1
-        version: 0.3.1
+        specifier: link:../dna_rljson
+        version: link:../dna_rljson
       '@tssuite/helix-js':
         specifier: ^0.5.1
         version: 0.5.1
@@ -187,42 +194,6 @@ packages:
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@ggdna/dna-blog@0.3.0':
-    resolution: {integrity: sha512-1LHLK0+3bOB6oCcDBEOsrcSN8tESeXw+o8d4nMBP8x7tVXENVe0IjsVykhXWs1jeQ8rgoIMDqgS7zyKW0VLlBQ==}
-    engines: {node: '>=22'}
-
-  '@ggdna/dna-clean-code@0.3.0':
-    resolution: {integrity: sha512-e2ej2IIm3LZZqvqmyrO/GE8D8o7PVpaCAU1ufTwLwyWZpDvOd223fvoSlTchFEhaDe4Je8OqGz0dJ9bGO5CNQA==}
-    engines: {node: '>=22'}
-
-  '@ggdna/dna-gg@1.1.1':
-    resolution: {integrity: sha512-tBkp+glWdTY5DoHyIZD5zaYUQ/5bbOiaGRxW52ZbxX1BNMnnm0tPV970d52rqN+IhMlejKTwRLSqj8RbbKPQ4A==}
-    engines: {node: '>=22'}
-
-  '@ggdna/dna-github@0.1.1':
-    resolution: {integrity: sha512-6K79BopuKYrZd0k017tVfJYK6+zeiz5bUkIxdcR9Bgv567AdWV42YzAHHFT/z2mPPl3sqCvNPAEXRLwUOCDbKQ==}
-    engines: {node: '>=22'}
-
-  '@ggdna/dna-guides@0.2.0':
-    resolution: {integrity: sha512-abcWI3W+b8U/uxSV6f9XGOHpaUXKHdqIbWgSczLq61ueOl0xSRJUZD+BeF6dasyV3blJ0Ir84vju6ioe8VTpyg==}
-    engines: {node: '>=22'}
-
-  '@ggdna/dna-index@0.2.0':
-    resolution: {integrity: sha512-azbA8fMhn01eSvEcjJc4aXrh8H0svc/lru2MJVAOaZ+sLnzm3bTrlQTxfcJ5sm/bidtMAh9+738AfAJcQdLP2A==}
-    engines: {node: '>=22'}
-
-  '@ggdna/dna-install@0.2.0':
-    resolution: {integrity: sha512-EIeGLKCSV2aBfdafgJK0ZrwHe/4t6B74MdLyw4UtbhrBivSZ2DYZfxGXohMffyOAxa8AJ1eUopPdhwyzYBKNjA==}
-    engines: {node: '>=22'}
-
-  '@ggdna/dna-readme@0.3.1':
-    resolution: {integrity: sha512-pChOh9A5peNDsjBhgGEqJR4et29LL7frLN6ou4PuKtGUd/oniqFCfVEVdaSeI4QGPZfNcf/re4W6fys/9WMbzA==}
-    engines: {node: '>=22'}
-
-  '@ggdna/dna-translate@0.3.0':
-    resolution: {integrity: sha512-Cc/CbCVItqRSeFz2sTtcH6E0TonT3qWpwqnvfouYKEePprzC5Gp5+rjinb9XzflcUTfXB9CjjXneLhGcueTMRw==}
-    engines: {node: '>=22'}
-
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
     engines: {node: '>=18.18.0'}
@@ -281,36 +252,8 @@ packages:
   '@oxc-project/types@0.155.0':
     resolution: {integrity: sha512-SeE8JPwW1xs1tHeNycjUtUBdhorRa8o4jlvjwk49R7/Z291i+4DQa7JJIgOm/TaYQZx+QrPQbVJ/9c8dMIZN8Q==}
 
-  '@rljson/converter@0.0.60':
-    resolution: {integrity: sha512-/S7CI1ZYk7qjoVpkBTUmXzMd5KtLHn2t+k1zmFSS4HE3UXQce8jTqlajNnARMBoQkYOTLB7hnDMiTuX39a5qdQ==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/dna-rljson@0.3.1':
-    resolution: {integrity: sha512-9cFuhq6EuQ6cYcsTgtHy+wGyQxOlg70+rrYkGhezJBOd1pIxYz4g4ZnXgohxYzSoxDvMAB1eINV60MyHTy72Xw==}
-    engines: {node: '>=22'}
-
-  '@rljson/hash@0.0.20':
-    resolution: {integrity: sha512-YbNHOzquPrNfg2X89aHfJ7O3T1xWiTK+orz6d0LZrPikCHSIyQ7XULYjYqWUI2VngrQjMPOuskitjqZVj1pqYA==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/io@0.0.86':
-    resolution: {integrity: sha512-DySd4PMNSYLRfx7acmorHktbx4CrIz0St84T86tBGw2X/dEO7f2W4W8CAfYa1FZiycmI8JPoecfq89REpo5KWQ==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/is-ready@0.0.20':
-    resolution: {integrity: sha512-UnJDNMAXYr3Q8u2f0MTNyRxWQAVcA7V6XQSGAquSmklMdbnfyp4/wev4rQIZwUFOwqRaLLLLzE3dzeLtWuhh+w==}
-    engines: {node: '>=22.14.0'}
-
   '@rljson/json@0.0.23':
     resolution: {integrity: sha512-ViYo8zx0z/SomjpS2f+xK+tS7HTwZI1HzRarHpXO3spVjpaF+GKCa7HgDXoV/Wc+zsliDzo8wz7S5NFb0yZaow==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/rljson@0.0.87':
-    resolution: {integrity: sha512-w1wboVVoPfVC/DuHmk1R2nbQbGAAzE4fdGxorcKwWdY82+J8pHqZmftkrO8EltfCbM6ZLiC1T28oWaGL8as2Iw==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/validate@0.0.13':
-    resolution: {integrity: sha512-Y2yPpaac+d6HaEJlxMjIaI1pfQZAk9fh8iqtF5JcwdN99c22Ab1PIpb0JeFhpGC+qzEeI/nSK5Kyb5O0u9apHg==}
     engines: {node: '>=22.14.0'}
 
   '@rolldown/binding-android-arm-eabi@1.2.15':
@@ -1091,11 +1034,6 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@6.0.2:
-    resolution: {integrity: sha512-hIvVOb9Qr1p/9CNNLOe0OlWvgx/ziTsVwKN/GDSsuArN2K0wDiafP3s0SWmsm7o2BdnyS8Z9Z64NFBUbn6ziBg==}
-    engines: {node: ^22 || ^24 || >=26}
-    hasBin: true
-
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
@@ -1644,28 +1582,6 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@ggdna/dna-blog@0.3.0': {}
-
-  '@ggdna/dna-clean-code@0.3.0': {}
-
-  '@ggdna/dna-gg@1.1.1':
-    dependencies:
-      '@ggdna/dna-github': 0.1.1
-      '@ggdna/dna-index': 0.2.0
-      '@ggdna/dna-install': 0.2.0
-
-  '@ggdna/dna-github@0.1.1': {}
-
-  '@ggdna/dna-guides@0.2.0': {}
-
-  '@ggdna/dna-index@0.2.0': {}
-
-  '@ggdna/dna-install@0.2.0': {}
-
-  '@ggdna/dna-readme@0.3.1': {}
-
-  '@ggdna/dna-translate@0.3.0': {}
-
   '@humanfs/core@0.19.2':
     dependencies:
       '@humanfs/types': 0.15.0
@@ -1724,51 +1640,7 @@ snapshots:
 
   '@oxc-project/types@0.155.0': {}
 
-  '@rljson/converter@0.0.60':
-    dependencies:
-      '@rljson/hash': 0.0.20
-      '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.87
-      object-traversal: 1.0.1
-
-  '@rljson/dna-rljson@0.3.1':
-    dependencies:
-      '@ggdna/dna-blog': 0.3.0
-      '@ggdna/dna-clean-code': 0.3.0
-      '@ggdna/dna-gg': 1.1.1
-      '@ggdna/dna-guides': 0.2.0
-      '@ggdna/dna-index': 0.2.0
-      '@ggdna/dna-install': 0.2.0
-      '@ggdna/dna-readme': 0.3.1
-      '@ggdna/dna-translate': 0.3.0
-
-  '@rljson/hash@0.0.20':
-    dependencies:
-      '@rljson/json': 0.0.23
-
-  '@rljson/io@0.0.86':
-    dependencies:
-      '@rljson/hash': 0.0.20
-      '@rljson/is-ready': 0.0.20
-      '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.87
-      '@rljson/validate': 0.0.13
-
-  '@rljson/is-ready@0.0.20': {}
-
   '@rljson/json@0.0.23': {}
-
-  '@rljson/rljson@0.0.87':
-    dependencies:
-      '@rljson/hash': 0.0.20
-      '@rljson/json': 0.0.23
-      nanoid: 6.0.2
-
-  '@rljson/validate@0.0.13':
-    dependencies:
-      '@rljson/hash': 0.0.20
-      '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.87
 
   '@rolldown/binding-android-arm-eabi@1.2.15':
     optional: true
@@ -2475,8 +2347,6 @@ snapshots:
   ms@2.1.3: {}
 
   nanoid@3.3.20: {}
-
-  nanoid@6.0.2: {}
 
   natural-compare@1.4.0: {}
 
