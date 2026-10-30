@@ -35,6 +35,13 @@ found in the LICENSE file in the root of this package.
 - Names that do not match the conventions or the purpose.
 - Magic numbers / strings that would be clearer as named constants.
 
+### Placeholder identifiers
+
+- Bundle IDs, application IDs, package names, domains, URLs, mail and
+  IP addresses of the organization in examples, tests or docs — replace
+  them by `com.example.<app>`, `example.com` and the documentation IP
+  ranges.
+
 ### Performance
 
 - Awaiting inside a loop that could run in parallel.
