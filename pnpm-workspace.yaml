@@ -4,11 +4,4 @@ minimumReleaseAgeExclude:
   - '@rljson/*'
   - '@ggdna/dna-gg@1.1.1'
 overrides:
-  "@rljson\/io": link:./.gg/ts_links/@rljson/io
-  "@rljson\/dna-rljson": link:../dna_rljson
-  "@rljson\/hash": link:./.gg/ts_links/@rljson/hash
   eslint-plugin-tsdoc>@typescript-eslint/utils: ^8.62.1
-  "@rljson\/is-ready": link:./.gg/ts_links/@rljson/is-ready
-  "@rljson\/rljson": link:./.gg/ts_links/@rljson/rljson
-  "@rljson\/validate": link:./.gg/ts_links/@rljson/validate
-  "@rljson\/converter": link:./.gg/ts_links/@rljson/converter
