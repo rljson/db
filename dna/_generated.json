@@ -85,9 +85,9 @@
       "name": "dna-rljson",
       "package": "@rljson/dna-rljson",
       "ecosystem": "node",
-      "resolvedVersion": "0.3.1",
+      "resolvedVersion": "0.3.2",
       "via": null,
-      "hash": "0x94c54eec1de4e552"
+      "hash": "0x69ce8ecebb6df9bc"
     },
     {
       "name": "self",
@@ -234,6 +234,10 @@
       "hash": "0x2c7a7a9ecb4eba01"
     },
     {
+      "path": "doc/guides/for-ai/rljson-review-guide.md",
+      "hash": "0x6220dcb0dac66491"
+    },
+    {
       "path": "doc/guides/index-guide.md",
       "hash": "0xef5e4cf556fc2a01"
     },
@@ -292,6 +296,10 @@
     {
       "path": "doc/guides/readme-guide.md",
       "hash": "0x24a9a0dd8794ed8b"
+    },
+    {
+      "path": "doc/guides/rljson-guide.md",
+      "hash": "0x94bfb877f224a902"
     },
     {
       "path": "doc/guides/setup-github-guide.md",

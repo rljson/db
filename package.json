@@ -1,6 +1,6 @@
 {
   "name": "@rljson/db",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "packageManager": "pnpm@11.10.0+sha512.0b7f8b98060031904c017e3a41eb187a16d40eeb829b95c4f8cb03681761fc4ab53dd219115b9b447f4dce1a05a214764461e7d3703392a9f32f9511ce8c86c8",
   "description": "A high level interface to read and write RLJSON data from and into a database",
   "homepage": "https://github.com/rljson/db",
@@ -28,8 +28,8 @@
     "updateGoldens": "cross-env UPDATE_GOLDENS=true pnpm test"
   },
   "devDependencies": {
-    "@rljson/converter": "^0.0.60",
-    "@rljson/dna-rljson": "^0.3.1",
+    "@rljson/converter": "^0.0.61",
+    "@rljson/dna-rljson": "^0.3.2",
     "@tssuite/helix-js": "^0.5.1",
     "@types/node": "^26.6.6",
     "@typescript-eslint/eslint-plugin": "^8.72.1",
@@ -52,11 +52,11 @@
     "vitest-dom": "^0.1.1"
   },
   "dependencies": {
-    "@rljson/hash": "0.0.20",
-    "@rljson/io": "0.0.86",
+    "@rljson/hash": "0.0.21",
+    "@rljson/io": "0.0.87",
     "@rljson/json": "0.0.23",
-    "@rljson/rljson": "0.0.87",
-    "@rljson/validate": "0.0.13",
+    "@rljson/rljson": "0.0.88",
+    "@rljson/validate": "0.0.14",
     "filtrex": "^3.1.0",
     "object-traversal": "^1.0.1"
   }

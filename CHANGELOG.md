@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### CLAUDE.md keeps this repo's own rules
+
+- The rules every rljson repo shares (coverage, pinning, docs, releases,
+  reviews) come with the rljson DNA: `doc/guides/rljson-guide.md` and
+  `doc/guides/for-ai/rljson-review-guide.md`. `CLAUDE.md` no longer repeats
+  them and no longer describes the old `gg one` workflow.
+
+## [0.1.2]
+
 ### Developed in gg tickets
 
 - **Developed in gg tickets.** The rljson DNA (`@rljson/dna-rljson`) is raised to gg's current workflow: the `/gg-*` skills, the development guide and the quick check.

@@ -12,20 +12,20 @@ importers:
   .:
     dependencies:
       '@rljson/hash':
-        specifier: 0.0.20
-        version: 0.0.20
+        specifier: 0.0.21
+        version: 0.0.21
       '@rljson/io':
-        specifier: 0.0.86
-        version: 0.0.86
+        specifier: 0.0.87
+        version: 0.0.87
       '@rljson/json':
         specifier: 0.0.23
         version: 0.0.23
       '@rljson/rljson':
-        specifier: 0.0.87
-        version: 0.0.87
+        specifier: 0.0.88
+        version: 0.0.88
       '@rljson/validate':
-        specifier: 0.0.13
-        version: 0.0.13
+        specifier: 0.0.14
+        version: 0.0.14
       filtrex:
         specifier: ^3.1.0
         version: 3.1.0
@@ -34,11 +34,11 @@ importers:
         version: 1.0.1
     devDependencies:
       '@rljson/converter':
-        specifier: ^0.0.60
-        version: 0.0.60
+        specifier: ^0.0.61
+        version: 0.0.61
       '@rljson/dna-rljson':
-        specifier: ^0.3.1
-        version: 0.3.1
+        specifier: ^0.3.2
+        version: 0.3.2
       '@tssuite/helix-js':
         specifier: ^0.5.1
         version: 0.5.1
@@ -281,36 +281,36 @@ packages:
   '@oxc-project/types@0.155.0':
     resolution: {integrity: sha512-SeE8JPwW1xs1tHeNycjUtUBdhorRa8o4jlvjwk49R7/Z291i+4DQa7JJIgOm/TaYQZx+QrPQbVJ/9c8dMIZN8Q==}
 
-  '@rljson/converter@0.0.60':
-    resolution: {integrity: sha512-/S7CI1ZYk7qjoVpkBTUmXzMd5KtLHn2t+k1zmFSS4HE3UXQce8jTqlajNnARMBoQkYOTLB7hnDMiTuX39a5qdQ==}
+  '@rljson/converter@0.0.61':
+    resolution: {integrity: sha512-llbOwmqDqFRGvI3DzAPnItn2e407LvmnWDUNY40N+Fk5GRrsn8n5c8r4F1uv1zbXmkWUM8FbZwpawF9CM915GQ==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/dna-rljson@0.3.1':
-    resolution: {integrity: sha512-9cFuhq6EuQ6cYcsTgtHy+wGyQxOlg70+rrYkGhezJBOd1pIxYz4g4ZnXgohxYzSoxDvMAB1eINV60MyHTy72Xw==}
+  '@rljson/dna-rljson@0.3.2':
+    resolution: {integrity: sha512-WYR1D9xY3QtsPlm+yvVFnbIBo6eK5+H9WbKVPu3dQnOAHM5W2ZevfHCaCtqYOsM0VeubotvgMbbFSiT4EXrAIw==}
     engines: {node: '>=22'}
 
-  '@rljson/hash@0.0.20':
-    resolution: {integrity: sha512-YbNHOzquPrNfg2X89aHfJ7O3T1xWiTK+orz6d0LZrPikCHSIyQ7XULYjYqWUI2VngrQjMPOuskitjqZVj1pqYA==}
+  '@rljson/hash@0.0.21':
+    resolution: {integrity: sha512-mmvUH1JDI/GNIKZ2CXWe+NVp2GyXaQe0VLzsnqdwIRF1geWHUjA1ctGV1OPibz7KxE2/3RHut1hPREdduXaIPQ==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/io@0.0.86':
-    resolution: {integrity: sha512-DySd4PMNSYLRfx7acmorHktbx4CrIz0St84T86tBGw2X/dEO7f2W4W8CAfYa1FZiycmI8JPoecfq89REpo5KWQ==}
+  '@rljson/io@0.0.87':
+    resolution: {integrity: sha512-XG6Y9rH7a6A7esdpEq66R7pn69omDqBKHlHe8/DbSdgqOeWxCv0JY7qJw/qWvWvvBulqqo1UE+ylsus1iH2lsg==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/is-ready@0.0.20':
-    resolution: {integrity: sha512-UnJDNMAXYr3Q8u2f0MTNyRxWQAVcA7V6XQSGAquSmklMdbnfyp4/wev4rQIZwUFOwqRaLLLLzE3dzeLtWuhh+w==}
+  '@rljson/is-ready@0.0.21':
+    resolution: {integrity: sha512-ltI7Q564UTOiJwADCFWYyILYWR7PheHt1MO+qm+tJ7moMMzDPk0ePSIF9iPeNGN0pNAkzjl/mNci+KEM1+qmuA==}
     engines: {node: '>=22.14.0'}
 
   '@rljson/json@0.0.23':
     resolution: {integrity: sha512-ViYo8zx0z/SomjpS2f+xK+tS7HTwZI1HzRarHpXO3spVjpaF+GKCa7HgDXoV/Wc+zsliDzo8wz7S5NFb0yZaow==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/rljson@0.0.87':
-    resolution: {integrity: sha512-w1wboVVoPfVC/DuHmk1R2nbQbGAAzE4fdGxorcKwWdY82+J8pHqZmftkrO8EltfCbM6ZLiC1T28oWaGL8as2Iw==}
+  '@rljson/rljson@0.0.88':
+    resolution: {integrity: sha512-R16An7xZbTYB9vVEaySY/0bkK2sxiBVuWkuE93E2CiFpWGTXs69Lk6Qaftba6KJgAcGekAJhGBWRa4nSVDhdgw==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/validate@0.0.13':
-    resolution: {integrity: sha512-Y2yPpaac+d6HaEJlxMjIaI1pfQZAk9fh8iqtF5JcwdN99c22Ab1PIpb0JeFhpGC+qzEeI/nSK5Kyb5O0u9apHg==}
+  '@rljson/validate@0.0.14':
+    resolution: {integrity: sha512-t0lcjiKA9vEQWIFbbM4WVuLAkkG9wNeWFAp5fWWYnD993FsjMNiJKhrIlXalBYNaos+KHJ/7gMrVuqmA3dMQKA==}
     engines: {node: '>=22.14.0'}
 
   '@rolldown/binding-android-arm-eabi@1.2.15':
@@ -649,8 +649,8 @@ packages:
   confbox@0.1.8:
     resolution: {integrity: sha512-RMtmw0iFkeR4YV+fUOSucriAQNb9g8zFR52MWCtl+cCZOFRNL6zeB395vPzFhEjjn4fMxXudmELnl/KF/WrK6w==}
 
-  confbox@0.3.1:
-    resolution: {integrity: sha512-cKUSoKa8YxFZZSmraVi7onONx3amu77ngK3kGpsYHDH7drPwCRkQE1RYMPlLRrMtnciRj274XNRxcHxnKmDSnA==}
+  confbox@0.3.2:
+    resolution: {integrity: sha512-ZUAKhKlkCOrIGKc8cj7zek9s9z1mveHif/25nUshI2BzCRzF7KH7KHa+Lnh2ubq+e1tIlaFuP763mzW4qVoehg==}
 
   cross-env@10.1.0:
     resolution: {integrity: sha512-GsYosgnACZTADcmEyJctkJIoqAhHjttw7RsFrVoJNXbsWWqaq6Ym+7kZjq6mS45O0jij6vtiReppKQEtqWy6Dw==}
@@ -1724,14 +1724,14 @@ snapshots:
 
   '@oxc-project/types@0.155.0': {}
 
-  '@rljson/converter@0.0.60':
+  '@rljson/converter@0.0.61':
     dependencies:
-      '@rljson/hash': 0.0.20
+      '@rljson/hash': 0.0.21
       '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.87
+      '@rljson/rljson': 0.0.88
       object-traversal: 1.0.1
 
-  '@rljson/dna-rljson@0.3.1':
+  '@rljson/dna-rljson@0.3.2':
     dependencies:
       '@ggdna/dna-blog': 0.3.0
       '@ggdna/dna-clean-code': 0.3.0
@@ -1742,33 +1742,33 @@ snapshots:
       '@ggdna/dna-readme': 0.3.1
       '@ggdna/dna-translate': 0.3.0
 
-  '@rljson/hash@0.0.20':
+  '@rljson/hash@0.0.21':
     dependencies:
       '@rljson/json': 0.0.23
 
-  '@rljson/io@0.0.86':
+  '@rljson/io@0.0.87':
     dependencies:
-      '@rljson/hash': 0.0.20
-      '@rljson/is-ready': 0.0.20
+      '@rljson/hash': 0.0.21
+      '@rljson/is-ready': 0.0.21
       '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.87
-      '@rljson/validate': 0.0.13
+      '@rljson/rljson': 0.0.88
+      '@rljson/validate': 0.0.14
 
-  '@rljson/is-ready@0.0.20': {}
+  '@rljson/is-ready@0.0.21': {}
 
   '@rljson/json@0.0.23': {}
 
-  '@rljson/rljson@0.0.87':
+  '@rljson/rljson@0.0.88':
     dependencies:
-      '@rljson/hash': 0.0.20
+      '@rljson/hash': 0.0.21
       '@rljson/json': 0.0.23
       nanoid: 6.0.2
 
-  '@rljson/validate@0.0.13':
+  '@rljson/validate@0.0.14':
     dependencies:
-      '@rljson/hash': 0.0.20
+      '@rljson/hash': 0.0.21
       '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.87
+      '@rljson/rljson': 0.0.88
 
   '@rolldown/binding-android-arm-eabi@1.2.15':
     optional: true
@@ -2067,7 +2067,7 @@ snapshots:
 
   confbox@0.1.8: {}
 
-  confbox@0.3.1: {}
+  confbox@0.3.2: {}
 
   cross-env@10.1.0:
     dependencies:
@@ -2545,7 +2545,7 @@ snapshots:
 
   pkg-types@2.4.0:
     dependencies:
-      confbox: 0.3.1
+      confbox: 0.3.2
       exsolve: 1.2.0
       pathe: 2.0.3
 
