@@ -28,8 +28,8 @@
     "updateGoldens": "cross-env UPDATE_GOLDENS=true pnpm test"
   },
   "devDependencies": {
-    "@rljson/converter": "^0.0.59",
-    "@rljson/dna-rljson": "^0.3.0",
+    "@rljson/converter": "^0.0.60",
+    "@rljson/dna-rljson": "^0.3.1",
     "@tssuite/helix-js": "^0.5.1",
     "@types/node": "^26.6.6",
     "@typescript-eslint/eslint-plugin": "^8.72.1",
@@ -52,11 +52,11 @@
     "vitest-dom": "^0.1.1"
   },
   "dependencies": {
-    "@rljson/hash": "0.0.19",
-    "@rljson/io": "0.0.85",
+    "@rljson/hash": "0.0.20",
+    "@rljson/io": "0.0.86",
     "@rljson/json": "0.0.23",
-    "@rljson/rljson": "0.0.86",
-    "@rljson/validate": "0.0.12",
+    "@rljson/rljson": "0.0.87",
+    "@rljson/validate": "0.0.13",
     "filtrex": "^3.1.0",
     "object-traversal": "^1.0.1"
   }
