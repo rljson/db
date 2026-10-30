@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@rljson/converter": "^0.0.59",
-    "@rljson/dna-rljson": "^0.2.0",
+    "@rljson/dna-rljson": "^0.3.0",
     "@tssuite/helix-js": "^0.5.1",
     "@types/node": "^26.6.5",
     "@typescript-eslint/eslint-plugin": "^8.72.1",
