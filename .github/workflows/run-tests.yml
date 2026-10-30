@@ -4,10 +4,10 @@
 
 name: Tests
 
+# Pull requests are checked by quick_check.yaml (gg one did commit);
+# the full tests run on main after the merge.
 on:
   push:
-    branches: ['main']
-  pull_request:
     branches: ['main']
 
 jobs:
