@@ -18,8 +18,15 @@ and says which one comes next.
 
 # rljson additions to the gg workflow
 
-- **Pull requests:** CI on a pull request checks that every commit went
-  through gg's local checks (`gg one did commit`). The full tests run on
-  `main` after the merge: watch them after every publish.
+The rules every rljson repo shares:
+
+@doc/guides/rljson-guide.md
+
+- **Reviews** follow `doc/guides/for-ai/rljson-review-guide.md`.
+- **Pull requests:** CI on a pull request runs the quick check (`gg one did
+  commit`), which passes only for commits made through gg. The full tests run
+  on `main` after the merge: watch them after every release.
+- **Never merge, publish or delete unasked** — no branch, ticket or ticket
+  folder. The owner runs `gg do publish`.
 
 <!-- helix:claude_md:end -->
