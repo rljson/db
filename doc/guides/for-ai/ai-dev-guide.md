@@ -319,7 +319,8 @@ gg do review
 ```
 
 gg creates pull requests for each repo and prints the URLs to the
-terminal.
+terminal. Print every URL to the user, one line per repo, and open each
+pull request without auto-merge in the browser.
 
 Afterwards load the review-light skill and execute it.
 
