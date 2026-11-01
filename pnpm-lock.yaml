@@ -5,7 +5,11 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
+  '@rljson/rljson': link:./.gg/ts_links/@rljson/rljson
+  '@rljson/io': link:./.gg/ts_links/@rljson/io
   eslint-plugin-tsdoc>@typescript-eslint/utils: ^8.62.1
+  '@rljson/validate': link:./.gg/ts_links/@rljson/validate
+  '@rljson/converter': link:./.gg/ts_links/@rljson/converter
 
 importers:
 
@@ -15,17 +19,17 @@ importers:
         specifier: 0.0.21
         version: 0.0.21
       '@rljson/io':
-        specifier: 0.0.87
-        version: 0.0.87
+        specifier: link:.gg/ts_links/@rljson/io
+        version: link:.gg/ts_links/@rljson/io
       '@rljson/json':
         specifier: 0.0.23
         version: 0.0.23
       '@rljson/rljson':
-        specifier: 0.0.88
-        version: 0.0.88
+        specifier: link:.gg/ts_links/@rljson/rljson
+        version: link:.gg/ts_links/@rljson/rljson
       '@rljson/validate':
-        specifier: 0.0.14
-        version: 0.0.14
+        specifier: link:.gg/ts_links/@rljson/validate
+        version: link:.gg/ts_links/@rljson/validate
       filtrex:
         specifier: ^3.1.0
         version: 3.1.0
@@ -34,8 +38,8 @@ importers:
         version: 1.0.1
     devDependencies:
       '@rljson/converter':
-        specifier: ^0.0.61
-        version: 0.0.61
+        specifier: link:.gg/ts_links/@rljson/converter
+        version: link:.gg/ts_links/@rljson/converter
       '@rljson/dna-rljson':
         specifier: ^0.3.2
         version: 0.3.2
@@ -281,10 +285,6 @@ packages:
   '@oxc-project/types@0.155.0':
     resolution: {integrity: sha512-SeE8JPwW1xs1tHeNycjUtUBdhorRa8o4jlvjwk49R7/Z291i+4DQa7JJIgOm/TaYQZx+QrPQbVJ/9c8dMIZN8Q==}
 
-  '@rljson/converter@0.0.61':
-    resolution: {integrity: sha512-llbOwmqDqFRGvI3DzAPnItn2e407LvmnWDUNY40N+Fk5GRrsn8n5c8r4F1uv1zbXmkWUM8FbZwpawF9CM915GQ==}
-    engines: {node: '>=22.14.0'}
-
   '@rljson/dna-rljson@0.3.2':
     resolution: {integrity: sha512-WYR1D9xY3QtsPlm+yvVFnbIBo6eK5+H9WbKVPu3dQnOAHM5W2ZevfHCaCtqYOsM0VeubotvgMbbFSiT4EXrAIw==}
     engines: {node: '>=22'}
@@ -293,24 +293,8 @@ packages:
     resolution: {integrity: sha512-mmvUH1JDI/GNIKZ2CXWe+NVp2GyXaQe0VLzsnqdwIRF1geWHUjA1ctGV1OPibz7KxE2/3RHut1hPREdduXaIPQ==}
     engines: {node: '>=22.14.0'}
 
-  '@rljson/io@0.0.87':
-    resolution: {integrity: sha512-XG6Y9rH7a6A7esdpEq66R7pn69omDqBKHlHe8/DbSdgqOeWxCv0JY7qJw/qWvWvvBulqqo1UE+ylsus1iH2lsg==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/is-ready@0.0.21':
-    resolution: {integrity: sha512-ltI7Q564UTOiJwADCFWYyILYWR7PheHt1MO+qm+tJ7moMMzDPk0ePSIF9iPeNGN0pNAkzjl/mNci+KEM1+qmuA==}
-    engines: {node: '>=22.14.0'}
-
   '@rljson/json@0.0.23':
     resolution: {integrity: sha512-ViYo8zx0z/SomjpS2f+xK+tS7HTwZI1HzRarHpXO3spVjpaF+GKCa7HgDXoV/Wc+zsliDzo8wz7S5NFb0yZaow==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/rljson@0.0.88':
-    resolution: {integrity: sha512-R16An7xZbTYB9vVEaySY/0bkK2sxiBVuWkuE93E2CiFpWGTXs69Lk6Qaftba6KJgAcGekAJhGBWRa4nSVDhdgw==}
-    engines: {node: '>=22.14.0'}
-
-  '@rljson/validate@0.0.14':
-    resolution: {integrity: sha512-t0lcjiKA9vEQWIFbbM4WVuLAkkG9wNeWFAp5fWWYnD993FsjMNiJKhrIlXalBYNaos+KHJ/7gMrVuqmA3dMQKA==}
     engines: {node: '>=22.14.0'}
 
   '@rolldown/binding-android-arm-eabi@1.2.15':
@@ -1091,11 +1075,6 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@6.0.2:
-    resolution: {integrity: sha512-hIvVOb9Qr1p/9CNNLOe0OlWvgx/ziTsVwKN/GDSsuArN2K0wDiafP3s0SWmsm7o2BdnyS8Z9Z64NFBUbn6ziBg==}
-    engines: {node: ^22 || ^24 || >=26}
-    hasBin: true
-
   natural-compare@1.4.0:
     resolution: {integrity: sha512-OWND8ei3VtNC9h7V60qff3SVobHr996CTwgxubgyQYEpg290h9J0buyECNNJexkFm5sOajh5G116RYA1c8ZMSw==}
 
@@ -1724,13 +1703,6 @@ snapshots:
 
   '@oxc-project/types@0.155.0': {}
 
-  '@rljson/converter@0.0.61':
-    dependencies:
-      '@rljson/hash': 0.0.21
-      '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.88
-      object-traversal: 1.0.1
-
   '@rljson/dna-rljson@0.3.2':
     dependencies:
       '@ggdna/dna-blog': 0.3.0
@@ -1746,29 +1718,7 @@ snapshots:
     dependencies:
       '@rljson/json': 0.0.23
 
-  '@rljson/io@0.0.87':
-    dependencies:
-      '@rljson/hash': 0.0.21
-      '@rljson/is-ready': 0.0.21
-      '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.88
-      '@rljson/validate': 0.0.14
-
-  '@rljson/is-ready@0.0.21': {}
-
   '@rljson/json@0.0.23': {}
-
-  '@rljson/rljson@0.0.88':
-    dependencies:
-      '@rljson/hash': 0.0.21
-      '@rljson/json': 0.0.23
-      nanoid: 6.0.2
-
-  '@rljson/validate@0.0.14':
-    dependencies:
-      '@rljson/hash': 0.0.21
-      '@rljson/json': 0.0.23
-      '@rljson/rljson': 0.0.88
 
   '@rolldown/binding-android-arm-eabi@1.2.15':
     optional: true
@@ -2475,8 +2425,6 @@ snapshots:
   ms@2.1.3: {}
 
   nanoid@3.3.20: {}
-
-  nanoid@6.0.2: {}
 
   natural-compare@1.4.0: {}
 
