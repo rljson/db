@@ -77,9 +77,9 @@
       "name": "dna-gg",
       "package": "@ggdna/dna-gg",
       "ecosystem": "node",
-      "resolvedVersion": "1.1.1",
+      "resolvedVersion": "1.2.0",
       "via": "dna-rljson",
-      "hash": "0xa4329d4ad27ccd8a"
+      "hash": "0x815024b382c3d167"
     },
     {
       "name": "dna-rljson",
@@ -143,7 +143,7 @@
     },
     {
       "path": ".claude/skills/gg-review/SKILL.md",
-      "hash": "0x8583deb0630bba47"
+      "hash": "0x55b2f0deb18d70d4"
     },
     {
       "path": ".claude/skills/gg-ticket/SKILL.md",
@@ -223,7 +223,7 @@
     },
     {
       "path": "doc/guides/for-ai/ai-dev-guide.md",
-      "hash": "0xdb9836161ca16d85"
+      "hash": "0xf8f80ff1b66b5ddf"
     },
     {
       "path": "doc/guides/for-ai/ai-review-guide.md",
