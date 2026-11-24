@@ -8,23 +8,35 @@ description: Creates a gg ticket and adds the repos it needs. Use when the user 
 All `gg do` commands run inside the workspace. Ask for the workspace
 directory if none is known.
 
-## 1. Ask for the ticket data
+## 1. Ask what the ticket should do
 
-Ask for these three, one after the other, and give the user a single input
-field per answer — one question per field, never all three in one question
-and never as a plain prose question:
-
-- Ticket ID, e.g. `ONE-145`
-- Title, one imperative line, e.g. `Fix issue abc`
-- Description, one or two sentences on what the ticket changes
+Ask a single question: what should the ticket do? One free-text answer is
+enough — never ask for a ticket id, a title or a description separately.
 
 ## 2. Create the ticket
 
+Derive from the answer, without asking anything else:
+
+- **id** — a short, descriptive slug in `snake_case`, 2-5 plain ASCII words
+  (transliterate non-ASCII, drop punctuation and emoji), e.g.
+  `fix_login_crash`. Never a sequential number: several tickets are usually
+  worked on in parallel, and a counter collides between them. List the
+  existing ticket folders of the workspace root and, if the slug is taken,
+  append `_2`, `_3`, … until it is free. If `gg do create ticket` still
+  rejects it as taken (e.g. another agent just created the same slug),
+  bump the suffix and retry.
+- **message** — one imperative line to one short sentence describing the
+  change, for `-m`.
+
 ```bash
 cd ~/dev/ # workspace
-gg do create ticket ONE-145 -m"Fix issue abc"
-cd tickets/ONE-145
+gg do create ticket fix_login_crash -m"Fix issue abc"
+cd fix_login_crash
 ```
+
+Tell the user the id and the message right after creating the ticket — both
+can be changed any time, e.g. by renaming the folder before anything else is
+added to it, or by editing `ticket.json`.
 
 ## 3. Choose the project management repo — or work without one
 
@@ -52,8 +64,9 @@ Call it the "project management repo" whenever you write to the user, never
 
 ## 4. Choose the code repos
 
-Ask the user how the code repos are chosen, as a single question with two
-options:
+Ask the user how the code repos are chosen, as a single question with the
+options below. Offer **only the project management repo** only when one was
+added in step 3 — without one there is nothing to be "only" about.
 
 - **automatically** — Claude finds the repos. Read the `index.jsonc` of
   the candidate repos in `.ocean`. Tell the user which repos the ticket
@@ -65,6 +78,9 @@ options:
   field which repos the ticket needs, e.g. `repo1 repo2`. Check each name
   against the repos in `.ocean` and ask again for names that do not exist
   there. The entered list is the confirmation.
+- **only the project management repo** — no code repo at all; the ticket
+  stays pure planning, and the project management repo added in step 3 is
+  everything it carries.
 
 A ticket that is only planned may need no code repo at all.
 
@@ -73,6 +89,12 @@ After the confirmation:
 ```bash
 gg do add repo1 repo2
 ```
+
+Name all code repos in this one call, never one `gg do add` per repo —
+not even for repos you find one after the other. Every call refreshes
+the ocean and builds the dependency graph again, and a ticket repo that
+depends on several new repos is resolved again for each call. The same
+goes for repos you find later, while implementing: add them together.
 
 ## 5. Open the workspace only on request
 
@@ -87,8 +109,9 @@ Run it only when the user asks for it.
 
 ## 6. Plan or implement
 
-If the project management repo keeps requirements (`doc/requirements`)
-and no accepted requirement covers the ticket, engineer them with the user
+If the project management repo keeps requirements
+(`doc/<yyyy>-Q<n>/requirements`, in the newest quarter folder) and no
+accepted requirement covers the ticket, engineer them with the user
 first — with `/gg-plan-requirements` if the repo has it — before any plan or
 code. Bug tickets are the exception, they name their bug file.
 
@@ -119,7 +142,8 @@ not fit the repo it is in or is about to land in:
 
 - **Split a repo** that has grown a second scope into two repos
 - **Add a new repo** with `gg do create repo` for a domain no repo covers
-- **Add an existing repo** with `gg do add` when the code belongs there
+- **Add an existing repo** with `gg do add` when the code belongs there;
+  several repos in one call
 - **Move code**, existing or just written, into the repo whose scope it fits
 
 Name the code, the repo it is in, the repo it should go to and why. Let the

@@ -1,6 +1,6 @@
 ---
 name: code
-description: Checks the code of this repo against the code guide and reports what breaks the conventions. Use when the user says "/code" or asks for a structure review.
+description: Checks the code of this repo against the code guide and reports what breaks the conventions. Use when the user says "/code" or asks for a review of the code conventions of files and functions.
 ---
 
 <!--

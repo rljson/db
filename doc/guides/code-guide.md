@@ -11,12 +11,14 @@ found in the LICENSE file in the root of this package.
 What holds in every language we write. The rules that only make sense in
 one of them live next door: [Dart](./code-guide-dart.md),
 [TypeScript](./code-guide-typescript.md). For tests see the
-[Test Guide](./test-guide.md).
+[Test Guide](./test-guide.md), for how a repo is cut into parts the
+[Architecture Guide](./architecture-guide.md).
 
 ## Lay out the package
 
 - Name the package after the repo
-- Keep one top level concept per package
+- For how the package is cut into concepts, see the
+  [Architecture Guide](./architecture-guide.md) under `@boundaries`
 - Expose the package through a single entry point that re-exports and
   holds no implementation of its own
 - Name a file after the main type it holds
@@ -112,6 +114,8 @@ Keep the style as it is — do not invent variants.
   second one
 - Duplicated imports, test setups and copied constants are the same
   problem in small
+- The same concept in two modules is the same problem in large, see the
+  [Architecture Guide](./architecture-guide.md)
 
 ## Name things consistently
 
