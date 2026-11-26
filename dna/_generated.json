@@ -13,73 +13,73 @@
       "name": "dna-readme",
       "package": "@ggdna/dna-readme",
       "ecosystem": "node",
-      "resolvedVersion": "0.3.1",
+      "resolvedVersion": "0.4.0",
       "via": "dna-rljson",
-      "hash": "0x6678ec2e509f3dd9"
+      "hash": "0x8742f5047e153ab2"
     },
     {
       "name": "dna-guides",
       "package": "@ggdna/dna-guides",
       "ecosystem": "node",
-      "resolvedVersion": "0.2.0",
+      "resolvedVersion": "0.3.0",
       "via": "dna-rljson",
-      "hash": "0x3bd4be7c009270a6"
+      "hash": "0x25f41220f7db3e94"
     },
     {
       "name": "dna-translate",
       "package": "@ggdna/dna-translate",
       "ecosystem": "node",
-      "resolvedVersion": "0.4.0",
+      "resolvedVersion": "0.5.0",
       "via": "dna-rljson",
-      "hash": "0x3039779d72fb105f"
+      "hash": "0x670eb775be06db3c"
     },
     {
       "name": "dna-index",
       "package": "@ggdna/dna-index",
       "ecosystem": "node",
-      "resolvedVersion": "0.2.0",
+      "resolvedVersion": "0.3.0",
       "via": "dna-rljson",
-      "hash": "0x1d92b0add37a1ac7"
+      "hash": "0x7507c4cbfdeabfac"
     },
     {
       "name": "dna-blog",
       "package": "@ggdna/dna-blog",
       "ecosystem": "node",
-      "resolvedVersion": "0.4.0",
+      "resolvedVersion": "0.5.0",
       "via": "dna-rljson",
-      "hash": "0xc77340df452ebff4"
+      "hash": "0x3b6dc4360cccbb6b"
     },
     {
       "name": "dna-install",
       "package": "@ggdna/dna-install",
       "ecosystem": "node",
-      "resolvedVersion": "0.2.0",
+      "resolvedVersion": "0.3.0",
       "via": "dna-rljson",
-      "hash": "0xbe88eb4256745ee1"
+      "hash": "0x6d44398210e8ef7b"
     },
     {
       "name": "dna-clean-code",
       "package": "@ggdna/dna-clean-code",
       "ecosystem": "node",
-      "resolvedVersion": "0.4.0",
+      "resolvedVersion": "0.5.0",
       "via": "dna-rljson",
-      "hash": "0x8e7b9f31d43721ab"
+      "hash": "0xa53bcc8790991ca9"
     },
     {
       "name": "dna-github",
       "package": "@ggdna/dna-github",
       "ecosystem": "node",
-      "resolvedVersion": "0.1.1",
+      "resolvedVersion": "0.2.0",
       "via": "dna-gg",
-      "hash": "0xf541b93b3dc7995d"
+      "hash": "0x5d579cf2e57c1869"
     },
     {
       "name": "dna-gg",
       "package": "@ggdna/dna-gg",
       "ecosystem": "node",
-      "resolvedVersion": "1.8.0",
+      "resolvedVersion": "1.9.0",
       "via": "dna-rljson",
-      "hash": "0x8a5adeee7fc82ac9"
+      "hash": "0x8450771ca3189443"
     },
     {
       "name": "dna-rljson",
@@ -180,6 +180,10 @@
     {
       "path": ".github/workflows/quick_check.yaml",
       "hash": "0xf3320fb8f530a565"
+    },
+    {
+      "path": ".pubignore",
+      "hash": "0x43fdf36825634b35"
     },
     {
       "path": "doc/guides/architecture-guide.md",
