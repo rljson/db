@@ -34,9 +34,9 @@ found in the LICENSE file in the root of this package.
 
 ### Node
 
-[Install Node on Windows](./doc/install/node-win.md)
+[Install Node on Windows](../../workflows/doc/install/node-win.md)
 
-[Install Node on Mac](./doc/install/node-mac.md)
+[Install Node on Mac](../../workflows/doc/install/node-mac.md)
 
 ### PNPM
 

@@ -90,7 +90,7 @@ function replaceTemplateProject() {
   const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8'));
   const projectName = pkg.name.replace('@rljson/', '');
 
-  const replaceFiles = ['doc/workflows/prepare.md', 'doc/workflows/tools.md'];
+  const replaceFiles = ['doc/en/workflows/prepare.md', 'doc/en/workflows/tools.md'];
 
   for (const file of replaceFiles) {
     const filePath = path.join(process.cwd(), file);
