@@ -46,8 +46,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0
       '@tssuite/helix-js':
-        specifier: ^0.7.0
-        version: 0.7.0
+        specifier: ^0.8.0
+        version: 0.8.0
       '@types/node':
         specifier: ^26.6.11
         version: 26.6.11
@@ -431,8 +431,8 @@ packages:
     resolution: {integrity: sha512-TeheYy0ILzBEI/CO55CP6zJCSdSWeRtGnHy8U8dWSUH4I68iqTsy7HkMktR4xakThc9jotkPQUXT4ITdbV7cHA==}
     engines: {node: '>=18'}
 
-  '@tssuite/helix-js@0.7.0':
-    resolution: {integrity: sha512-g80nPLJc2bkKohGSF8NkqzFY1TeAqi2ZUf/IUjOdOfFg1or9HIBztcsL7WYT/sPthmWy/pWqBYlrYNLAW6kAqQ==}
+  '@tssuite/helix-js@0.8.0':
+    resolution: {integrity: sha512-5TltI0pkX41R5Xa9ejX4ypVICP0hGu+1f+bWX9gKRgoMs/NYi4yIl0hDfvXGk725Da2l0XBmobmC2ggjh0lQiA==}
     engines: {node: '>=22'}
 
   '@tybys/wasm-util@0.10.5':
@@ -1824,7 +1824,7 @@ snapshots:
 
   '@sindresorhus/base62@1.0.0': {}
 
-  '@tssuite/helix-js@0.7.0': {}
+  '@tssuite/helix-js@0.8.0': {}
 
   '@tybys/wasm-util@0.10.5':
     dependencies:

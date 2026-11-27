@@ -5,7 +5,7 @@
       "name": "base",
       "package": "helix",
       "ecosystem": null,
-      "resolvedVersion": "1.16.0",
+      "resolvedVersion": "1.18.0",
       "via": null,
       "hash": "0x6883da335b415f9d"
     },
@@ -103,9 +103,10 @@
     "claudeMdFromDna": true,
     "blockHash": "0xfaf2b52d19d960be"
   },
-  "baseVersion": "1.16.0",
+  "baseVersion": "1.18.0",
   "baseHash": "0x6883da335b415f9d",
   "configHash": "0xf09fa51ef6d256c5",
+  "gitignoreHash": "0x9ed7c8a6fa41ccc3",
   "instances": [
     {
       "path": ".claude/CLAUDE_dna_gg.md",
@@ -193,7 +194,7 @@
     },
     {
       "path": ".pubignore",
-      "hash": "0x2ab6461d1a94557a"
+      "hash": "0x10fe87dfdc9683ef"
     },
     {
       "path": "doc/de/guides/architecture-guide.md",
