@@ -5,7 +5,7 @@
       "name": "base",
       "package": "helix",
       "ecosystem": null,
-      "resolvedVersion": "1.13.0",
+      "resolvedVersion": "1.16.0",
       "via": null,
       "hash": "0x6883da335b415f9d"
     },
@@ -100,11 +100,21 @@
   ],
   "claude": {
     "claudeMdInclude": null,
-    "claudeMdFromDna": true
+    "claudeMdFromDna": true,
+    "blockHash": "0xfaf2b52d19d960be"
   },
-  "baseVersion": "1.13.0",
+  "baseVersion": "1.16.0",
   "baseHash": "0x6883da335b415f9d",
+  "configHash": "0xf09fa51ef6d256c5",
   "instances": [
+    {
+      "path": ".claude/CLAUDE_dna_gg.md",
+      "hash": "0x4bb650f323b19657"
+    },
+    {
+      "path": ".claude/CLAUDE_dna_rljson.md",
+      "hash": "0x5235d639b4b32482"
+    },
     {
       "path": ".claude/skills/blog/SKILL.md",
       "hash": "0xe844d9a1ee90ada0"
