@@ -7,13 +7,16 @@ description: Prepares the release of a reviewed ticket and hands `gg do publish`
 
 `gg do publish` merges the pull requests, publishes to the registry and
 creates and pushes the version tags. It is interactive — the user runs it.
+It resolves and analyzes every repo, but upgrades nothing and does not run
+the tests again.
 
 ## 1. Check the preconditions
 
 - Every repo of the ticket is committed and pushed.
 - The pull requests created by `gg do review` are green.
-- Every repo with `doc/guides/blog-guide.md` holds the post of this ticket
-  in `doc/blog/<yyyy>`. If one is missing, go back to `/gg-review`.
+- Every repo with `doc/en/guides/blog-guide.md` holds the post of this
+  ticket in `pm/<lang>/<yyyy>-Q<n>/blog` of each of its languages. If one
+  is missing, go back to `/gg-review`.
 
 ## 2. Configure the publish
 
@@ -29,11 +32,17 @@ it is interactive. Check that `CHANGELOG.md` reads well.
 
 ## 3. Let the user publish
 
-Ask the user to run this **manually** from the ticket folder:
+Ask the user to run this **manually** from the workspace root, not from the
+ticket folder. Fill in the real workspace root and ticket folder:
 
 ```bash
-gg do publish
+cd ~/dev/ # workspace root
+gg do publish -i fix_login_crash
 ```
+
+At the end gg moves the ticket folder to the trash. Windows refuses to move
+a folder a terminal sits in ("used by another process", errno 32), so the
+terminal must stay outside the ticket — `-i` names the ticket instead.
 
 It asks whether the ticket and the remote feature branches may be deleted.
 If the user declines, run `/gg-cleanup` afterwards.
