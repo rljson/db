@@ -37,13 +37,13 @@ parent may name the dependency. The same holds for the `mergeMessage`.
 - Right in `gg`: `Create the remote repository with gg_git`
 
 Section "Describe every repo in its own terms" of
-`doc/guides/for-ai/ai-dev-guide.md` has the details.
+`doc/en/guides/for-ai/ai-dev-guide.md` has the details.
 
 Check in the same pass whether the diff changes what the `index.jsonc` of
 the repo says — its `summary`, `domain` or `interfaces` — and update it
 before committing. If the repo has no `index.jsonc`, create it now from
-`doc/templates/index-template.jsonc`, whatever the diff. Section "Keep the
-index.jsonc up to date" of `doc/guides/for-ai/ai-dev-guide.md` has the
+`doc/en/templates/index-template.jsonc`, whatever the diff. Section "Keep the
+index.jsonc up to date" of `doc/en/guides/for-ai/ai-dev-guide.md` has the
 details.
 
 ## 3. Commit

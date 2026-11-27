@@ -52,7 +52,7 @@ ticket runs:
   gg do add pm_repo
   ```
 
-  Read `doc/guides/pm-repo-guide.md` of that repo if it exists: it says how
+  Read `doc/en/guides/pm-repo-guide.md` of that repo if it exists: it says how
   the repo is structured and how planning works there. If none of the repos
   fits, ask whether to create one.
 
@@ -110,7 +110,7 @@ Run it only when the user asks for it.
 ## 6. Plan or implement
 
 If the project management repo keeps requirements
-(`doc/<yyyy>-Q<n>/requirements`, in the newest quarter folder) and no
+(`pm/<lang>/<yyyy>-Q<n>/requirements`, in the newest quarter folder) and no
 accepted requirement covers the ticket, engineer them with the user
 first — with `/gg-plan-requirements` if the repo has it — before any plan or
 code. Bug tickets are the exception, they name their bug file.
@@ -126,12 +126,12 @@ repo alone.
 While implementing, write the code comments and documentation of a
 dependency in its own terms: never name the repos of the ticket that use
 it, nor their goal (section "Describe every repo in its own terms" of
-`doc/guides/for-ai/ai-dev-guide.md`). Keep every repo in its scope: stop
+`doc/en/guides/for-ai/ai-dev-guide.md`). Keep every repo in its scope: stop
 and propose a split, a new repo or a move as soon as code does not fit (see
 below). With every code change, check whether the `index.jsonc` of the repo
 still matches and update it in the same step; a repo without one gets it
 with its first change — section "Keep the index.jsonc up to date" of
-`doc/guides/for-ai/ai-dev-guide.md` says when and how.
+`doc/en/guides/for-ai/ai-dev-guide.md` says when and how.
 
 ## Keep every repo in its scope
 
@@ -150,7 +150,7 @@ Name the code, the repo it is in, the repo it should go to and why. Let the
 user decide whether it changes now, within this ticket, or later, as a
 follow-up ticket. After a change of scope, update the `index.jsonc` of each
 repo concerned. Section "Keep every repo in its scope" of
-`doc/guides/for-ai/ai-dev-guide.md` has the details.
+`doc/en/guides/for-ai/ai-dev-guide.md` has the details.
 
 ## Important
 

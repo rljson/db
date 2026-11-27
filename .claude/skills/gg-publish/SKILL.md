@@ -14,9 +14,9 @@ the tests again.
 
 - Every repo of the ticket is committed and pushed.
 - The pull requests created by `gg do review` are green.
-- Every repo with `doc/guides/blog-guide.md` holds the post of this ticket
-  in `doc/blog/<yyyy>`, a project management repo in
-  `doc/<yyyy>-Q<n>/blog`. If one is missing, go back to `/gg-review`.
+- Every repo with `doc/en/guides/blog-guide.md` holds the post of this
+  ticket in `pm/<lang>/<yyyy>-Q<n>/blog` of each of its languages. If one
+  is missing, go back to `/gg-review`.
 
 ## 2. Configure the publish
 

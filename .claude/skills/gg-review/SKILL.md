@@ -18,11 +18,11 @@ your own a split of the repo, a new repo, an existing repo to add, or a
 move of the code into the repo whose scope it fits — with the reason. Let
 the user decide whether it changes now, within this ticket, or later, as a
 follow-up ticket. Section "Keep every repo in its scope" of
-`doc/guides/for-ai/ai-dev-guide.md` has the details.
+`doc/en/guides/for-ai/ai-dev-guide.md` has the details.
 
 ## 2. Document the change in every repo
 
-Look for `doc/guides/blog-guide.md` in the project management repo and in
+Look for `doc/en/guides/blog-guide.md` in the project management repo and in
 every other repo the ticket changed. It comes from the `dna_blog` layer.
 
 - Run `/blog` in each repo that has it; skip the others
@@ -31,12 +31,12 @@ every other repo the ticket changed. It comes from the `dna_blog` layer.
   alone would force a release without a change
 - A dependency's post describes its own change only: it never names the
   repos of the ticket that use it, nor their goal — section "Describe
-  every repo in its own terms" of `doc/guides/for-ai/ai-dev-guide.md`
+  every repo in its own terms" of `doc/en/guides/for-ai/ai-dev-guide.md`
 - `/blog` stops by itself when the post already exists
 
 Update `README.md` of each repo the ticket changed. Check once more that
 each of them has an `index.jsonc` — create it from
-`doc/templates/index-template.jsonc` if not — and that it matches the code
+`doc/en/templates/index-template.jsonc` if not — and that it matches the code
 of the ticket.
 
 Let the user review the changes, then run `/gg-commit` and `/gg-push`.
@@ -70,7 +70,7 @@ the repo when the fix changes what it describes.
 
 ## Important
 
-- Never write a blog post in a repo without `doc/guides/blog-guide.md`.
+- Never write a blog post in a repo without `doc/en/guides/blog-guide.md`.
 - Never write a blog post in a repo the ticket did not change, apart from
   the project management repo.
 - Never start `gg do review` without the user's confirmation.
