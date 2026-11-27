@@ -12,4 +12,10 @@ minimumReleaseAgeExclude:
   - '@ggdna/dna-readme@0.5.0'
   - '@ggdna/dna-translate@0.6.0'
 overrides:
+  "@rljson/io": link:./.gg/ts_links/@rljson/io
+  "@rljson/hash": link:./.gg/ts_links/@rljson/hash
   eslint-plugin-tsdoc>@typescript-eslint/utils: ^8.62.1
+  "@rljson/is-ready": link:./.gg/ts_links/@rljson/is-ready
+  "@rljson/rljson": link:./.gg/ts_links/@rljson/rljson
+  "@rljson/validate": link:./.gg/ts_links/@rljson/validate
+  "@rljson/converter": link:./.gg/ts_links/@rljson/converter
