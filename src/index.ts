@@ -24,6 +24,33 @@ export type {
   SyncEventNames,
 } from '@rljson/rljson';
 export { Db } from './db.ts';
+export type { DbOptions } from './db.ts';
+export {
+  DbEvents,
+  DbHookLoopError,
+  DbHookRefusedError,
+} from './events/db-events.ts';
+export type {
+  DbBeforeHook,
+  DbEventContext,
+  DbEventsOptions,
+  DbHookDecision,
+  DbHookOptions,
+  DbInsertEvent,
+  DbInsertObserverOptions,
+  DbIoEventBase,
+  DbObserver,
+  DbReadEvent,
+  DbReadOperation,
+  DbRowFilter,
+  DbWriteEvent,
+  DbWriteOperation,
+} from './events/db-events.ts';
+export { EventIo } from './events/event-io.ts';
+export { MockHook } from './events/mock-hook.ts';
+export type { MockHookOptions } from './events/mock-hook.ts';
+export { Notify } from './notify.ts';
+export type { NotifyCallback } from './notify.ts';
 export {
   exampleEditActionColumnSelection,
   exampleEditActionColumnSelectionOnlySomeColumns,

@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### One event model for hooks, observers and notifiers
+
+- **`DbEvents`: hooks before every read and write.** A hook lets the
+  operation pass, refuses it (`DbHookRefusedError`) or filters its rows.
+  Hooks run by priority, then in registration order; `tables` limits a hook
+  to some tables.
+- **Observers after writes and inserts.** `afterWrite` and `afterInsert`
+  start in the same order, are not awaited and only report their errors.
+- **`Notify` runs on the event model** with an unchanged API:
+  `registerObserver`, `unregisterObserver` and `db.notify` behave as before.
+- **Loop protection.** Hooks read and write through `event.io`; hooks that
+  trigger each other deeper than `maxDepth` (default 8) end with a
+  `DbHookLoopError`.
+- **`new Db(io, { events, context })`, `db.events`, `db.ioFor(context)`.**
+  The context names who reads or writes; `ioFor` serves the same store with
+  another context. `EventIo` wraps any `Io`.
+- **`MockHook`** records what it sees and refuses or filters as configured.
+- `Notify`, `NotifyCallback` and `DbOptions` are exported.
+
 ### CLAUDE.md keeps this repo's own rules
 
 - The rules every rljson repo shares (coverage, pinning, docs, releases,

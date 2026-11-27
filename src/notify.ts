@@ -6,6 +6,8 @@
 
 import { InsertHistoryRow, Route } from '@rljson/rljson';
 
+import { DbEvents } from './events/db-events.ts';
+
 export type NotifyCallback<N extends string> = (
   InsertHistoryRow: InsertHistoryRow<N>,
 ) => Promise<any>;
@@ -13,12 +15,21 @@ export type NotifyCallback<N extends string> = (
 // ...........................................................................
 /**
  * Notification system to manage callbacks for specific routes and notify them with edit protocol rows.
+ *
+ * The callbacks are insert observers of a {@link DbEvents}: `notify` starts
+ * them in the order they were registered, does not wait for them and only
+ * logs their errors.
  */
 export class Notify {
   private _callbacks: Map<string, NotifyCallback<any>[]> = new Map();
+  private _detachers: Map<string, (() => void)[]> = new Map();
 
   // ...........................................................................
-  constructor() {}
+  /**
+   * Constructor
+   * @param events - The event model the callbacks are registered with
+   */
+  constructor(readonly events: DbEvents = new DbEvents()) {}
 
   // ...........................................................................
   /**
@@ -30,6 +41,15 @@ export class Notify {
     this._callbacks.set(route.flat, [
       ...(this._callbacks.get(route.flat) || []),
       callback,
+    ]);
+
+    const detach = this.events.afterInsert(
+      (event) => callback(event.insertHistoryRow),
+      { route, name: callback.name },
+    );
+    this._detachers.set(route.flat, [
+      ...(this._detachers.get(route.flat) || []),
+      detach,
     ]);
   }
 
@@ -43,6 +63,14 @@ export class Notify {
     const callbacks = this._callbacks.get(route.flat);
     /*v8 ignore else -- @preserve */
     if (callbacks) {
+      const detachers = this._detachers.get(route.flat)!;
+      callbacks.forEach((cb, i) => {
+        if (cb === callback) detachers[i]();
+      });
+      this._detachers.set(
+        route.flat,
+        detachers.filter((_, i) => callbacks[i] !== callback),
+      );
       this._callbacks.set(
         route.flat,
         callbacks.filter((cb) => cb !== callback),
@@ -56,6 +84,8 @@ export class Notify {
    * @param route   The route to unregister all callbacks from.
    */
   unregisterAll(route: Route) {
+    for (const detach of this._detachers.get(route.flat) || []) detach();
+    this._detachers.delete(route.flat);
     this._callbacks.delete(route.flat);
   }
 
@@ -69,16 +99,7 @@ export class Notify {
     route: Route,
     insertHistoryRow: InsertHistoryRow<N>,
   ) {
-    const callbacks = this._callbacks.get(route.flat);
-    if (callbacks) {
-      /*v8 ignore next -- @preserve */
-      Promise.all(callbacks.map((cb) => cb(insertHistoryRow))).catch((err) => {
-        console.error(
-          `Error notifying callbacks for route ${route.flat}:`,
-          err,
-        );
-      });
-    }
+    this.events.emitInsert(route, insertHistoryRow);
   }
 
   // ...........................................................................

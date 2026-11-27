@@ -14,6 +14,7 @@ This document provides a deep dive into the architecture, design patterns, and i
 - [Tree Processing](#tree-processing)
 - [Join System](#join-system)
 - [Multi-Edit System](#multi-edit-system)
+- [Event Model](#event-model)
 - [Design Decisions](#design-decisions)
 
 ## Overview
@@ -271,10 +272,51 @@ class LayerController extends Controller {
    └─ Collect history rows
    ↓
 4. Notify Callbacks
-   Broadcast changes to registered listeners
+   db.events.emitInsert: the insert observers of the route
    ↓
 5. Return InsertHistoryRows
 ```
+
+Every Io call of steps 2-3 passes the before-write hooks of `db.events`
+(see [Event Model](#event-model)); a refusal aborts the insert.
+
+## Event Model
+
+`DbEvents` (`src/events/db-events.ts`) is the one place where code hangs
+itself into reads and writes:
+
+```text
+caller (Db, Core, remote peer via db.ioFor)
+   ↓
+EventIo (src/events/event-io.ts) — context, depth
+   ├─ read:  runBeforeRead  → refuse: throw / filter: drop rows, rehash table
+   ├─ write: runBeforeWrite → refuse: throw / filter: drop rows
+   │         Io.write
+   │         emitAfterWrite (not awaited, errors reported)
+   └─ table cfgs, content types, lifecycle: pass through
+   ↓
+wrapped Io (IoMem, IoMulti, …)
+```
+
+- `Db` wraps the `Io` given to its constructor in an `EventIo` with its own
+  `context`; `Core` only sees the wrapped one. `db.ioFor(context)` wraps the
+  same `Io` with another context.
+- Without hooks, `EventIo` calls the wrapped `Io` directly.
+- Order: priority descending, then registration order. Hooks run
+  sequentially and are awaited; observers start in the same order and are
+  not awaited.
+- Loop protection: `event.io` is an `EventIo` one level deeper. Runs deeper
+  than `maxDepth` throw `DbHookLoopError` before any hook runs. A hook that
+  writes past `event.io` (e.g. through a captured `Db`) is not counted.
+- `Notify` keeps its API and registers each callback as an insert observer
+  of a route. `Db.insert` and `Db.insertTrees` call `notify.notify`, which
+  calls `events.emitInsert`.
+- A filter of a hook registered with `tables` applies only to those tables;
+  a filtered table that carried a `_hash` is rehashed, and so is the
+  surrounding Rljson.
+- Adding or removing a before-read hook clears `Db._cache`, whose entries
+  were read under the old hooks.
+- `Db.clone(io)` creates a `Db` with an event model of its own, as before.
 
 #### Cakes and layers derived from a previous version
 

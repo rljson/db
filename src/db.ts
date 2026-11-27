@@ -50,6 +50,7 @@ import { TreeController } from './controller/tree-controller.ts';
 import { Core } from './core.ts';
 import { Join, JoinColumn, JoinRow, JoinRows } from './join/join.ts';
 import { ColumnSelection } from './join/selection/column-selection.ts';
+import { DbEventContext, DbEvents } from './events/db-events.ts';
 import { Notify, NotifyCallback } from './notify.ts';
 
 export type Cell = {
@@ -75,17 +76,34 @@ export type ContainerWithControllers = Container & {
   controllers: Record<string, Controller<any, any, any>>;
 };
 
+/** Options of {@link Db} */
+export interface DbOptions {
+  /** The event model of the Db. Default: a new one. */
+  readonly events?: DbEvents;
+
+  /** Who or what reads and writes through the Db, passed to every hook */
+  readonly context?: DbEventContext;
+}
+
 /**
  * Access Rljson data
  */
 export class Db {
   /**
    * Constructor
-   * @param _io - The Io instance used to read and write data
+   * @param io - The Io instance used to read and write data
+   * @param options - The event model and the context of the Db
    */
-  constructor(private readonly _io: Io) {
+  constructor(io: Io, options: DbOptions = {}) {
+    this.events = options.events ?? new DbEvents();
+    this.context = options.context ?? {};
+    this._rawIo = io;
+    this._io = this.events.io(io, this.context);
     this.core = new Core(this._io);
-    this.notify = new Notify();
+    this.notify = new Notify(this.events);
+
+    // Cached reads would bypass a read hook added later
+    this.events.onReadHooksChanged(() => this._cache.clear());
   }
 
   /**
@@ -106,6 +124,31 @@ export class Db {
    * Notification system to register callbacks on data changes
    */
   readonly notify: Notify;
+
+  /**
+   * The event model: hooks before reads and writes, observers after writes
+   * and inserts. Every read and write of the Db passes it.
+   */
+  readonly events: DbEvents;
+
+  /** Who or what reads and writes through the Db, passed to every hook */
+  readonly context: DbEventContext;
+
+  // ...........................................................................
+  /**
+   * Returns an Io on the store of the Db whose reads and writes pass the
+   * hooks of the Db with another context, e.g. to serve a remote peer
+   * @param context - Who or what reads and writes through the returned Io
+   */
+  ioFor(context: DbEventContext): Io {
+    return this.events.io(this._rawIo, context);
+  }
+
+  /** The Io given to the constructor, without hooks */
+  private readonly _rawIo: Io;
+
+  /** The Io the Db reads and writes through, with hooks */
+  private readonly _io: Io;
 
   private _conflictCallbacks: Map<string, ConflictCallback[]> = new Map();
 

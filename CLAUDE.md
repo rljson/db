@@ -2,6 +2,18 @@
 
 Database layer for the RLJSON ecosystem. Depends on `@rljson/rljson`, `@rljson/io`.
 
+## Event model
+
+- **One event model: `DbEvents`.** Hooks before reads and writes, observers
+  after writes and inserts. Never add a second callback mechanism; `Notify`
+  is a view onto `DbEvents` and keeps its API.
+- **Every Io call of a `Db` passes `EventIo`.** `Core` gets the wrapped Io
+  only. Code that reads or writes past it escapes every hook.
+- **Hooks read and write through `event.io`**, which counts the depth.
+  Anything else escapes the loop protection.
+- **Without hooks, `EventIo` costs nothing:** it checks `hasReadHooks`,
+  `hasWriteHooks`, `hasWriteObservers` before building an event.
+
 <!-- helix:claude_md:start -->
 
 # gg workflow

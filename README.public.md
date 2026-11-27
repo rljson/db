@@ -585,20 +585,80 @@ Register callbacks for data changes:
 
 ```typescript
 // Register callback
-db.notify.registerCallback('myCallback', async (insertHistoryRow) => {
+const callback = async (insertHistoryRow) => {
   console.log('Data changed:', insertHistoryRow);
   // Perform side effects (cache invalidation, UI updates, etc.)
-});
+};
+db.registerObserver(route, callback);
 
 // Perform operations - callback fires automatically
 await db.insert(route, data);
 
 // Unregister when done
-db.notify.unregisterCallback('myCallback');
+db.unregisterObserver(route, callback);
 
 // Or unregister all callbacks for a route
-db.notify.unregisterAll(route);
+db.unregisterAllObservers(route);
 ```
+
+The callbacks are insert observers of the event model (see below): they
+start in the order they were registered, are not awaited, and their errors
+are only logged.
+
+### Event Model: Hooks and Observers
+
+Every read and write of a `Db` passes one event model, `db.events`
+(`DbEvents`):
+
+- **Before hooks** run before a read or a write and decide about it: let it
+  pass, refuse it, or filter its rows.
+- **Observers** run after a write or after an insert. They cannot change the
+  outcome anymore.
+
+```typescript
+import { Db, DbEvents, DbHookRefusedError } from '@rljson/db';
+
+const db = new Db(io, { context: { user: 'alice' } });
+
+// Refuse writes to a table
+db.events.beforeWrite(() => ({ refuse: 'read only' }), {
+  name: 'readOnly',
+  tables: ['carGeneral'],
+});
+
+// Hide rows from every read
+db.events.beforeRead(
+  (event) => ({ filter: (row) => row.owner === event.context.user }),
+  { tables: ['carGeneral'] },
+);
+
+// Observe what was written, or every insert
+db.events.afterWrite((event) => console.log('written', event.tables));
+db.events.afterInsert((event) => console.log('inserted', event.route.flat));
+
+await db.insert(route, data); // throws DbHookRefusedError
+```
+
+- A hook returns nothing or `{ allow: true }` to let the operation pass,
+  `{ refuse: reason }` to make it throw a `DbHookRefusedError`, or
+  `{ filter }` to keep only the rows the filter returns true for. Filters of
+  several hooks apply together; the filter of a hook registered for certain
+  `tables` only sees rows of those tables.
+- Hooks run one after the other: the highest `priority` first (default 0),
+  then in the order they were registered. The first refusal ends the
+  operation.
+- Each event carries the `context` of whoever reads or writes and a `depth`.
+  A hook reads and writes through `event.io`, which runs the hooks again one
+  level deeper. Beyond `maxDepth` (default 8) a `DbHookLoopError` ends hooks
+  that trigger each other.
+- `db.ioFor(context)` returns an `Io` on the same store whose reads and
+  writes pass the hooks with another context, e.g. to serve a remote peer.
+  `db.events.io(io, context)` wraps any `Io` the same way.
+- Several `Db`s can share one event model: `new Db(io, { events })`.
+- `MockHook` records what it sees and refuses or filters as configured, for
+  tests: `MockHook.example(db.events, { refuseWrites: 'no' })`.
+- Adding or removing a read hook empties the query cache of the `Db`.
+- Table configurations, content types and `tableExists` pass without hooks.
 
 ### Caching
 
