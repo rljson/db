@@ -2,13 +2,20 @@ onlyBuiltDependencies:
   - esbuild
 minimumReleaseAgeExclude:
   - '@rljson/*'
-  - '@ggdna/dna-gg@1.1.1'
+  - '@ggdna/dna-gg@1.1.1 || 2.0.0'
+  - '@ggdna/dna-blog@0.6.0'
+  - '@ggdna/dna-clean-code@0.6.0'
+  - '@ggdna/dna-github@0.3.0'
+  - '@ggdna/dna-guides@0.4.0'
+  - '@ggdna/dna-index@0.4.0'
+  - '@ggdna/dna-install@0.5.0'
+  - '@ggdna/dna-readme@0.5.0'
+  - '@ggdna/dna-translate@0.6.0'
 overrides:
-  "@rljson\/io": link:./.gg/ts_links/@rljson/io
-  "@rljson\/dna-rljson": link:../dna_rljson
-  "@rljson\/hash": link:./.gg/ts_links/@rljson/hash
+  "@rljson/io": link:./.gg/ts_links/@rljson/io
+  "@rljson/hash": link:./.gg/ts_links/@rljson/hash
   eslint-plugin-tsdoc>@typescript-eslint/utils: ^8.62.1
-  "@rljson\/is-ready": link:./.gg/ts_links/@rljson/is-ready
-  "@rljson\/rljson": link:./.gg/ts_links/@rljson/rljson
-  "@rljson\/validate": link:./.gg/ts_links/@rljson/validate
-  "@rljson\/converter": link:./.gg/ts_links/@rljson/converter
+  "@rljson/is-ready": link:./.gg/ts_links/@rljson/is-ready
+  "@rljson/rljson": link:./.gg/ts_links/@rljson/rljson
+  "@rljson/validate": link:./.gg/ts_links/@rljson/validate
+  "@rljson/converter": link:./.gg/ts_links/@rljson/converter

@@ -15,7 +15,7 @@ found in the LICENSE file in the root of this package.
 
 ## Preparation
 
-Do all steps described in [develop.md](./develop.md).
+Do all steps described in [develop.md](develop.md).
 
 ## Get the pull request URL
 

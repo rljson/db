@@ -37,7 +37,7 @@ pnpm install
 pnpm test
 ```
 
-See also: [doc/workflows/prepare.md](doc/workflows/prepare.md)
+See also: [doc/en/workflows/prepare.md](doc/en/workflows/prepare.md)
 
 ## Development Workflow
 
@@ -151,7 +151,7 @@ git push origin feature/my-feature
 
 Push your branch and create a pull request on GitHub.
 
-See also: [doc/workflows/develop.md](doc/workflows/develop.md)
+See also: [doc/en/workflows/develop.md](doc/en/workflows/develop.md)
 
 ## Project Structure
 
@@ -468,7 +468,7 @@ See [README.architecture.md](./README.architecture.md) for deep dive.
 
 ### VS Code Debugging
 
-See [doc/workflows/debug-with-vscode.md](doc/workflows/debug-with-vscode.md)
+See [doc/en/workflows/debug-with-vscode.md](doc/en/workflows/debug-with-vscode.md)
 
 Launch configuration example:
 ```json
@@ -527,7 +527,7 @@ it.only('should test specific thing', async () => {
 
 - [README.architecture.md](./README.architecture.md) - Technical architecture deep dive
 - [README.trouble.md](./README.trouble.md) - Troubleshooting guide
-- [doc/workflows/](./doc/workflows/) - Detailed workflow guides
+- [doc/en/workflows](doc/en/workflows) - Detailed workflow guides
 - [GitHub Issues](https://github.com/rljson/db/issues) - Bug reports and feature requests
 
 ## Getting Help

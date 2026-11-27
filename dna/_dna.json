@@ -10,5 +10,5 @@
   "layers": ["@rljson/dna-rljson"]
 
   // "vars": { "dnaProjectName": "my-project" },
-  // "claude": { "claudeMdInclude": ["doc/conventions"] }
+  // "claude": { "claudeMdInclude": ["doc/en/conventions"] }
 }

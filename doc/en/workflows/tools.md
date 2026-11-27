@@ -15,7 +15,7 @@ found in the LICENSE file in the root of this package.
 
 ## Read architecture doc
 
-Read [README.architecture.md](./README.architecture.md) to get an overview
+Read [README.architecture.md](../../workflows/README.architecture.md) to get an overview
 of the package's architecture.
 
 ## Rename classes
@@ -28,11 +28,11 @@ node ./scripts/rename-class.js ClassA ClassB
 
 ## Create a new repo
 
-To create a new repo checkout [create-new-repo.md](doc/workflows/create-new-repo.md)
+To create a new repo checkout [create-new-repo.md](../../workflows/doc/workflows/create-new-repo.md)
 
 ## Handle issues
 
-Checkout [./README.trouble.md](./README.trouble.md)
+Checkout [./README.trouble.md](../../workflows/README.trouble.md)
 
 Visit <https://github.com/rljson/db/issues>
 
