@@ -527,7 +527,7 @@ it.only('should test specific thing', async () => {
 
 - [README.architecture.md](./README.architecture.md) - Technical architecture deep dive
 - [README.trouble.md](./README.trouble.md) - Troubleshooting guide
-- [doc/en/workflows/](doc/en/workflows) - Detailed workflow guides
+- [doc/en/workflows](doc/en/workflows) - Detailed workflow guides
 - [GitHub Issues](https://github.com/rljson/db/issues) - Bug reports and feature requests
 
 ## Getting Help
