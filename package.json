@@ -21,7 +21,7 @@
   ],
   "type": "module",
   "scripts": {
-    "build": "pnpm test && vite build && tsc && cp README* dist && mkdir dist/src && cp src/example.ts dist/src",
+    "build": "pnpm test && vite build && tsc && node scripts/copy-readme-to-dist.js",
     "test": "pnpm exec vitest run --coverage && pnpm run lint",
     "prepublishOnly": "pnpm run build && pnpm run test",
     "lint": "pnpm exec eslint",

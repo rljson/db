@@ -24,6 +24,8 @@ export type {
   SyncEventNames,
 } from '@rljson/rljson';
 export { Db } from './db.ts';
+export { MissingRows } from './missing-rows.ts';
+export type { MissingRow, MissingRowsOptions } from './missing-rows.ts';
 export {
   exampleEditActionColumnSelection,
   exampleEditActionColumnSelectionOnlySomeColumns,

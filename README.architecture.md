@@ -12,6 +12,7 @@ This document provides a deep dive into the architecture, design patterns, and i
 - [Route Resolution](#route-resolution)
 - [Caching Strategy](#caching-strategy)
 - [Tree Processing](#tree-processing)
+- [Missing Rows](#missing-rows)
 - [Join System](#join-system)
 - [Multi-Edit System](#multi-edit-system)
 - [Design Decisions](#design-decisions)
@@ -578,6 +579,19 @@ Beyond `buildTreeFromTrees`:
 4. **Path-based Expansion**: Only expand children when navigating
 5. **Memoization**: Prevent redundant processing
 6. **Early Returns**: Short-circuit on leaf nodes
+
+## Missing Rows
+
+`MissingRows` (`src/missing-rows.ts`) walks a store breadth first from the row
+a ref names, one `readRowsByHashes` per table and level (row by row on an Io
+without it), straight on the Io: no `Core` cache, so a row the store lost is
+missing again. What a row references comes from its content type (trees,
+edit chains, layers, cakes, slice ids, insert history) and from the declared
+`ColumnCfg.ref` columns of its table's newest config. The insert history's
+declared reference points to a multi edits table, but its value names a row
+of the table the history belongs to, so that one type is special-cased. A walk
+that finds nothing missing adds every visited hash to a set of complete
+subtrees; one that finds rows missing remembers nothing.
 
 ## Join System
 

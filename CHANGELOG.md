@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+### `MissingRows`: the rows under a ref a store lacks
+
+- **New class `MissingRows`:** `of(ref, limit?)` lists the rows under a ref
+  that one store lacks, `holds(ref)` says whether it lacks none. It reads only
+  that store, finds the ref's row in any table — by the whole ref, or by the
+  part after its last `:` — and follows every reference: declared reference
+  columns, `previous` of edit chains, tree `children`, layers, cakes, slice
+  ids and insert history. Blobs are not followed. Subtrees found complete are
+  remembered by hash, so the next ref walks only its new rows.
+
+### The build runs on Windows
+
+- **`pnpm run build` copies with a node script:** the READMEs and
+  `src/example.ts` go into `dist` through `scripts/copy-readme-to-dist.js`
+  instead of `cp` and `mkdir`, which `cmd.exe` refuses. `dist` holds the same
+  files as before.
+
+## [0.1.5]
+
 ### The rljson DNA 0.4.0: docs language first, no prompts hook
 
 - `@rljson/dna-rljson` 0.4.0, on dna-gg 2.0: the guides and templates of the
