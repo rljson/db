@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### The rljson DNA 0.4.0: docs language first, no prompts hook
+
+- `@rljson/dna-rljson` 0.4.0, on dna-gg 2.0: the guides and templates of the
+  DNA live in `doc/en/`, `doc/de/` and `doc/fa/`. The Claude Code hook that
+  would keep every prompt in a project management repo is gone, with
+  `.claude/hooks` and `.claude/settings.json`. New are the architecture guide
+  and the `/gg-review-architecture` skill.
+- The own documentation follows: `doc/<file>` to `doc/en/<file>`. The links
+  point to the new places.
+
+## [0.1.4]
+
 ### CLAUDE.md keeps this repo's own rules
 
 - The rules every rljson repo shares (coverage, pinning, docs, releases,
