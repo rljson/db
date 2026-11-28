@@ -9,13 +9,14 @@
   "name": "@rljson/db",
 
   // 1-2 sentence summary about this repo.
-  "summary": "High-level database on an Io: get/insert by route over components, trees, cakes, layers, sliceIds; insert history, time travel, Join, multi-edits, edit chains. Connector: client side of the sync protocol.",
+  "summary": "High-level database on an Io: get/insert by route over components, trees, cakes, layers, sliceIds; insert history, time travel, Join, multi-edits, edit chains. Connector: client side of the sync protocol. MissingRows: the rows under a ref a store lacks.",
 
   // 1-3 bullet points: the problem space.
   "domain": [
     "content-addressed, immutable data: route queries, insert history, DAG-branch conflict detection, query cache",
     "Join (column selection, row filter/sort, setValue), MultiEditManager, EditChainManager",
-    "Connector: refs over a socket (dedup, gap fill, predecessors, bootstrap, stamps), stateBeaconEvent"
+    "Connector: refs over a socket (dedup, gap fill, predecessors, bootstrap, stamps), stateBeaconEvent",
+    "MissingRows: walks every row under a ref in one store, memoized by hash"
   ],
 
   // The repos this one depends on and the repos depending on it.
@@ -32,7 +33,7 @@
 
     // "<repo-b>": "why / API"
     "usedBy": {
-      "server": "Db, Connector, stateBeaconEvent",
+      "server": "Db, Connector, stateBeaconEvent, MissingRows",
       "fs-agent": "Db, Connector, trees (insertTrees), stateBeaconEvent",
       "mongo-agent": "Db, MultiEditManager; Connector subset (EditSyncConnector)"
     }

@@ -579,6 +579,31 @@ const many = await chain.entries([root.head, next.head]); // three batched reads
 that needs all of them compares the result's size with what it asked for. A
 failing read rejects.
 
+### Missing Rows
+
+`MissingRows` tells which rows under a ref one store lacks. It reads only that
+store — pass a local Io, not one that cascades to a network — and finds the
+ref's row in any of its tables: by the whole ref, or, when no row has that
+hash, by the part after the last `:` (so a ref may carry a prefix). From there
+it follows every reference: the reference columns a table config declares,
+`previous` of edit histories and multi edits, `children` of trees, the base,
+slice ids and added components of layers, the slice ids and layers of cakes,
+the row an insert history row names. Blobs are not followed.
+
+```typescript
+import { MissingRows } from '@rljson/db';
+
+const missingRows = new MissingRows(localIo);
+
+await missingRows.holds(head); // true when nothing under head is missing
+await missingRows.of(head, 10); // up to ten [{ table, hash }] the store lacks
+```
+
+A walk that finds nothing missing remembers the hashes it visited, so the next
+head walks only the rows it adds (`maxRemembered`, default 1 000 000, bounds
+that memory). A ref whose row is in no table comes back as `[{ hash: ref }]`.
+A table the store lacks or cannot read counts as lacking its rows.
+
 ### Real-Time Notifications
 
 Register callbacks for data changes:
